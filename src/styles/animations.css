@@ -1,0 +1,113 @@
+:root {
+  --anim-duration: 700ms;
+  --anim-easing: cubic-bezier(0.2, 0.9, 0.4, 1.1);
+  --hover-duration: 250ms;
+  --lift-distance: -6px;
+  --fade-distance: 24px;
+  --stagger-delay: 120ms;
+}
+
+/* Reduced motion (accessibility) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   SCROLL ANIMATIONS — BIDIRECTIONAL FADE
+============================================================ */
+
+/* Base hidden state — elements start invisible & shifted down */
+.scroll-fade {
+  opacity: 0;
+  transform: translateY(var(--fade-distance));
+  transition: opacity var(--anim-duration) var(--anim-easing),
+              transform var(--anim-duration) var(--anim-easing);
+  will-change: opacity, transform;
+}
+
+/* Visible state — when in viewport (scroll down) */
+.scroll-fade.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ============================================================
+   STAGGER (children animate one-by-one)
+============================================================ */
+
+.stagger-children > * {
+  opacity: 0;
+  transform: translateY(var(--fade-distance));
+  transition: opacity var(--anim-duration) var(--anim-easing),
+              transform var(--anim-duration) var(--anim-easing);
+  will-change: opacity, transform;
+}
+
+.stagger-children.visible > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.stagger-children.visible > *:nth-child(1) { transition-delay: 0ms; }
+.stagger-children.visible > *:nth-child(2) { transition-delay: calc(var(--stagger-delay) * 1); }
+.stagger-children.visible > *:nth-child(3) { transition-delay: calc(var(--stagger-delay) * 2); }
+.stagger-children.visible > *:nth-child(4) { transition-delay: calc(var(--stagger-delay) * 3); }
+.stagger-children.visible > *:nth-child(5) { transition-delay: calc(var(--stagger-delay) * 4); }
+.stagger-children.visible > *:nth-child(6) { transition-delay: calc(var(--stagger-delay) * 5); }
+
+/* When stagger goes back to hidden, reset delays instantly */
+.stagger-children:not(.visible) > * {
+  transition-delay: 0ms;
+}
+
+/* ============================================================
+   HOVER EFFECTS (DESKTOP ONLY — NO CONFLICTS)
+============================================================ */
+
+@media (min-width: 1024px) {
+
+  /* Buttons */
+  button,
+  a[role="button"],
+  .btn {
+    transition: transform var(--hover-duration) ease,
+                box-shadow var(--hover-duration) ease,
+                background-color var(--hover-duration) ease;
+  }
+
+  button:hover,
+  a[role="button"]:hover,
+  .btn:hover {
+    transform: scale(1.03);
+    box-shadow: 0 12px 20px -10px rgba(0, 0, 0, 0.2);
+  }
+
+  button:active,
+  .btn:active {
+    transform: scale(0.97);
+  }
+
+  /* Cards — uses a SEPARATE class so it doesn't clash with scroll-fade */
+  .card-hover {
+    transition: transform 300ms var(--anim-easing),
+                box-shadow 300ms ease,
+                border-color 200ms ease;
+  }
+
+  .card-hover:hover {
+    transform: translateY(var(--lift-distance));
+    box-shadow: 0 20px 30px -12px rgba(0, 0, 0, 0.15);
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+
+  /* CTA button */
+  .hero-cta:hover {
+    box-shadow: 0 0 18px rgba(245, 158, 11, 0.6);
+    transform: scale(1.03);
+  }
+}

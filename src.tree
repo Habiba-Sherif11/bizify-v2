@@ -1,0 +1,104 @@
+// struct ./src -o src.tree 
+
+
+├── app
+│  ├── (auth)
+│  │  ├── forgot-password
+│  │  │  └── page.tsx
+│  │  ├── login
+│  │  │  └── page.tsx
+│  │  ├── reset-password
+│  │  │  └── page.tsx
+│  │  └── signup
+│  │    └── page.tsx
+│  ├── api
+│  │  ├── auth
+│  │  │  ├── forgot-password
+│  │  │  │  └── route.ts
+│  │  │  ├── login
+│  │  │  │  └── route.ts
+│  │  │  ├── me
+│  │  │  │  └── route.ts
+│  │  │  ├── reset-password
+│  │  │  │  └── route.ts
+│  │  │  ├── signup
+│  │  │  │  └── route.ts
+│  │  │  └── verify-otp
+│  │  │    └── route.ts
+│  │  └── health
+│  │    └── route.ts
+│  ├── favicon.ico
+│  ├── layout.tsx
+│  ├── middleware.ts
+│  └── page.tsx
+├── assets
+│  ├── fonts
+│  └── imgs
+│    ├── auth
+│    │  └── login.png
+│    └── landing
+│      ├── hero-bg.png
+│      ├── mock-bg.png
+│      ├── section2.png
+│      └── section33.png
+├── components
+│  ├── providers
+│  │  └── AnimationProvider.tsx
+│  ├── sections
+│  │  ├── ai-startup-mentor.tsx
+│  │  ├── footer.tsx
+│  │  ├── hero-mockup.tsx
+│  │  ├── hero.tsx
+│  │  ├── herobg.tsx
+│  │  ├── how-it-works-new.tsx
+│  │  ├── logo.tsx
+│  │  ├── navbar.tsx
+│  │  ├── pricing.tsx
+│  │  ├── problems.tsx
+│  │  ├── process-card.tsx
+│  │  ├── section-with-bg.tsx
+│  │  ├── solutions.tsx
+│  │  └── why-bizify.tsx
+│  ├── shared
+│  └── ui
+│    ├── alert.tsx
+│    ├── badge.tsx
+│    ├── button.tsx
+│    └── card.tsx
+├── features
+│  ├── auth
+│  │  ├── components
+│  │  │  ├── LoginForm.tsx
+│  │  │  ├── OTPVerification.tsx
+│  │  │  ├── ProgressBar.tsx
+│  │  │  ├── QuestionnaireStep.tsx
+│  │  │  ├── SignupForm.tsx
+│  │  │  └── SkillsStep.tsx
+│  │  ├── context
+│  │  │  └── AuthContext.tsx
+│  │  ├── hooks
+│  │  │  ├── useAuth.ts
+│  │  │  ├── useLogin.ts
+│  │  │  └── useSignup.ts
+│  │  ├── lib
+│  │  │  ├── api.ts
+│  │  │  ├── helpers.ts
+│  │  │  └── schemas.ts
+│  │  ├── screens
+│  │  └── types
+│  │    └── index.ts
+│  └── onboarding
+│    ├── components
+│    ├── context
+│    ├── data
+│    ├── hooks
+│    ├── screens
+│    └── types
+├── hooks
+├── i18n
+├── lib
+│  └── utils.ts
+├── styles
+│  ├── animations.css
+│  └── globals.css
+└── types
