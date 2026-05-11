@@ -1,8 +1,10 @@
 "use client";
 
 // External libraries
+import Link from "next/link";
 import { useState } from "react";
 import { Check, Minus, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Feature and plan data
 const FEATURES = [
@@ -143,16 +145,14 @@ export function PricingSection() {
                         </span>
                       </div>
 
-                      <button
-                        className={`w-full py-2 rounded-lg transition-all duration-200 cursor-pointer ${
-                          plan.popular
-                            ? "bg-amber-500 text-white hover:bg-amber-600 shadow-sm"
-                            : "bg-white text-neutral-900 border border-neutral-300 hover:border-amber-500 hover:text-amber-600"
-                        }`}
-                        style={{ fontSize: "0.8rem", fontWeight: 500 }}
+                      <Button
+                        asChild
+                        variant={plan.popular ? "primary-gradient" : "outline"}
+                        size="default"
+                        className={`w-full ${!plan.popular ? "border-cyan-600 text-cyan-600 hover:bg-cyan-50 hover:border-cyan-700" : ""}`}
                       >
-                        {plan.cta}
-                      </button>
+                        <Link href="/signup">{plan.cta}</Link>
+                      </Button>
                     </div>
                   </th>
                 ))}
@@ -226,16 +226,14 @@ export function PricingSection() {
                 <span className="text-neutral-400" style={{ fontSize: "0.8rem" }}>/mo</span>
               </div>
 
-              <button
-                className={`w-full py-2.5 rounded-lg transition-all duration-200 cursor-pointer mb-6 ${
-                  plan.popular
-                    ? "bg-amber-500 text-white hover:bg-amber-600 shadow-sm"
-                    : "bg-white text-neutral-900 border border-neutral-300 hover:border-amber-500 hover:text-amber-600"
-                }`}
-                style={{ fontSize: "0.85rem", fontWeight: 500 }}
+              <Button
+                asChild
+                variant={plan.popular ? "primary-gradient" : "outline"}
+                size="lg"
+                className={`w-full mb-6 ${!plan.popular ? "border-cyan-600 text-cyan-600 hover:bg-cyan-50 hover:border-cyan-700" : ""}`}
               >
-                {plan.cta}
-              </button>
+                <Link href="/signup">{plan.cta}</Link>
+              </Button>
 
               <div className="space-y-3 border-t border-neutral-100 pt-6">
                 {FEATURES.map((feature) => (
@@ -269,9 +267,9 @@ export function PricingSection() {
         </div>
 
         {/* Bottom CTA */}
-        <div className="mt-16 relative">
+        <div className="mt-10 relative">
           <div
-            className="rounded-2xl p-6 sm:p-10 text-center relative overflow-hidden bg-white/60 backdrop-blur-md border border-white/80"
+            className="rounded-2xl p-6 sm:p-8 text-center relative overflow-hidden bg-white/60 backdrop-blur-md border border-white/80"
             style={{
               boxShadow: "0 0 0 1px rgba(251,133,0,0.08), 0 8px 40px rgba(251,133,0,0.06)",
             }}
@@ -293,19 +291,25 @@ export function PricingSection() {
                 Our team is here to help. Get a personalized recommendation based on your business needs.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <button
-                  className="px-6 py-2.5 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-all duration-200 cursor-pointer flex items-center gap-2 shadow-sm w-full sm:w-auto justify-center"
-                  style={{ fontSize: "0.85rem", fontWeight: 500 }}
+                <Button
+                  asChild
+                  variant="primary-gradient"
+                  size="lg"
+                  className="w-full sm:w-auto justify-center"
                 >
-                  Talk to sales
-                  <ArrowRight size={15} />
-                </button>
-                <button
-                  className="px-6 py-2.5 rounded-lg bg-white text-cyan-600 border border-cyan-300/30 hover:border-cyan-600/60 transition-all duration-200 cursor-pointer w-full sm:w-auto"
-                  style={{ fontSize: "0.85rem", fontWeight: 500 }}
+                  <Link href="/signup">
+                    Talk to sales
+                    <ArrowRight size={15} />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:w-auto border-cyan-600 text-cyan-600 hover:bg-cyan-50 hover:border-cyan-700"
                 >
-                  Compare all features
-                </button>
+                  <Link href="/signup">Compare all features</Link>
+                </Button>
               </div>
             </div>
           </div>

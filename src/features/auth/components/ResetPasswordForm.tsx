@@ -1,17 +1,24 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2, Mail } from "lucide-react";
+import { toast } from "react-toastify";
+import { useSearchParams, useRouter } from "next/navigation";
 import { resetSchema } from "../lib/validations";
 import { Button } from "@/components/ui/button";
 import { api } from "../lib/api";
-import { toast } from "react-toastify";
-import { useSearchParams, useRouter } from "next/navigation";
+
+const RESEND_COOLDOWN = 60;
 
 export function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const emailFromUrl = searchParams.get("email") || "";
+
+  const [countdown, setCountdown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
 
   const {
     register,
@@ -27,6 +34,28 @@ export function ResetPasswordForm() {
     },
   });
 
+  // Countdown tick
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const id = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(id);
+  }, [countdown]);
+
+  const handleResend = async () => {
+    if (isResending || countdown > 0 || !emailFromUrl) return;
+    setIsResending(true);
+    try {
+      await api.post("/auth/forgot-password", { email: emailFromUrl });
+      toast.success("A new reset code has been sent to your email");
+      setCountdown(RESEND_COOLDOWN);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { error?: string } } };
+      toast.error(e.response?.data?.error || "Failed to resend. Please try again.");
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   const onSubmit = async (data: {
     email: string;
     otp_code: string;
@@ -34,92 +63,128 @@ export function ResetPasswordForm() {
     confirm_password: string;
   }) => {
     try {
-      // Send as JSON to our proxy – the proxy handles the conversion to query params
-      const response = await api.post("/auth/reset-password", {
+      await api.post("/auth/reset-password", {
         email: data.email,
         otp_code: data.otp_code,
         new_password: data.new_password,
       });
-
-      console.log("✅ Proxy response:", response.data);
-      toast.success("Password reset successfully! Redirecting to login...");
+      toast.success("Password reset successfully! Redirecting to login…");
       router.push("/login");
-    } catch (error: any) {
-      console.error("❌ Reset error:", error.response?.data || error.message);
-      toast.error(error.response?.data?.error || "Reset failed");
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { error?: string } } };
+      toast.error(e.response?.data?.error || "Reset failed. Please try again.");
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      <h2 className="text-2xl font-semibold font-[var(--font-cormorant-sc)]">
-        Reset Password
-      </h2>
-
-      {/* Email (read-only, pre-filled from URL) */}
-      <div>
-        <label className="block text-sm font-medium text-neutral-700">Email</label>
-        <input
-          {...register("email")}
-          type="email"
-          readOnly
-          className="mt-1 w-full rounded-lg border border-neutral-300 bg-gray-50 px-4 py-2.5 text-sm"
-        />
-        {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-col items-center text-center space-y-2">
+        <div className="w-10 h-10 rounded-full bg-cyan-50 flex items-center justify-center mb-1">
+          <Mail className="w-5 h-5 text-cyan-500" />
+        </div>
+        <h2 className="text-xl font-semibold text-gray-900">Reset Password</h2>
+        <p className="text-sm text-neutral-500">
+          Enter the code sent to{" "}
+          <span className="font-medium text-gray-700">{emailFromUrl}</span>
+        </p>
       </div>
 
-      {/* OTP Code */}
-      <div>
-        <label className="block text-sm font-medium text-neutral-700">OTP Code</label>
-        <input
-          {...register("otp_code")}
-          className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm"
-          placeholder="Enter 6‑digit code"
-        />
-        {errors.otp_code && (
-          <p className="text-red-500 text-xs mt-1">{errors.otp_code.message}</p>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* Hidden email field (keeps validation happy) */}
+        <input {...register("email")} type="hidden" />
+
+        {/* OTP Code */}
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">
+            Reset Code
+          </label>
+          <input
+            {...register("otp_code")}
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            placeholder="Enter 6-digit code"
+            className="w-full text-center text-xl tracking-[0.5em] font-mono rounded-lg border border-neutral-300 bg-white px-4 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/20 focus-visible:border-cyan-500 transition-colors"
+          />
+          {errors.otp_code && (
+            <p className="text-red-500 text-xs mt-1">{errors.otp_code.message}</p>
+          )}
+        </div>
+
+        {/* New Password */}
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">
+            New Password
+          </label>
+          <input
+            {...register("new_password")}
+            type="password"
+            placeholder="Enter new password"
+            className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/20 focus-visible:border-cyan-500 transition-colors"
+          />
+          {errors.new_password && (
+            <p className="text-red-500 text-xs mt-1">{errors.new_password.message}</p>
+          )}
+        </div>
+
+        {/* Confirm Password */}
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">
+            Confirm New Password
+          </label>
+          <input
+            {...register("confirm_password")}
+            type="password"
+            placeholder="Confirm new password"
+            className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/20 focus-visible:border-cyan-500 transition-colors"
+          />
+          {errors.confirm_password && (
+            <p className="text-red-500 text-xs mt-1">{errors.confirm_password.message}</p>
+          )}
+        </div>
+
+        <Button
+          type="submit"
+          variant="primary-gradient"
+          size="lg"
+          className="w-full"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Resetting…
+            </span>
+          ) : (
+            "Reset Password"
+          )}
+        </Button>
+      </form>
+
+      {/* Resend */}
+      <p className="text-center text-xs text-gray-400">
+        Didn&apos;t get the code?{" "}
+        {countdown > 0 ? (
+          <span className="text-gray-500 tabular-nums">Resend in {countdown}s</span>
+        ) : (
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={isResending}
+            className="text-cyan-600 font-medium disabled:opacity-50 cursor-pointer"
+          >
+            {isResending ? (
+              <span className="inline-flex items-center gap-1">
+                <Loader2 size={11} className="animate-spin" />
+                Sending…
+              </span>
+            ) : (
+              "Resend"
+            )}
+          </button>
         )}
-      </div>
-
-      {/* New Password */}
-      <div>
-        <label className="block text-sm font-medium text-neutral-700">New Password</label>
-        <input
-          {...register("new_password")}
-          type="password"
-          className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm"
-        />
-        {errors.new_password && (
-          <p className="text-red-500 text-xs mt-1">{errors.new_password.message}</p>
-        )}
-      </div>
-
-      {/* Confirm New Password */}
-      <div>
-        <label className="block text-sm font-medium text-neutral-700">
-          Confirm New Password
-        </label>
-        <input
-          {...register("confirm_password")}
-          type="password"
-          className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm"
-        />
-        {errors.confirm_password && (
-          <p className="text-red-500 text-xs mt-1">
-            {errors.confirm_password.message}
-          </p>
-        )}
-      </div>
-
-      <Button
-        type="submit"
-        variant="primary-gradient"
-        size="lg"
-        className="w-full"
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? "Resetting..." : "Reset Password"}
-      </Button>
-    </form>
+      </p>
+    </div>
   );
 }

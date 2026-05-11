@@ -8,6 +8,7 @@ import { Menu, X } from "lucide-react";
 // Internal components
 import { Button } from "@/components/ui/button";
 import SVGComponent from "@/components/sections/logo";
+import { useAuth } from "@/features/auth/context/AuthContext";
 
 const NAV_LINKS = [
   { href: "#problems", label: "Why Bizify" },
@@ -20,6 +21,7 @@ export function Navbar() {
   // ---- State ----
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const { user, loading } = useAuth();
 
   // ---- Effects ----
   // Scroll state
@@ -52,16 +54,16 @@ export function Navbar() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16 md:h-18 relative">
+          <div className="flex justify-between items-center h-14 relative">
             {/* Logo */}
             <Link
               href="#"
               className="flex items-center gap-2 group shrink-0"
               onClick={handleLinkClick}
             >
-              <SVGComponent className="h-9 md:h-10 w-auto transition-transform group-hover:scale-105 duration-200" />
+              <SVGComponent className="h-8 w-auto transition-transform group-hover:scale-105 duration-200" />
               <span
-                className="text-2xl md:text-[1.75rem] font-semibold text-neutral-900"
+                className="text-xl font-semibold text-neutral-900"
                 style={{ fontFamily: "var(--font-cormorant-sc)" }}
               >
                 Bizify
@@ -84,20 +86,30 @@ export function Navbar() {
 
             {/* Desktop CTA Buttons */}
             <div className="hidden lg:flex gap-3 shrink-0">
-              <Link href="/signup">
-                <Button variant="primary-gradient" size="sm" className="min-w-32">
-                  Start Now
-                </Button>
-              </Link>
-              <Link href="/login">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="min-w-32 border-cyan-600 text-cyan-600 hover:bg-cyan-50 hover:border-cyan-700"
-                >
-                  Start free trial
-                </Button>
-              </Link>
+              {!loading && user ? (
+                <Link href="/dashboard">
+                  <Button variant="primary-gradient" size="sm" className="min-w-32">
+                    Dashboard
+                  </Button>
+                </Link>
+              ) : !loading ? (
+                <>
+                  <Link href="/signup">
+                    <Button variant="primary-gradient" size="sm" className="min-w-32">
+                      Start Now
+                    </Button>
+                  </Link>
+                  <Link href="/login">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="min-w-32 border-cyan-600 text-cyan-600 hover:bg-cyan-50 hover:border-cyan-700"
+                    >
+                      Start free trial
+                    </Button>
+                  </Link>
+                </>
+              ) : null}
             </div>
 
             {/* Mobile Menu Toggle */}
@@ -134,11 +146,11 @@ export function Navbar() {
       >
         <div className="flex flex-col h-full">
           {/* Mobile Header */}
-          <div className="flex items-center justify-between p-6 border-b border-neutral-200">
+          <div className="flex items-center justify-between p-4 border-b border-neutral-200">
             <Link href="#" className="flex items-center gap-2" onClick={handleLinkClick}>
-              <SVGComponent className="h-10 w-auto" />
+              <SVGComponent className="h-8 w-auto" />
               <span
-                className="text-2xl font-semibold text-neutral-900"
+                className="text-xl font-semibold text-neutral-900"
                 style={{ fontFamily: "var(--font-cormorant-sc)" }}
               >
                 Bizify
@@ -162,7 +174,7 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={handleLinkClick}
-                  className="px-4 py-3 text-lg font-medium text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 rounded-lg transition-colors"
+                  className="px-4 py-2.5 text-sm font-medium text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 rounded-lg transition-colors"
                 >
                   {link.label}
                 </Link>
@@ -172,20 +184,30 @@ export function Navbar() {
 
           {/* Mobile CTA Buttons */}
           <div className="p-6 border-t border-neutral-200 space-y-3">
-            <Link href="/signup" onClick={handleLinkClick} className="block">
-              <Button variant="primary-gradient" size="lg" className="w-full">
-                Start Now
-              </Button>
-            </Link>
-            <Link href="/login" onClick={handleLinkClick} className="block">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full border-cyan-600 text-cyan-600 hover:bg-cyan-50"
-              >
-                Start free trial
-              </Button>
-            </Link>
+            {!loading && user ? (
+              <Link href="/dashboard" onClick={handleLinkClick} className="block">
+                <Button variant="primary-gradient" size="lg" className="w-full">
+                  Dashboard
+                </Button>
+              </Link>
+            ) : !loading ? (
+              <>
+                <Link href="/signup" onClick={handleLinkClick} className="block">
+                  <Button variant="primary-gradient" size="lg" className="w-full">
+                    Start Now
+                  </Button>
+                </Link>
+                <Link href="/login" onClick={handleLinkClick} className="block">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full border-cyan-600 text-cyan-600 hover:bg-cyan-50"
+                  >
+                    Start free trial
+                  </Button>
+                </Link>
+              </>
+            ) : null}
           </div>
         </div>
       </div>

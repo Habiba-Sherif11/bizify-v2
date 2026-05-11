@@ -121,10 +121,18 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    @apply font-sans;
+    /* Reserve scrollbar gutter to prevent layout shift on page transitions */
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+  }
   body {
     @apply bg-background text-foreground;
   }
-  html {
-    @apply font-sans;
+  [dir="rtl"] {
+    --font-sans: var(--font-tajawal);
+    letter-spacing: 0;
   }
 }
+

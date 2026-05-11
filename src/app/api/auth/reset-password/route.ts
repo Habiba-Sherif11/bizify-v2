@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
+import { handleBackendError } from "@/lib/backend-error";
 
 export async function POST(request: NextRequest) {
-  // Frontend sends a JSON body, we extract the fields from it
-  const body = await request.json();
+  let body: { email?: string; otp_code?: string; new_password?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
   const { email, otp_code, new_password } = body;
 
   if (!email || !otp_code || !new_password) {
@@ -14,25 +20,24 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // The backend expects params in the QUERY string, so we use axios params option
     await axios.post(
       `${process.env.BACKEND_URL}/api/v1/auth/reset-password`,
-      null,                                    // no request body
+      null,
       {
-        params: {                             // these become ?email=...&otp_code=...&new_password=...
-          email,
-          otp_code,
-          new_password,
-        },
+        params: { email, otp_code, new_password },
+        timeout: 65_000,
       }
     );
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("Reset password backend error:", error.response?.status, error.message);
-    return NextResponse.json(
-      { error: error.response?.data?.detail || "Reset failed" },
-      { status: error.response?.status || 500 }
-    );
+  } catch (error: unknown) {
+    const { message, status } = handleBackendError(error, "Reset failed");
+
+    if (process.env.NODE_ENV === "development") {
+      const e = error as { response?: { status?: number; data?: unknown } };
+      console.error("[Reset Password] Backend error:", e.response?.status, e.response?.data);
+    }
+
+    return NextResponse.json({ error: message }, { status });
   }
 }

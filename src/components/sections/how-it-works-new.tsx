@@ -35,20 +35,20 @@ export function HowItWorks() {
   return (
     <section
       id="hiw"
-      className="relative min-h-[88svh] px-4 py-20 sm:px-6 sm:py-28 lg:px-8 flex items-center"
+      className="relative min-h-[80svh] px-4 py-14 sm:px-6 sm:py-20 lg:px-8 flex items-center"
     >
       <div className="relative z-10 w-full max-w-5xl mx-auto">
         {/* Section Header */}
-        <div className="text-center mb-12 sm:mb-16">
+        <div className="text-center mb-10 sm:mb-12">
           <div className="inline-block px-4 py-1.5 mb-6 bg-white border border-amber-500 rounded-full">
             <span className="text-xs font-semibold text-amber-500 uppercase tracking-wide">
               How it works
             </span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-neutral-950 mb-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-neutral-950 mb-4">
             One Platform For Your Entire Startup Journey
           </h2>
-          <p className="text-base sm:text-lg text-neutral-600 max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base text-neutral-600 max-w-2xl mx-auto">
             Bizify guides you from initial idea to a thriving business with AI at every step.
           </p>
         </div>

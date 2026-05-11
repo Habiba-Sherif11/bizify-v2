@@ -8,6 +8,8 @@ import {
   useCallback,
   ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 import { api } from "../lib/api";
 
 export type User = {
@@ -19,8 +21,8 @@ export type User = {
 type AuthContextType = {
   user: User | null;
   loading: boolean;
-  fetchUser: () => Promise<void>;
-  logout: () => void;
+  fetchUser: () => Promise<User | null>;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -28,16 +30,18 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  const fetchUser = useCallback(async () => {
+  const fetchUser = useCallback(async (): Promise<User | null> => {
     try {
       const { data } = await api.get("/auth/me");
-      // data.user can be null (if no token) or a user object
       setUser(data.user);
-    } catch (error: any) {
-      // This catch now only fires on network errors, not on 401
-      console.error("Network error while fetching user:", error.message);
+      return data.user;
+    } catch {
+      // Only fires on network errors (401 is handled by the API interceptor)
+      toast.error("Connection error. Please try again.");
       setUser(null);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -47,10 +51,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fetchUser();
   }, [fetchUser]);
 
-  const logout = useCallback(() => {
-    document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+  const logout = useCallback(async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch {
+      // Even if the server call fails, clear local state and redirect
+    }
     setUser(null);
-  }, []);
+    router.push("/login");
+  }, [router]);
 
   return (
     <AuthContext.Provider value={{ user, loading, fetchUser, logout }}>

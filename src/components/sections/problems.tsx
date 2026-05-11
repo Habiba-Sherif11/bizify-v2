@@ -36,22 +36,22 @@ export function ProblemsSection() {
     >
       <div className="relative z-10 w-full max-w-5xl mx-auto">
         {/* Section Header */}
-        <div className="text-center mb-12 sm:mb-16">
+        <div className="text-center mb-10 sm:mb-12">
           <div className="inline-block px-4 py-1.5 mb-6 bg-white border border-amber-500 rounded-full">
             <span className="text-xs font-semibold text-amber-500 uppercase tracking-wide">
               The Problem
             </span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-neutral-950 mb-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-neutral-950 mb-4">
             Starting a Business Is Harder Than It Should Be
           </h2>
-          <p className="text-base sm:text-lg text-neutral-600 max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base text-neutral-600 max-w-2xl mx-auto">
             Entrepreneurs waste time, money, and energy on fragmented processes that slow them down.
           </p>
         </div>
 
         {/* Problems Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-5">
           {PROBLEMS.map((problem, idx) => (
             <Card
               key={idx}

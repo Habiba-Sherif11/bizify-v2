@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 import { AnimationProvider } from "@/components/providers/AnimationProvider";
 import { AuthProvider } from "@/features/auth/context/AuthContext";
 import { ReactQueryProvider } from "@/components/providers/ReactQueryProvider";
+import { ThemeProvider } from "@/features/dashboard/context/ThemeContext";
+import { LanguageProvider } from "@/features/dashboard/context/LanguageContext";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -55,7 +57,7 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       className={cn(
-        "h-full overflow-x-hidden antialiased font-sans",
+        "antialiased font-sans",
         geist.variable,
         inter.variable,
         tajawal.variable,
@@ -64,12 +66,16 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col overflow-x-hidden">
         <ReactQueryProvider>
-          <AuthProvider>
-            <AnimationProvider>
-              {children}
-              <ToastContainer position="top-right" />
-            </AnimationProvider>
-          </AuthProvider>
+          <ThemeProvider>
+            <LanguageProvider>
+              <AuthProvider>
+                <AnimationProvider>
+                  {children}
+                  <ToastContainer position="top-right" />
+                </AnimationProvider>
+              </AuthProvider>
+            </LanguageProvider>
+          </ThemeProvider>
         </ReactQueryProvider>
       </body>
     </html>

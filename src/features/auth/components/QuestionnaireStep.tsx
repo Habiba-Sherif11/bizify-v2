@@ -1,7 +1,10 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useState, useEffect, useRef } from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ChatBubble } from "./ChatBubble";
+import { ChoiceButton } from "./ChoiceButton";
 import questionnaireData from "../data/questionnaire.json";
 
 interface Question {
@@ -12,89 +15,177 @@ interface Question {
   label?: string;
 }
 
-export function QuestionnaireStep({
-  onNext,
-}: {
-  onNext: (payload: any[]) => void;
-}) {
+interface ChatMessage {
+  role: "ai" | "user";
+  text: string;
+}
+
+interface Props {
+  onNext: (payload: { field: string; question: string; multi: boolean; choices: string[]; label: string }[]) => void;
+}
+
+function ProgressBar({ current, total }: { current: number; total: number }) {
+  const pct = Math.round((current / total) * 100);
+  return (
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-xs text-gray-400">
+        <span>{current < total ? `Question ${current + 1} of ${total}` : "All done!"}</span>
+        <span>{pct}%</span>
+      </div>
+      <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full bg-linear-to-r from-amber-400 to-yellow-500 transition-all duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+const WELCOME = "Welcome! I'm your AI co-founder. Let's personalize your experience — it'll only take a minute.";
+
+export function QuestionnaireStep({ onNext }: Props) {
   const questions = questionnaireData as Question[];
 
-  const {
-    register,
-    handleSubmit,
-    formState: { isSubmitting },
-  } = useForm();
+  const [currentQ, setCurrentQ] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, string[]>>({});
+  const [selected, setSelected] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [history, setHistory] = useState<ChatMessage[]>([
+    { role: "ai", text: WELCOME },
+    { role: "ai", text: questions[0].question },
+  ]);
 
-  const onSubmit = (rawData: any) => {
-    const payload = questions.map((q) => {
-      const value = rawData[q.field];
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isDone = currentQ >= questions.length;
+  const currentQuestion = questions[currentQ];
+  const isMulti = currentQuestion?.multi ?? false;
 
-      let selectedChoices: string[] = [];
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    }
+  }, [history]);
 
-      if (q.multi) {
-        if (Array.isArray(value)) {
-          selectedChoices = value;
-        } else if (value) {
-          selectedChoices = [value];
-        }
-      } else {
-        if (value) {
-          selectedChoices = [value]; // ✅ ALWAYS ARRAY
-        }
-      }
+  const advance = (choices: string[]) => {
+    const q = questions[currentQ];
+    const newAnswers = { ...answers, [q.field]: choices };
+    setAnswers(newAnswers);
+    setSelected([]);
 
-      return {
+    const displayText = choices.join(", ");
+    const next = currentQ + 1;
+
+    if (next < questions.length) {
+      setHistory((h) => [
+        ...h,
+        { role: "user", text: displayText },
+        { role: "ai", text: questions[next].question },
+      ]);
+      setCurrentQ(next);
+    } else {
+      setHistory((h) => [
+        ...h,
+        { role: "user", text: displayText },
+        { role: "ai", text: "Perfect! I've got everything I need. Let's move on to your skills." },
+      ]);
+      setCurrentQ(questions.length);
+    }
+  };
+
+  const handleSingle = (choice: string) => {
+    if (isDone) return;
+    advance([choice]);
+  };
+
+  const toggleMulti = (choice: string) => {
+    setSelected((prev) =>
+      prev.includes(choice) ? prev.filter((c) => c !== choice) : [...prev, choice]
+    );
+  };
+
+  const handleContinue = async () => {
+    if (isDone) {
+      setIsSubmitting(true);
+      const payload = questions.map((q) => ({
         field: q.field,
         question: q.question,
         multi: q.multi,
-        choices: selectedChoices, // ✅ FIXED TYPE
-        label: q.label || "",
-      };
-    });
-
-    onNext(payload);
+        choices: answers[q.field] ?? [],
+        label: q.label ?? "",
+      }));
+      onNext(payload);
+    } else if (isMulti && selected.length > 0) {
+      advance(selected);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <h2 className="text-2xl font-semibold font-[var(--font-cormorant-sc)]">
-        Tell Us About Yourself
-      </h2>
+    <div className="flex flex-col gap-4" style={{ minHeight: 400 }}>
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900">Tell us about yourself</h2>
+        <p className="text-sm text-gray-400 mt-0.5">This helps us tailor the experience for you</p>
+      </div>
 
-      {questions.map((q) => (
-        <fieldset key={q.field}>
-          <legend className="text-sm font-medium text-neutral-700 mb-2">
-            {q.question}
-          </legend>
+      {/* Progress */}
+      <ProgressBar current={currentQ} total={questions.length} />
 
-          <div className="grid grid-cols-2 gap-3">
-            {q.choices.map((choice) => (
-              <label
+      {/* Chat history */}
+      <div
+        ref={scrollRef}
+        className="flex flex-col gap-3.5 overflow-y-auto flex-1 pr-0.5 scroll-smooth"
+        style={{ maxHeight: 300, minHeight: 200 }}
+      >
+        {history.map((msg, i) => (
+          <ChatBubble key={i} role={msg.role} text={msg.text} />
+        ))}
+      </div>
+
+      {/* Choice buttons for current question */}
+      {!isDone && (
+        <div className="flex flex-col gap-2 pt-1">
+          {isMulti && (
+            <p className="text-xs font-medium text-amber-600 flex items-center gap-1">
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-100 text-amber-600 text-[10px] font-bold leading-none">+</span>
+              Select all that apply
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {currentQuestion.choices.map((choice) => (
+              <ChoiceButton
                 key={choice}
-                className="flex items-center gap-2 rounded-lg border border-neutral-200 p-3 cursor-pointer hover:bg-amber-50"
-              >
-                <input
-                  {...register(q.field)}
-                  type={q.multi ? "checkbox" : "radio"}
-                  value={choice}
-                  className="accent-amber-500"
-                />
-                <span className="text-sm">{choice}</span>
-              </label>
+                label={choice}
+                selected={isMulti ? selected.includes(choice) : false}
+                onClick={() => (isMulti ? toggleMulti(choice) : handleSingle(choice))}
+              />
             ))}
           </div>
-        </fieldset>
-      ))}
+        </div>
+      )}
 
-      <Button
-        type="submit"
-        variant="primary-gradient"
-        size="lg"
-        className="w-full"
-        disabled={isSubmitting}
-      >
-        Continue
-      </Button>
-    </form>
+      {/* Continue / Submit — shows for multi after selection, or when all done */}
+      {(isDone || (isMulti && selected.length > 0)) && (
+        <Button
+          type="button"
+          variant="primary-gradient"
+          size="lg"
+          className="w-full mt-1"
+          disabled={isSubmitting}
+          onClick={handleContinue}
+        >
+          {isSubmitting ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Saving…
+            </span>
+          ) : isDone ? (
+            "Continue to Skills"
+          ) : (
+            "Continue"
+          )}
+        </Button>
+      )}
+    </div>
   );
 }

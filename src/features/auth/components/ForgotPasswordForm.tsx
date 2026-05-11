@@ -15,42 +15,23 @@ export function ForgotPasswordForm() {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm({
     resolver: zodResolver(forgotSchema),
   });
 
-  const emailValue = watch("email");
-
   const onSubmit = async (data: { email: string }) => {
     setIsLoading(true);
     try {
-      console.log("📝 [Forgot Password] Requesting OTP for:", data.email);
-
-      const response = await api.post("/auth/forgot-password", data);
-      console.log("✅ [Forgot Password] OTP sent successfully:", response.data);
-
+      await api.post("/auth/forgot-password", data);
       toast.success("OTP sent to your email");
-
-      // Redirect to reset password with email in URL params
-      // This preserves state across page navigation
-      const encodedEmail = encodeURIComponent(data.email);
-      console.log("🔄 [Forgot Password] Redirecting to reset-password with email...");
-      router.push(`/reset-password?email=${encodedEmail}&step=otp`);
-    } catch (error: any) {
-      console.error("❌ [Forgot Password] Error:", {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
-      });
-
+      router.push(`/reset-password?email=${encodeURIComponent(data.email)}`);
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { error?: string; detail?: string } }; message?: string };
       const errorMsg =
-        error.response?.data?.error ||
-        error.response?.data?.detail ||
-        error.message ||
+        e.response?.data?.error ||
+        e.response?.data?.detail ||
+        e.message ||
         "Failed to send OTP";
-
-      console.error("📨 Error:", errorMsg);
       toast.error(errorMsg);
     } finally {
       setIsLoading(false);
@@ -59,7 +40,7 @@ export function ForgotPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      <h2 className="text-2xl font-semibold font-[var(--font-cormorant-sc)]">Forgot Password</h2>
+      <h2 className="text-xl font-semibold">Forgot Password</h2>
       <p className="text-sm text-neutral-600">Enter your email to receive a reset code</p>
 
       <div>
@@ -67,7 +48,7 @@ export function ForgotPasswordForm() {
           {...register("email")}
           type="email"
           placeholder="Enter your email"
-          className="w-full rounded-lg border border-neutral-300 p-2.5"
+          className="flex h-9 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/20 focus-visible:border-cyan-500 disabled:opacity-50 transition-colors"
           disabled={isLoading}
         />
         {errors.email && (

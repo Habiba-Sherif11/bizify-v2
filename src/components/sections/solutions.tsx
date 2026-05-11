@@ -9,9 +9,9 @@ function SolutionCard({ icon: Icon, title, description, fadedColor, iconColor }:
     <div className="flex justify-start items-end gap-4">
       {/* Colored Icon Box */}
       <div
-        className={`w-16 h-16 ${fadedColor} rounded-lg flex items-center justify-center flex-shrink-0`}
+        className={`w-10 h-10 ${fadedColor} rounded-lg flex items-center justify-center flex-shrink-0`}
       >
-        <Icon className={`w-6 h-6 ${iconColor}`} />
+        <Icon className={`w-5 h-5 ${iconColor}`} />
       </div>
       {/* Text Content */}
       <div className="flex flex-col justify-center items-start gap-1.5">
@@ -73,20 +73,20 @@ export function Solutions() {
     <section id="features" className="relative py-16 px-4 sm:px-6 lg:px-8 flex items-center">
       <div className="relative w-full max-w-5xl mx-auto">
         {/* Section Header */}
-        <div className="text-center mb-14">
+        <div className="text-center mb-10">
           <div className="inline-block px-4 py-1.5 mb-6 bg-white border border-amber-500 rounded-full">
             <span className="text-xs font-semibold text-amber-500 uppercase tracking-wide">Solutions</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-neutral-950 mb-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-neutral-950 mb-4">
             Every Problem Has a Solution
           </h2>
-          <p className="text-base sm:text-lg text-neutral-600 max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base text-neutral-600 max-w-2xl mx-auto">
             Bizify solves the biggest challenges startup founders face.
           </p>
         </div>
 
         {/* Solutions Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {SOLUTIONS.map((solution, idx) => (
             <SolutionCard key={idx} {...solution} />
           ))}

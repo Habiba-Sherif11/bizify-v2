@@ -1,43 +1,35 @@
 import axios from "axios";
 
+// 70 s — gives the full chain (browser → Next.js route → Render backend cold start) enough time.
+// Render's free tier can take up to 60 s to wake from sleep.
 export const api = axios.create({
-  baseURL: "/api", // proxies through Next API routes
-  withCredentials: true,
+  baseURL: "/api",
+  withCredentials: true, // sends httpOnly auth_token cookie automatically
+  timeout: 70000,
 });
 
-// ✅ FIXED: Request interceptor to attach Bearer token from cookie
-api.interceptors.request.use((config) => {
-  // Try to get auth_token from document.cookie (client-side only)
-  if (typeof document !== "undefined") {
-    const token = document.cookie
-      .split("; ")
-      .find((c) => c.startsWith("auth_token="))
-      ?.split("=")[1];
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log("🔐 [API] Bearer token attached to request");
-    }
-  }
-  return config;
-});
-
-// Response interceptor to handle errors globally
+// Response interceptor: handle 401 auto-logout and global errors
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    const message = error.response?.data?.error || error.message || "Request failed";
+  async (error) => {
+    const status = error.response?.status;
 
-    // Only show toast for non-auth errors or if explicitly needed
-    if (error.response?.status !== 401 && error.response?.status !== 400) {
-      console.error("API Error:", message);
+    // On 401, clear the session and redirect to login (skip if already on logout route)
+    if (status === 401 && !error.config?.url?.includes("/auth/logout")) {
+      try {
+        await fetch("/api/auth/logout", { method: "POST" });
+      } catch {
+        // best-effort
+      }
+      window.location.href = "/login";
+      return new Promise(() => {}); // prevent further error propagation
     }
 
     return Promise.reject(error);
   }
 );
 
-export const post = (url: string, data?: any) => api.post(url, data);
-export const patch = (url: string, data?: any) => api.patch(url, data);
+export const post = (url: string, data?: unknown) => api.post(url, data);
+export const patch = (url: string, data?: unknown) => api.patch(url, data);
 export const get = (url: string) => api.get(url);
-export const put = (url: string, data?: any) => api.put(url, data);
+export const put = (url: string, data?: unknown) => api.put(url, data);

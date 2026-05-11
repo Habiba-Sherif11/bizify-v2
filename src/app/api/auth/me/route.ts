@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
+import { handleBackendError } from "@/lib/backend-error";
 
-/**
- * GET /api/auth/me
- * Returns the currently authenticated user (from the auth_token cookie)
- * or { user: null } if not authenticated.
- */
 export async function GET(request: NextRequest) {
   const token = request.cookies.get("auth_token")?.value;
 
@@ -13,43 +9,55 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ user: null });
   }
 
-  try {
-    const { data } = await axios.get(
-      `${process.env.BACKEND_URL}/api/v1/users/me`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+  const headers = { Authorization: `Bearer ${token}` };
 
-    const user = {
-      email: data.email || data.username || "",
-      role: data.role || "entrepreneur",
-      name: data.full_name || data.name || data.username || "",
-    };
+  // Try /users/me first, fall back to /auth/session-status
+  const attempts = [
+    `${process.env.BACKEND_URL}/api/v1/users/me`,
+    `${process.env.BACKEND_URL}/api/v1/auth/session-status`,
+  ];
 
-    return NextResponse.json({ user });
-  } catch (error: any) {
-    // Failed to fetch user – invalid token or backend error
-    return NextResponse.json({ user: null });
+  for (const url of attempts) {
+    try {
+      const { data } = await axios.get(url, { headers, timeout: 65_000 });
+
+      console.log(`[/api/auth/me] Success from ${url}:`, JSON.stringify(data));
+
+      const user = {
+        email: data.email || data.username || data.user?.email || "",
+        role: data.role || data.user?.role || "entrepreneur",
+        name: data.full_name || data.name || data.username || data.user?.full_name || "",
+      };
+
+      return NextResponse.json({ user });
+    } catch (err: unknown) {
+      const e = err as { response?: { status?: number; data?: unknown }; code?: string };
+      console.error(
+        `[/api/auth/me] Failed ${url}:`,
+        e.response?.status ?? e.code,
+        JSON.stringify(e.response?.data)
+      );
+      // continue to next attempt
+    }
   }
+
+  // All attempts failed — return null so frontend shows "session expired"
+  return NextResponse.json({ user: null });
 }
 
-/**
- * PATCH /api/auth/me
- * Updates the current user's profile (e.g., skills).
- * Expects a JSON body with the fields to update.
- */
 export async function PATCH(request: NextRequest) {
   const token = request.cookies.get("auth_token")?.value;
 
   if (!token) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
 
   try {
     const { data } = await axios.patch(
@@ -60,19 +68,13 @@ export async function PATCH(request: NextRequest) {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
+        timeout: 65_000,
       }
     );
 
     return NextResponse.json(data, { status: 200 });
-  } catch (error: any) {
-    console.error(
-      "Profile update error:",
-      error.response?.status,
-      error.response?.data
-    );
-    return NextResponse.json(
-      { error: error.response?.data?.detail || "Update failed" },
-      { status: error.response?.status || 500 }
-    );
+  } catch (error: unknown) {
+    const { message, status } = handleBackendError(error, "Update failed");
+    return NextResponse.json({ error: message }, { status });
   }
 }

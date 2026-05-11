@@ -9,15 +9,15 @@ import SVGComponent from "@/components/sections/logo";
 
 export function Footer() {
   return (
-    <footer className="bg-white border-t border-neutral-200 py-12 px-4 sm:px-6 lg:px-8">
+    <footer className="bg-white border-t border-neutral-200 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           {/* Brand */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <SVGComponent className="h-10 w-auto" />
+              <SVGComponent className="h-8 w-auto" />
               <span
-                className="text-2xl font-semibold text-neutral-900"
+                className="text-xl font-semibold text-neutral-900"
                 style={{ fontFamily: "var(--font-cormorant-sc)" }}
               >
                 Bizify
@@ -105,7 +105,7 @@ export function Footer() {
         </div>
 
         {/* Divider & Legal */}
-        <div className="border-t border-neutral-200 pt-8">
+        <div className="border-t border-neutral-200 pt-6">
           <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-neutral-600">
             <p>&copy; 2024 Bizify. All rights reserved.</p>
             <div className="flex gap-6 mt-4 sm:mt-0">
