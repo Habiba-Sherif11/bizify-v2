@@ -64,7 +64,7 @@ export default function RootLayout({
         cormorantSC.variable
       )}
     >
-      <body className="min-h-full flex flex-col overflow-x-hidden">
+      <body className="min-h-screen flex flex-col">
         <ReactQueryProvider>
           <ThemeProvider>
             <LanguageProvider>

@@ -123,12 +123,21 @@
   }
   html {
     @apply font-sans;
-    /* Reserve scrollbar gutter to prevent layout shift on page transitions */
     overflow-y: scroll;
     scrollbar-gutter: stable;
   }
   body {
     @apply bg-background text-foreground;
+    /* clip instead of hidden: prevents horizontal overflow without creating a
+       scroll container or triggering the CSS spec rule that forces overflow-y to auto */
+    overflow-x: clip;
+  }
+  /* react-remove-scroll-bar (Radix Dialog/Select/Popover) injects overflow:hidden
+     on this selector when a modal opens. Since our scrollbar gutter is already
+     reserved on <html>, no extra padding shift is needed. */
+  body[data-scroll-locked] {
+    padding-right: var(--removed-body-scroll-bar-size, 0px) !important;
+    margin-right: 0 !important;
   }
   [dir="rtl"] {
     --font-sans: var(--font-tajawal);
