@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import { LoginForm } from "@/features/auth/components/LoginForm";
 import loginImg from "@/assets/imgs/auth/login.png";
 
@@ -15,7 +16,9 @@ export default function LoginPage() {
           </div>
 
           <div className="rounded-xl border border-gray-200/80 bg-white p-6 shadow-sm">
-            <LoginForm />
+            <Suspense>
+              <LoginForm />
+            </Suspense>
           </div>
         </div>
       </div>
