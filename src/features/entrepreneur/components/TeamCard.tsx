@@ -1,6 +1,7 @@
 "use client";
 
-import { Settings } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { MoreVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Member {
@@ -16,7 +17,8 @@ export interface TeamCardProps {
   members: Member[];
   overflowCount?: number;
   overflowColor?: "amber" | "cyan";
-  onSettings?: () => void;
+  onMenuClick?: (e: React.MouseEvent) => void;
+  onDeleteClick?: (e: React.MouseEvent) => void;
 }
 
 function MemberAvatar({ name }: { name: string }) {
@@ -35,8 +37,55 @@ export function TeamCard({
   members,
   overflowCount,
   overflowColor = "amber",
-  onSettings,
+  onMenuClick,
+  onDeleteClick,
 }: TeamCardProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const menuContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!menuContainerRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+        setDeleteConfirm(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [menuOpen]);
+
+  const handleMenuClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenuOpen((prev) => !prev);
+    setDeleteConfirm(false);
+    onMenuClick?.(e);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!deleteConfirm) {
+      setDeleteConfirm(true);
+      return;
+    }
+    setMenuOpen(false);
+    setDeleteConfirm(false);
+    onDeleteClick?.(e);
+  };
+
+  const handleDeleteCancel = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDeleteConfirm(false);
+  };
+
   return (
     <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col gap-4">
       {/* Header */}
@@ -47,14 +96,50 @@ export function TeamCard({
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{date}</p>
         </div>
-        <button
-          type="button"
-          onClick={onSettings}
-          title="Team settings"
-          className="w-7 h-7 flex items-center justify-center text-gray-400 dark:text-gray-500 cursor-pointer shrink-0 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
-        >
-          <Settings size={15} />
-        </button>
+        <div ref={menuContainerRef} className="relative shrink-0">
+          <button
+            type="button"
+            onClick={handleMenuClick}
+            title="Team options"
+            className="w-7 h-7 flex items-center justify-center text-gray-400 dark:text-gray-500 cursor-pointer rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+          >
+            <MoreVertical size={15} />
+          </button>
+
+          {menuOpen && (
+            <div className="absolute right-0 top-9 z-20 min-w-30 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 shadow-lg p-1">
+              {!deleteConfirm ? (
+                <button
+                  type="button"
+                  onClick={handleDeleteClick}
+                  className="w-full px-3 py-1.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md cursor-pointer"
+                >
+                  Delete
+                </button>
+              ) : (
+                <div className="px-2 py-1.5 flex flex-col gap-2">
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Are you sure?</p>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleDeleteCancel}
+                      className="flex-1 px-2 py-1 text-xs bg-neutral-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-300 rounded-md cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-600"
+                    >
+                      No
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteClick}
+                      className="flex-1 px-2 py-1 text-xs bg-red-600 text-white rounded-md cursor-pointer hover:bg-red-700"
+                    >
+                      Yes
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Body */}

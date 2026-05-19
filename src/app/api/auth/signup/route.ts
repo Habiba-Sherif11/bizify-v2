@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
-import axios, { AxiosError } from "axios";
 
-const BACKEND_TIMEOUT = 65_000; // 65 s — Render free tier can take ~60 s to wake
+const BACKEND_TIMEOUT_MS = 65_000;
 
 function parseBackendMessage(data: unknown, fallback: string): string {
   if (!data || typeof data !== "object" || Array.isArray(data)) return fallback;
-
   const d = data as Record<string, unknown>;
-
   if (Array.isArray(d.detail)) {
     const first = d.detail[0] as Record<string, unknown> | undefined;
     return typeof first?.msg === "string" ? first.msg : fallback;
@@ -15,7 +12,6 @@ function parseBackendMessage(data: unknown, fallback: string): string {
   if (typeof d.detail === "string" && d.detail) return d.detail;
   if (typeof d.error === "string" && d.error) return d.error;
   if (typeof d.message === "string" && d.message) return d.message;
-
   return fallback;
 }
 
@@ -42,35 +38,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
   }
 
-  console.log(`[Signup] Calling backend: POST ${backendUrl}/api/v1/users/register`);
+  console.log(`[Signup] POST ${backendUrl}/api/v1/users/register`);
 
   try {
-    const { data, status } = await axios.post(
-      `${backendUrl}/api/v1/users/register`,
-      { full_name, email, password, confirm_password },
-      { timeout: BACKEND_TIMEOUT }
-    );
+    const res = await fetch(`${backendUrl}/api/v1/users/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ full_name, email, password, confirm_password }),
+      signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
+    });
 
-    console.log("[Signup] Backend success:", status, data);
-    return NextResponse.json(data, { status: 201 });
-  } catch (err: unknown) {
-    const error = err as AxiosError;
+    const data: unknown = await res.json().catch(() => ({}));
 
-    if (error.response) {
-      // Backend replied with a non-2xx status
-      console.error(
-        "[Signup] Backend error:",
-        error.response.status,
-        JSON.stringify(error.response.data)
-      );
-      const message = parseBackendMessage(error.response.data, "Registration failed");
-      return NextResponse.json({ error: message }, { status: error.response.status });
+    if (!res.ok) {
+      console.error("[Signup] Backend error:", res.status, data);
+      const message = parseBackendMessage(data, "Registration failed");
+      return NextResponse.json({ error: message }, { status: res.status });
     }
 
-    // No response — network / timeout
-    const isTimeout = error.code === "ECONNABORTED" || error.message?.includes("timeout");
-    console.error("[Signup] Network error:", error.code, error.message);
-
+    console.log("[Signup] Backend success:", res.status);
+    return NextResponse.json(data, { status: 201 });
+  } catch (err: unknown) {
+    const isTimeout = err instanceof Error && err.name === "TimeoutError";
+    console.error("[Signup] Fetch error:", isTimeout ? "timeout" : err);
     return NextResponse.json(
       {
         error: isTimeout

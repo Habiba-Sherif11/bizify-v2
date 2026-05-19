@@ -23,10 +23,17 @@ export async function GET(request: NextRequest) {
 
       console.log(`[/api/auth/me] Success from ${url}:`, JSON.stringify(data));
 
+      const rawRole = (data.role || data.user?.role || "entrepreneur") as string;
       const user = {
         email: data.email || data.username || data.user?.email || "",
-        role: data.role || data.user?.role || "entrepreneur",
+        role: rawRole.toLowerCase() as "entrepreneur" | "manufacturer" | "mentor" | "supplier" | "admin",
         name: data.full_name || data.name || data.username || data.user?.full_name || "",
+        approval_status: (data.approval_status || data.user?.approval_status) as
+          | "PENDING"
+          | "APPROVED"
+          | "REJECTED"
+          | undefined,
+        business_id: (data.business_id || data.user?.business_id) as string | undefined,
       };
 
       return NextResponse.json({ user });

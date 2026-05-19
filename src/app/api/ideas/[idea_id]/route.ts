@@ -1,0 +1,22 @@
+import { NextRequest, NextResponse } from "next/server";
+import axios from "axios";
+import { getBearerHeaders } from "@/lib/backend-auth";
+import { handleBackendError } from "@/lib/backend-error";
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ idea_id: string }> }
+) {
+  const { idea_id } = await params;
+  const headers = getBearerHeaders(req);
+  try {
+    const { data } = await axios.get(
+      `${process.env.BACKEND_URL}/api/v1/ideas/${idea_id}`,
+      { headers, timeout: 30_000 }
+    );
+    return NextResponse.json(data);
+  } catch (error: unknown) {
+    const { message, status } = handleBackendError(error, "Failed to fetch idea");
+    return NextResponse.json({ error: message }, { status });
+  }
+}

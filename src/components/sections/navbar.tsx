@@ -65,7 +65,7 @@ export function Navbar() {
               className="flex items-center gap-2 group shrink-0"
               onClick={handleLinkClick}
             >
-              <SVGComponent className="h-8 w-auto transition-transform group-hover:scale-105 duration-200" />
+              <SVGComponent className="h-8 w-auto" />
               <span
                 className="text-xl font-semibold text-neutral-900"
                 style={{ fontFamily: "var(--font-cormorant-sc)" }}

@@ -1,41 +1,71 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Search, Loader2, Plus, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { api } from "../lib/api";
 
-export type SkillEntry =
-  | { predefined_skill_id: string; skill_name?: never }
-  | { skill_name: string; predefined_skill_id?: never };
+export type SkillEntry = { skill_name: string };
+
+interface NormalizedCategory {
+  name: string;
+  subcategories: string[];
+}
 
 interface Props {
   onComplete: (skills: SkillEntry[]) => Promise<void>;
-}
-
-interface PredefinedSkill {
-  id: string;
-  name: string;
-}
-
-interface SkillCategory {
-  id: string;
-  name: string;
-  predefined_skills: PredefinedSkill[];
+  title?: string;
+  description?: string;
+  submitLabel?: string;
+  existingSkillNames?: Set<string>;
 }
 
 interface SelectedSkill {
-  id?: string;
   name: string;
-  isCustom: boolean;
 }
 
-export function SkillsStep({ onComplete }: Props) {
-  const [categories, setCategories] = useState<SkillCategory[]>([]);
-  const [allSkills, setAllSkills] = useState<PredefinedSkill[]>([]);
-  const [loadingSkills, setLoadingSkills] = useState(true);
-  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
+function normalizeCategories(raw: unknown): NormalizedCategory[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw
+      .map((item) => {
+        if (typeof item === "string") return { name: item, subcategories: [] };
+        if (item && typeof item === "object") {
+          const obj = item as Record<string, unknown>;
+          const name = String(obj.name ?? obj.category ?? obj.title ?? "");
+          const subs = Array.isArray(obj.subcategories)
+            ? (obj.subcategories as string[])
+            : [];
+          return { name, subcategories: subs };
+        }
+        return { name: "", subcategories: [] };
+      })
+      .filter((c) => c.name);
+  }
+  if (typeof raw === "object" && raw !== null) {
+    return Object.entries(raw as Record<string, unknown>).map(([key, value]) => ({
+      name: key,
+      subcategories: Array.isArray(value) ? (value as string[]) : [],
+    }));
+  }
+  return [];
+}
+
+export function SkillsStep({
+  onComplete,
+  title = "Your skills",
+  description = "Search for skills or type anything to add a custom one",
+  submitLabel = "Complete setup",
+  existingSkillNames,
+}: Props) {
+  const [categories, setCategories] = useState<NormalizedCategory[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [categorySkills, setCategorySkills] = useState<string[]>([]);
+  const [loadingCategorySkills, setLoadingCategorySkills] = useState(false);
+  const [searchResults, setSearchResults] = useState<string[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [loadingSearch, setLoadingSearch] = useState(false);
 
   const [query, setQuery] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -44,18 +74,44 @@ export function SkillsStep({ onComplete }: Props) {
   const [error, setError] = useState("");
 
   const searchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     api
       .get("/profile/skill-categories")
-      .then((res) => {
-        const cats = res.data as SkillCategory[];
-        setCategories(cats);
-        setAllSkills(cats.flatMap((c) => c.predefined_skills));
-      })
-      .catch(() => { setCategories([]); setAllSkills([]); })
-      .finally(() => setLoadingSkills(false));
+      .then((res) => setCategories(normalizeCategories(res.data)))
+      .catch(() => setCategories([]))
+      .finally(() => setLoadingCategories(false));
   }, []);
+
+  const searchSkills = useCallback((q: string) => {
+    if (!q.trim()) {
+      setSearchResults([]);
+      setLoadingSearch(false);
+      return;
+    }
+    setLoadingSearch(true);
+    api
+      .get(`/profile/skills/search?q=${encodeURIComponent(q)}`)
+      .then((res) => {
+        const results = res.data;
+        setSearchResults(Array.isArray(results) ? (results as string[]) : []);
+      })
+      .catch(() => setSearchResults([]))
+      .finally(() => setLoadingSearch(false));
+  }, []);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    debounceRef.current = setTimeout(() => searchSkills(query), 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query, searchSkills]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -67,72 +123,84 @@ export function SkillsStep({ onComplete }: Props) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const selectedIds = new Set(selected.filter((s) => !s.isCustom).map((s) => s.id));
   const selectedNames = new Set(selected.map((s) => s.name.toLowerCase()));
+  const allTakenNames = existingSkillNames
+    ? new Set([...selectedNames, ...existingSkillNames])
+    : selectedNames;
 
-  const searchMatches = query.trim()
-    ? allSkills.filter(
-        (s) =>
-          s.name.toLowerCase().includes(query.toLowerCase()) &&
-          !selectedNames.has(s.name.toLowerCase())
-      )
-    : [];
-
+  const filteredResults = searchResults.filter(
+    (name) => !allTakenNames.has(name.toLowerCase())
+  );
   const canAddCustom =
     query.trim().length > 0 &&
-    !selectedNames.has(query.trim().toLowerCase()) &&
-    !allSkills.some((s) => s.name.toLowerCase() === query.trim().toLowerCase());
+    !allTakenNames.has(query.trim().toLowerCase()) &&
+    !searchResults.some((s) => s.toLowerCase() === query.trim().toLowerCase());
 
   const showDropdown =
-    dropdownOpen && query.trim().length > 0 && (searchMatches.length > 0 || canAddCustom);
+    dropdownOpen &&
+    query.trim().length > 0 &&
+    (filteredResults.length > 0 || canAddCustom || loadingSearch);
 
-  const toggleCategory = (id: string) => {
-    setOpenCategories((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
-  const addPredefined = (skill: PredefinedSkill) => {
-    if (selectedNames.has(skill.name.toLowerCase())) return;
-    setSelected((prev) => [...prev, { id: skill.id, name: skill.name, isCustom: false }]);
-    setQuery("");
-    setDropdownOpen(false);
-    if (error) setError("");
-  };
-
-  const removePredefined = (id: string) =>
-    setSelected((prev) => prev.filter((s) => s.id !== id));
-
-  const addCustom = (name: string) => {
+  const addSkill = (name: string) => {
     const trimmed = name.trim();
-    if (!trimmed || selectedNames.has(trimmed.toLowerCase())) return;
-    setSelected((prev) => [...prev, { name: trimmed, isCustom: true }]);
+    if (!trimmed || allTakenNames.has(trimmed.toLowerCase())) return;
+    setSelected((prev) => [...prev, { name: trimmed }]);
     setQuery("");
     setDropdownOpen(false);
+    setSearchResults([]);
     if (error) setError("");
   };
 
-  const removeSkill = (skill: SelectedSkill) =>
-    setSelected((prev) => prev.filter((s) => s.name !== skill.name));
+  const removeSkill = (name: string) =>
+    setSelected((prev) => prev.filter((s) => s.name !== name));
+
+  const handleCategoryClick = (cat: NormalizedCategory) => {
+    if (selectedCategory === cat.name) {
+      setSelectedCategory(null);
+      setCategorySkills([]);
+      return;
+    }
+    setSelectedCategory(cat.name);
+    setCategorySkills([]);
+    if (cat.subcategories.length === 0) {
+      // Use the first word of the category name as the search key so the
+      // backend returns actual skill names (not the category label itself).
+      const keyword = cat.name.split(/\s*[&,]\s*/)[0].trim();
+      setLoadingCategorySkills(true);
+      api
+        .get(`/profile/skills/search?q=${encodeURIComponent(keyword)}`)
+        .then((res) => {
+          const results = Array.isArray(res.data) ? (res.data as string[]) : [];
+          setCategorySkills(results);
+        })
+        .catch(() => setCategorySkills([]))
+        .finally(() => setLoadingCategorySkills(false));
+    }
+  };
+
+  const handleSubcategoryClick = (subcat: string) => {
+    setQuery(subcat);
+    setDropdownOpen(true);
+    searchSkills(subcat);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      if (searchMatches.length > 0) addPredefined(searchMatches[0]);
-      else if (canAddCustom) addCustom(query);
+      if (filteredResults.length > 0) addSkill(filteredResults[0]);
+      else if (canAddCustom) addSkill(query);
     }
     if (e.key === "Escape") setDropdownOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selected.length === 0) { setError("Add at least one skill to continue"); return; }
+    if (selected.length === 0) {
+      setError("Add at least one skill to continue");
+      return;
+    }
     setIsSubmitting(true);
-    const entries: SkillEntry[] = selected.map((s) =>
-      s.isCustom || !s.id ? { skill_name: s.name } : { predefined_skill_id: s.id }
-    );
+    const entries: SkillEntry[] = selected.map((s) => ({ skill_name: s.name }));
     await onComplete(entries);
     setIsSubmitting(false);
   };
@@ -141,10 +209,8 @@ export function SkillsStep({ onComplete }: Props) {
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">Your skills</h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Search or browse by category — type anything new to add it
-        </p>
+        <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">{title}</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{description}</p>
       </div>
 
       {/* Selected chips */}
@@ -153,17 +219,12 @@ export function SkillsStep({ onComplete }: Props) {
           {selected.map((s) => (
             <span
               key={s.name}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border",
-                s.isCustom
-                  ? "bg-amber-50 border-amber-200 text-amber-700"
-                  : "bg-cyan-50 border-cyan-200 text-cyan-700"
-              )}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-cyan-50 border-cyan-200 text-cyan-700 dark:bg-cyan-900/30 dark:border-cyan-700 dark:text-cyan-300"
             >
               {s.name}
               <button
                 type="button"
-                onClick={() => removeSkill(s)}
+                onClick={() => removeSkill(s.name)}
                 className="opacity-60 hover:opacity-100 transition-opacity"
               >
                 <X size={11} />
@@ -176,44 +237,68 @@ export function SkillsStep({ onComplete }: Props) {
       {/* Search bar + dropdown */}
       <div ref={searchRef} className="relative">
         <div className="relative">
-          {loadingSkills ? (
-            <Loader2 size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
+          {loadingSearch ? (
+            <Loader2
+              size={15}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin"
+            />
           ) : (
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search
+              size={15}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
           )}
           <input
             type="text"
-            placeholder={loadingSkills ? "Loading skills…" : "Search skills…"}
+            placeholder="Search or add skills…"
             value={query}
-            disabled={isSubmitting || loadingSkills}
-            onChange={(e) => { setQuery(e.target.value); setDropdownOpen(true); }}
-            onFocus={() => { if (query.trim()) setDropdownOpen(true); }}
+            disabled={isSubmitting}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setDropdownOpen(true);
+            }}
+            onFocus={() => {
+              if (query.trim()) setDropdownOpen(true);
+            }}
             onKeyDown={handleKeyDown}
-            className="w-full pl-9 pr-4 py-2.5 text-sm rounded-lg border border-gray-200 bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 disabled:opacity-50 transition-colors"
+            className="w-full pl-9 pr-4 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 disabled:opacity-50 transition-colors"
           />
         </div>
 
         {/* Search dropdown */}
         {showDropdown && (
-          <div className="absolute z-20 top-full mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-            <ul className="max-h-52 overflow-y-auto overflow-x-hidden divide-y divide-gray-100">
-              {searchMatches.map((skill) => (
-                <li key={skill.id}>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); addPredefined(skill); }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-700 transition-colors"
-                  >
-                    {skill.name}
-                  </button>
+          <div className="absolute z-20 top-full mt-1 w-full bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-xl shadow-lg overflow-hidden">
+            <ul className="max-h-52 overflow-y-auto divide-y divide-gray-100 dark:divide-neutral-700">
+              {loadingSearch && (
+                <li className="px-4 py-2.5 text-sm text-gray-400 flex items-center gap-2">
+                  <Loader2 size={13} className="animate-spin" />
+                  Searching…
                 </li>
-              ))}
-              {canAddCustom && (
+              )}
+              {!loadingSearch &&
+                filteredResults.map((name) => (
+                  <li key={name}>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        addSkill(name);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 hover:text-cyan-700 dark:hover:text-cyan-400 transition-colors"
+                    >
+                      {name}
+                    </button>
+                  </li>
+                ))}
+              {!loadingSearch && canAddCustom && (
                 <li>
                   <button
                     type="button"
-                    onMouseDown={(e) => { e.preventDefault(); addCustom(query); }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-amber-600 hover:bg-amber-50 transition-colors flex items-center gap-2"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      addSkill(query);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors flex items-center gap-2"
                   >
                     <Plus size={13} />
                     Add &ldquo;{query.trim()}&rdquo; as a new skill
@@ -225,72 +310,112 @@ export function SkillsStep({ onComplete }: Props) {
         )}
       </div>
 
-      {/* Category accordion — hidden while searching */}
-      {!query.trim() && !loadingSkills && categories.length > 0 && (
-        <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 max-h-60 overflow-y-auto overflow-x-hidden">
-          {categories.map((cat) => {
-            const isOpen = openCategories.has(cat.id);
-            const selectedInCat = cat.predefined_skills.filter((s) =>
-              selectedIds.has(s.id)
-            ).length;
-
-            return (
-              <div key={cat.id}>
-                {/* Category header */}
-                <button
-                  type="button"
-                  onClick={() => toggleCategory(cat.id)}
-                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <ChevronRight
-                      size={14}
-                      className={cn(
-                        "text-gray-400 transition-transform duration-200 shrink-0",
-                        isOpen && "rotate-90"
-                      )}
-                    />
-                    <span className="text-sm font-medium text-gray-800">{cat.name}</span>
-                    {selectedInCat > 0 && (
-                      <span className="px-1.5 py-0.5 rounded-full bg-cyan-100 text-cyan-700 text-[10px] font-bold leading-none">
-                        {selectedInCat}
-                      </span>
+      {/* Category quick-filters */}
+      {!loadingCategories && categories.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-gray-400 dark:text-gray-500">
+            Browse by category
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {categories.map((cat) => (
+              <button
+                key={cat.name}
+                type="button"
+                onClick={() => handleCategoryClick(cat)}
+                className={cn(
+                  "inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border transition-all",
+                  selectedCategory === cat.name
+                    ? "bg-cyan-50 dark:bg-cyan-900/30 border-cyan-400 dark:border-cyan-600 text-cyan-700 dark:text-cyan-400"
+                    : "bg-white dark:bg-neutral-700 border-gray-200 dark:border-neutral-600 text-gray-600 dark:text-gray-300 hover:border-cyan-300 dark:hover:border-cyan-600 hover:bg-cyan-50/50 dark:hover:bg-cyan-900/20"
+                )}
+              >
+                {cat.name}
+                {cat.subcategories.length > 0 && (
+                  <ChevronRight
+                    size={11}
+                    className={cn(
+                      "transition-transform",
+                      selectedCategory === cat.name && "rotate-90"
                     )}
-                  </div>
-                  <span className="text-[11px] text-gray-400 shrink-0">
-                    {cat.predefined_skills.length} skills
-                  </span>
-                </button>
+                  />
+                )}
+              </button>
+            ))}
+          </div>
 
-                {/* Expanded skills */}
-                {isOpen && (
-                  <div className="flex flex-wrap gap-2 px-4 pb-3 pt-1 bg-gray-50/60">
-                    {cat.predefined_skills.map((skill) => {
-                      const active = selectedIds.has(skill.id);
+          {/* Subcategories (when backend provides them) */}
+          {selectedCategory && (() => {
+            const cat = categories.find((c) => c.name === selectedCategory);
+            if (!cat || cat.subcategories.length === 0) return null;
+            return (
+              <div className="pl-2 border-l-2 border-cyan-200 dark:border-cyan-700 mt-2 space-y-1.5">
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  {cat.name} — pick a subcategory
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {cat.subcategories.map((sub) => (
+                    <button
+                      key={sub}
+                      type="button"
+                      onClick={() => handleSubcategoryClick(sub)}
+                      disabled={allTakenNames.has(sub.toLowerCase())}
+                      className={cn(
+                        "px-2.5 py-1 rounded-full text-xs border transition-all",
+                        allTakenNames.has(sub.toLowerCase())
+                          ? "opacity-40 cursor-not-allowed bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 text-gray-400"
+                          : "bg-white dark:bg-neutral-700 border-gray-200 dark:border-neutral-600 text-gray-600 dark:text-gray-300 hover:border-cyan-300 dark:hover:border-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 hover:text-cyan-700 dark:hover:text-cyan-400"
+                      )}
+                    >
+                      {sub}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Skills for selected category — persistent chip grid */}
+          {selectedCategory && (
+            <div className="pl-2 border-l-2 border-cyan-200 dark:border-cyan-700 mt-1 space-y-1.5">
+              {loadingCategorySkills ? (
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <Loader2 size={12} className="animate-spin" />
+                  Loading skills…
+                </div>
+              ) : categorySkills.length > 0 ? (
+                <>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    Click to add
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
+                    {categorySkills.map((name) => {
+                      const taken = allTakenNames.has(name.toLowerCase());
                       return (
                         <button
-                          key={skill.id}
+                          key={name}
                           type="button"
-                          onClick={() =>
-                            active ? removePredefined(skill.id) : addPredefined(skill)
-                          }
+                          disabled={taken}
+                          onClick={() => addSkill(name)}
                           className={cn(
-                            "px-3 py-1 rounded-full text-xs font-medium border transition-all",
-                            active
-                              ? "bg-cyan-50 border-cyan-400 text-cyan-700"
-                              : "bg-white border-gray-200 text-gray-600 hover:border-cyan-300 hover:bg-cyan-50/50"
+                            "px-2.5 py-1 rounded-full text-xs border transition-all",
+                            taken
+                              ? "opacity-40 cursor-not-allowed bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 text-gray-400"
+                              : "bg-white dark:bg-neutral-700 border-gray-200 dark:border-neutral-600 text-gray-600 dark:text-gray-300 hover:border-cyan-300 dark:hover:border-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 hover:text-cyan-700 dark:hover:text-cyan-400"
                           )}
                         >
-                          {active && <span className="mr-0.5">✓</span>}
-                          {skill.name}
+                          {taken ? name : `+ ${name}`}
                         </button>
                       );
                     })}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                </>
+              ) : (
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  No predefined skills found — use the search bar above to add any skill.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -309,7 +434,7 @@ export function SkillsStep({ onComplete }: Props) {
             Saving…
           </span>
         ) : (
-          "Complete setup"
+          submitLabel
         )}
       </Button>
     </form>

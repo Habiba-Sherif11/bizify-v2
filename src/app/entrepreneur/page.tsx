@@ -7,7 +7,6 @@ import {
 
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/context/AuthContext";
-import { useLanguage } from "@/features/dashboard/context/LanguageContext";
 import { DashboardHeader } from "@/features/entrepreneur/components/DashboardHeader";
 import { GuidanceTour } from "@/features/guidance/components/GuidanceTour";
 import { ChatBotBubble } from "@/features/entrepreneur/components/ChatBotBubble";
@@ -15,13 +14,11 @@ import { AiSearchBar } from "@/features/entrepreneur/components/AiSearchBar";
 import { FeatureCard } from "@/features/entrepreneur/components/FeatureCard";
 import { RecentActivity, type ActivityItem } from "@/features/entrepreneur/components/RecentActivity";
 
-// ─── Static card config (icons + colors only — text comes from translations) ─
-
 const FEATURE_CARD_CONFIGS = [
-  { id: "ideas" as const, icon: Lightbulb, iconClassName: "bg-cyan-600" },
-  { id: "aiChat" as const, icon: Bot, iconClassName: "bg-linear-to-br from-amber-500 to-yellow-500" },
-  { id: "team" as const, icon: Users, iconClassName: "bg-cyan-800" },
-  { id: "marketplace" as const, icon: Store, iconClassName: "bg-cyan-600" },
+  { id: "ideas",       icon: Lightbulb, iconClassName: "bg-cyan-600",                              title: "My Ideas",     description: "All your saved business ideas, roadmaps, tasks, and validation reports in one place." },
+  { id: "aiChat",      icon: Bot,       iconClassName: "bg-linear-to-br from-amber-500 to-yellow-500", title: "AI Chat",      description: "Start a conversation with the AI to generate, refine, and validate new business ideas." },
+  { id: "team",        icon: Users,     iconClassName: "bg-cyan-800",                              title: "Team",         description: "Manage your team: invite members, assign roles, and view team activity." },
+  { id: "marketplace", icon: Store,     iconClassName: "bg-cyan-600",                              title: "Marketplace",  description: "Browse and connect with external partners: suppliers, mentors, and manufacturers." },
 ];
 
 const ACTIVITY_ITEMS: ActivityItem[] = [
@@ -85,22 +82,19 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const CARD_ROUTES: Record<string, string> = {
-  ideas:       "/entrepreneur/ideas",
-  team:        "/entrepreneur/team",
-  aiChat:      "/entrepreneur/ai-chat",
-  marketplace: "/entrepreneur/marketplace",
+  ideas:      "/entrepreneur/ideas",
+  team:       "/entrepreneur/team",
+  aiChat:     "/entrepreneur/ai-chat",
+  marketplace:"/entrepreneur/marketplace",
 };
 
 export default function EntrepreneurDashboard() {
   const { user } = useAuth();
-  const { t } = useLanguage();
   const router = useRouter();
   const firstName = user?.name?.split(" ")[0] || user?.email?.split("@")[0] || "there";
 
   const featureCards = FEATURE_CARD_CONFIGS.map((c) => ({
     ...c,
-    title: t.features[c.id].title,
-    description: t.features[c.id].description,
     onClick: () => router.push(CARD_ROUTES[c.id] ?? "#"),
   }));
 
@@ -119,10 +113,10 @@ export default function EntrepreneurDashboard() {
         >
           <div className="text-center space-y-2 px-4">
             <h1 className="text-2xl sm:text-3xl font-semibold text-neutral-900 dark:text-white">
-              {t.dashboard.welcome}, {firstName}
+              Welcome back, {firstName}
             </h1>
             <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400">
-              {t.dashboard.subtitle}
+              What would you like to work on today?
             </p>
           </div>
 

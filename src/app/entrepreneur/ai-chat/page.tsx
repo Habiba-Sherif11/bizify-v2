@@ -6,7 +6,20 @@ import {
   Sparkles, MessageSquare, Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { api } from "@/features/auth/lib/api";
+import type { HistoryEntry } from "@/features/entrepreneur/hooks/useGeneralChat";
+
+const CREATE_IDEA_PATTERN = /create.*idea|add.*idea|save.*idea|new.*idea|make.*idea/i;
+
+function extractIdeaTitle(text: string): string {
+  const quoted = text.match(/["']([^"']+)["']/);
+  if (quoted) return quoted[1];
+  const afterKw = text.match(/(?:create|add|save|make|new)\s+(?:an?\s+)?idea\s+(?:called|named|titled|about)?\s*(.+)/i);
+  if (afterKw) return afterKw[1].trim().replace(/[.!?]+$/, "").slice(0, 80);
+  return text.slice(0, 60);
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,28 +36,16 @@ interface Conversation {
   preview: string;
   date: string;
   messages: Message[];
+  history: HistoryEntry[];
 }
 
-// ─── Mock data ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function ts() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function aiReply(text: string): string {
-  const q = text.toLowerCase();
-  if (q.includes("market") || q.includes("size"))
-    return "To size your market, start with a top-down approach: find the TAM (Total Addressable Market) from industry reports, then estimate your SAM and SOM based on your go-to-market constraints. For example, if the global food-delivery market is $150B, your SAM might be Egypt at ~$3B, and your realistic SOM in year 1 could be $30M. Want me to help model this for your specific idea?";
-  if (q.includes("pitch") || q.includes("deck") || q.includes("investor"))
-    return "A strong pitch deck has 10–12 slides: Problem → Solution → Market Size → Product Demo → Business Model → Traction → Team → Ask. Investors spend ~3 minutes on a cold deck, so lead with the most compelling hook — usually the problem or traction slide. What's your startup about? I can help you structure yours.";
-  if (q.includes("idea") || q.includes("validate"))
-    return "The fastest way to validate is the 5 Customer Conversations method: talk to 5 potential users in 48 hours. Ask about their current behaviour (not opinions). Listen for pain intensity and willingness to pay. If 3 out of 5 say they'd pay or refer, you have signal worth pursuing. What problem are you solving?";
-  if (q.includes("team") || q.includes("cofounder"))
-    return "The ideal founding team has 3 complementary profiles: a Hacker (builder), a Hustler (seller), and a Designer (UX/product thinker). Studies show 2-3 person founding teams raise 30% more funding than solo founders. What skills do you currently have on your team?";
-  if (q.includes("fund") || q.includes("raise") || q.includes("investor"))
-    return "At pre-seed stage, focus on angels and micro-VCs who invest in your region and vertical. Prepare a 1-page executive summary before your deck. Warm intros convert 10x better than cold outreach. Build in public to create inbound. What stage are you at and how much are you looking to raise?";
-  return "Great question! As your AI co-founder, I can help you with idea validation, market research, competitive analysis, pitch preparation, team building, and go-to-market strategy. What specific challenge are you working through right now?";
-}
+// ─── Initial data ─────────────────────────────────────────────────────────────
 
 const INITIAL_CONVERSATIONS: Conversation[] = [
   {
@@ -52,6 +53,7 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     title: "Validating Cafe Noir",
     preview: "How do I test if people would pay for…",
     date: "Today",
+    history: [],
     messages: [
       { id: "1", role: "user",      text: "How do I test if people would pay for a specialty coffee subscription?", time: "09:14" },
       { id: "2", role: "assistant", text: "Great question! The fastest way to validate pricing is to create a simple landing page with a 'Pre-order for 10% off' CTA. If 3–5% of visitors convert to waitlist sign-ups, that's strong signal. You can also run 5 customer interviews asking about current coffee spending. What city are you targeting?", time: "09:14" },
@@ -64,6 +66,7 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     title: "Fundraising strategy",
     preview: "What slides should I focus on for…",
     date: "Yesterday",
+    history: [],
     messages: [
       { id: "1", role: "user",      text: "What slides should I focus on for a pre-seed pitch?", time: "15:22" },
       { id: "2", role: "assistant", text: "For pre-seed, investors bet on the team and the problem, not the product. Prioritise: (1) Problem slide — make it visceral, use a story. (2) Team slide — show relevant experience and why you uniquely. (3) Traction — even early signals count. The rest is secondary. You have ~90 seconds per slide. Want me to review your current deck?", time: "15:23" },
@@ -141,42 +144,111 @@ function MessageBubble({ msg }: { msg: Message }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+const STORAGE_KEY = "bizify_ai_conversations";
+const ACTIVE_KEY  = "bizify_ai_active_id";
+
+function loadConversations(): Conversation[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw) as Conversation[];
+  } catch {}
+  return INITIAL_CONVERSATIONS;
+}
+
+function loadActiveId(conversations: Conversation[]): string {
+  try {
+    const saved = localStorage.getItem(ACTIVE_KEY);
+    if (saved && conversations.some((c) => c.id === saved)) return saved;
+  } catch {}
+  return conversations[0]?.id ?? "";
+}
+
 export default function AiChatPage() {
-  const [conversations, setConversations] = useState<Conversation[]>(INITIAL_CONVERSATIONS);
-  const [activeId, setActiveId] = useState<string>(INITIAL_CONVERSATIONS[0].id);
+  const searchParams = useSearchParams();
+  const [conversations, setConversations] = useState<Conversation[]>(() => loadConversations());
+  const [activeId, setActiveId] = useState<string>(() => loadActiveId(loadConversations()));
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef  = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const autoSentRef = useRef(false);
 
   const active = conversations.find((c) => c.id === activeId) ?? conversations[0];
+
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations)); } catch {}
+  }, [conversations]);
+
+  useEffect(() => {
+    try { localStorage.setItem(ACTIVE_KEY, activeId); } catch {}
+  }, [activeId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [active?.messages, thinking]);
 
-  const handleSend = () => {
+  const updateConversation = (id: string, patch: Partial<Conversation>) =>
+    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+
+  const handleSend = async () => {
     const text = input.trim();
     if (!text || thinking) return;
 
     const userMsg: Message = { id: Date.now().toString(), role: "user", text, time: ts() };
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === activeId
-          ? { ...c, messages: [...c.messages, userMsg], preview: text.slice(0, 40) }
-          : c
-      )
-    );
+    const baseMessages = [...active.messages, userMsg];
+    updateConversation(activeId, { messages: baseMessages, preview: text.slice(0, 40) });
     setInput("");
     setThinking(true);
 
-    setTimeout(() => {
-      const reply: Message = { id: (Date.now() + 1).toString(), role: "assistant", text: aiReply(text), time: ts() };
-      setConversations((prev) =>
-        prev.map((c) => (c.id === activeId ? { ...c, messages: [...c.messages, reply] } : c))
-      );
+    const newTitle = active.title === "New conversation" ? text.slice(0, 30) : active.title;
+
+    try {
+      // Create idea intent — POST only title + description (no extra fields)
+      if (CREATE_IDEA_PATTERN.test(text)) {
+        const title = extractIdeaTitle(text);
+        await api.post("/ideas", { title, description: text });
+        const assistantMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          text: `Done! I've created a new idea titled "${title}". You can find and manage it in your Ideas section.`,
+          time: ts(),
+        };
+        updateConversation(activeId, { messages: [...baseMessages, assistantMsg], title: newTitle });
+        return;
+      }
+
+      // All other messages — route through general-chat which handles intent server-side.
+      // Pass the full history so the server can detect pending confirmations (<!--PENDING:...-->).
+      const { data } = await api.post("/ai/general-chat", { message: text, history: active.history });
+      const replyText: string = data.reply ?? "No response received";
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        text: replyText,
+        time: ts(),
+      };
+      // Always preserve the full reply in history (including invisible <!--PENDING:--> markers)
+      const updatedHistory: HistoryEntry[] = [
+        ...active.history,
+        { role: "user" as const, content: text },
+        { role: "assistant" as const, content: replyText },
+      ];
+      updateConversation(activeId, {
+        messages: [...baseMessages, assistantMsg],
+        history: updatedHistory,
+        title: newTitle,
+      });
+    } catch {
+      const errorMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        text: "Sorry, I'm having trouble connecting right now. Please try again.",
+        time: ts(),
+      };
+      updateConversation(activeId, { messages: [...baseMessages, errorMsg] });
+    } finally {
       setThinking(false);
-    }, 900 + Math.random() * 600);
+    }
   };
 
   const handleNewChat = () => {
@@ -186,6 +258,7 @@ export default function AiChatPage() {
       title: "New conversation",
       preview: "Start a new conversation…",
       date: "Today",
+      history: [],
       messages: [
         { id: "0", role: "assistant", text: "Hi! I'm Bizify AI. What would you like to work on today?", time: ts() },
       ],
@@ -196,9 +269,19 @@ export default function AiChatPage() {
   };
 
   const handleDelete = (id: string) => {
-    setConversations((prev) => prev.filter((c) => c.id !== id));
-    if (activeId === id) setActiveId(conversations.find((c) => c.id !== id)?.id ?? "");
+    const remaining = conversations.filter((c) => c.id !== id);
+    setConversations(remaining);
+    if (activeId === id) setActiveId(remaining[0]?.id ?? "");
   };
+
+  // Pre-fill input with the query from the dashboard search bar (?q=...)
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (!q || autoSentRef.current) return;
+    autoSentRef.current = true;
+    setInput(q);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  }, [searchParams]);
 
   const grouped = Object.entries(
     conversations.reduce<Record<string, Conversation[]>>((acc, c) => {
@@ -221,8 +304,10 @@ export default function AiChatPage() {
       </div>
 
       {/* Two-column layout */}
-      <div className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-6 flex gap-4 min-h-0" style={{ height: "calc(100vh - 110px)" }}>
-
+      <div
+        className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-6 flex gap-4 min-h-0"
+        style={{ height: "calc(100vh - 110px)" }}
+      >
         {/* ── Sidebar ── */}
         <aside className="hidden md:flex flex-col w-60 shrink-0 gap-3">
           <button
@@ -284,8 +369,11 @@ export default function AiChatPage() {
                 </div>
                 <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-sm flex items-center gap-1">
                   {[0, 1, 2].map((i) => (
-                    <span key={i} className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-500 animate-bounce"
-                      style={{ animationDelay: `${i * 150}ms` }} />
+                    <span
+                      key={i}
+                      className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-500 animate-bounce"
+                      style={{ animationDelay: `${i * 150}ms` }}
+                    />
                   ))}
                 </div>
               </div>

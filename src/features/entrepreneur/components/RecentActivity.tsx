@@ -2,7 +2,6 @@
 
 import { type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLanguage } from "@/features/dashboard/context/LanguageContext";
 
 export interface ActivityItem {
   id: string;
@@ -37,14 +36,12 @@ function ModuleBadge({ item }: { item: ActivityItem }) {
 }
 
 export function RecentActivity({ items, onViewAll }: Props) {
-  const { t } = useLanguage();
-
   return (
     <div className="flex flex-col gap-4">
       {/* Section header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-widest">
-          {t.activity.title}
+          Recent Activity
         </h2>
         {onViewAll && (
           <button
@@ -52,7 +49,7 @@ export function RecentActivity({ items, onViewAll }: Props) {
             onClick={onViewAll}
             className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           >
-            {t.activity.viewAll}
+            View all
           </button>
         )}
       </div>
@@ -62,10 +59,10 @@ export function RecentActivity({ items, onViewAll }: Props) {
         {/* Table head — 2-col on mobile, 3-col on sm+ */}
         <div className="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_120px_100px] border-b border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/60">
           <div className="px-4 sm:px-5 py-3 text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-            {t.activity.headers.activity}
+            Activity
           </div>
           <div className="hidden sm:block px-3 py-3 text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-center">
-            {t.activity.headers.module}
+            Module
           </div>
           <div className="px-4 sm:px-5 py-3" />
         </div>

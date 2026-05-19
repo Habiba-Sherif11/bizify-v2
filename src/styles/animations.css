@@ -83,13 +83,7 @@
   button:hover,
   a[role="button"]:hover,
   .btn:hover {
-    transform: scale(1.03);
     box-shadow: 0 12px 20px -10px rgba(0, 0, 0, 0.2);
-  }
-
-  button:active,
-  .btn:active {
-    transform: scale(0.97);
   }
 
   /* Cards — uses a SEPARATE class so it doesn't clash with scroll-fade */
@@ -108,7 +102,6 @@
   /* CTA button */
   .hero-cta:hover {
     box-shadow: 0 0 18px rgba(245, 158, 11, 0.6);
-    transform: scale(1.03);
   }
 }
 

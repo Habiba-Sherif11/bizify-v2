@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
   try {
     await axios.post(
       `${process.env.BACKEND_URL}/api/v1/auth/reset-password`,
-      null,
+      { email, otp_code, new_password },
       {
-        params: { email, otp_code, new_password },
+        headers: { "Content-Type": "application/json" },
         timeout: 65_000,
       }
     );

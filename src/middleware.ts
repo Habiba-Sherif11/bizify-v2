@@ -8,6 +8,7 @@ const protectedPrefixes = [
   "/supplier",
   "/admin",
   "/dashboard",
+  "/partner-pending",
 ];
 
 export function middleware(request: NextRequest) {

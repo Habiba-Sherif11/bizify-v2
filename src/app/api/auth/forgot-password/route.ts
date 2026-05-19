@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
   try {
     await axios.post(
       `${process.env.BACKEND_URL}/api/v1/auth/forgot-password`,
-      null,
-      { params: { email }, timeout: 65_000 }
+      { email },
+      { headers: { "Content-Type": "application/json" }, timeout: 65_000 }
     );
 
     return NextResponse.json({

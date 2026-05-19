@@ -8,7 +8,7 @@ import {
   useCallback,
   ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "react-toastify";
 import { api } from "../lib/api";
 
@@ -16,7 +16,11 @@ export type User = {
   email: string;
   role: "entrepreneur" | "manufacturer" | "mentor" | "supplier" | "admin";
   name?: string;
+  approval_status?: "PENDING" | "APPROVED" | "REJECTED";
+  business_id?: string;
 };
+
+const PARTNER_ROLES = new Set(["manufacturer", "mentor", "supplier"]);
 
 type AuthContextType = {
   user: User | null;
@@ -31,6 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   const fetchUser = useCallback(async (): Promise<User | null> => {
     try {
@@ -50,6 +55,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     fetchUser();
   }, [fetchUser]);
+
+  // Redirect unapproved partners away from the main app
+  useEffect(() => {
+    if (loading || !user) return;
+    if (!PARTNER_ROLES.has(user.role)) return;
+    const isPending =
+      user.approval_status === "PENDING" || user.approval_status === "REJECTED";
+    if (isPending && pathname !== "/partner-pending") {
+      router.replace("/partner-pending");
+    }
+  }, [user, loading, pathname, router]);
 
   const logout = useCallback(async () => {
     try {

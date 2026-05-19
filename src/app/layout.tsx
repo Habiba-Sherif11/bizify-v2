@@ -3,7 +3,7 @@ import "react-toastify/dist/ReactToastify.css";
 import type { Metadata } from "next";
 
 // Fonts
-import { Inter, Tajawal, Cormorant_SC, Geist } from "next/font/google";
+import { Inter, Cormorant_SC, Geist } from "next/font/google";
 
 // Styles
 import "@/styles/globals.css";
@@ -17,7 +17,6 @@ import { AnimationProvider } from "@/components/providers/AnimationProvider";
 import { AuthProvider } from "@/features/auth/context/AuthContext";
 import { ReactQueryProvider } from "@/components/providers/ReactQueryProvider";
 import { ThemeProvider } from "@/features/dashboard/context/ThemeContext";
-import { LanguageProvider } from "@/features/dashboard/context/LanguageContext";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -27,12 +26,6 @@ const geist = Geist({
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
-});
-
-const tajawal = Tajawal({
-  subsets: ["arabic"],
-  weight: ["400", "500", "700", "800", "900"],
-  variable: "--font-tajawal",
 });
 
 const cormorantSC = Cormorant_SC({
@@ -55,26 +48,22 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      suppressHydrationWarning
       className={cn(
         "antialiased font-sans",
         geist.variable,
         inter.variable,
-        tajawal.variable,
         cormorantSC.variable
       )}
     >
       <body className="min-h-screen flex flex-col">
         <ReactQueryProvider>
           <ThemeProvider>
-            <LanguageProvider>
-              <AuthProvider>
-                <AnimationProvider>
-                  {children}
-                  <ToastContainer position="top-right" />
-                </AnimationProvider>
-              </AuthProvider>
-            </LanguageProvider>
+            <AuthProvider>
+              <AnimationProvider>
+                {children}
+                <ToastContainer position="top-right" />
+              </AnimationProvider>
+            </AuthProvider>
           </ThemeProvider>
         </ReactQueryProvider>
       </body>

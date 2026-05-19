@@ -25,3 +25,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status });
   }
 }
+
+export async function GET(request: NextRequest) {
+  const token = request.cookies.get("auth_token")?.value;
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const { data } = await axios.get(
+      `${process.env.BACKEND_URL}/api/v1/profile/skills`,
+      { headers: { Authorization: `Bearer ${token}` }, timeout: 30_000 }
+    );
+    return NextResponse.json(data);
+  } catch (error) {
+    const { message, status } = handleBackendError(error, "Failed to load skills");
+    return NextResponse.json({ error: message }, { status });
+  }
+}

@@ -1,47 +1,39 @@
 "use client";
 
-import { Bell, Globe, ChevronDown, LogOut, User, Settings, Moon, Sun } from "lucide-react";
+import { Bell, ChevronDown, LogOut, User, Settings, Moon, Sun } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { useTheme } from "@/features/dashboard/context/ThemeContext";
-import { useLanguage } from "@/features/dashboard/context/LanguageContext";
 
 // ─── Logout confirmation dialog ───────────────────────────────────────────────
 
 function LogoutConfirmDialog({
-  title,
-  message,
-  confirmLabel,
-  cancelLabel,
   onConfirm,
   onCancel,
 }: {
-  title: string;
-  message: string;
-  confirmLabel: string;
-  cancelLabel: string;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white dark:bg-neutral-800 rounded-2xl p-6 shadow-xl w-full max-w-sm mx-4">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{title}</h3>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{message}</p>
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white">Log out?</h3>
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Are you sure you want to log out of your account?</p>
         <div className="mt-5 flex gap-3 justify-end">
           <button
             type="button"
             onClick={onCancel}
             className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-neutral-100 dark:bg-neutral-700 cursor-pointer"
           >
-            {cancelLabel}
+            Cancel
           </button>
           <button
             type="button"
             onClick={onConfirm}
             className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-red-500 cursor-pointer"
           >
-            {confirmLabel}
+            Log out
           </button>
         </div>
       </div>
@@ -55,19 +47,17 @@ function NavButton({
   children,
   onClick,
   title,
-  wide,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   title?: string;
-  wide?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       title={title}
-      className={`${wide ? "w-16 pl-3 justify-start gap-1.5" : "w-9 justify-center"} h-9 bg-white dark:bg-neutral-800 rounded-[10px] outline outline-[0.67px] outline-offset-[-0.67px] outline-black/10 dark:outline-white/10 flex items-center cursor-pointer`}
+      className="w-9 h-9 justify-center bg-white dark:bg-neutral-800 rounded-[10px] outline-[0.67px] outline-offset-[-0.67px] outline-black/10 dark:outline-white/10 flex items-center cursor-pointer"
     >
       {children}
     </button>
@@ -79,7 +69,7 @@ function NavButton({
 export function DashboardHeader() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { lang, t, toggleLang } = useLanguage();
+  const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -93,6 +83,16 @@ export function DashboardHeader() {
   const handleLogoutClick = () => {
     setShowMenu(false);
     setShowLogoutConfirm(true);
+  };
+
+  const handleProfileClick = () => {
+    setShowMenu(false);
+    router.push("/entrepreneur/profile");
+  };
+
+  const handleSettingsClick = () => {
+    setShowMenu(false);
+    router.push("/entrepreneur/settings");
   };
 
   return (
@@ -132,17 +132,19 @@ export function DashboardHeader() {
               <div className="absolute top-full mt-2 start-0 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-1 z-50 min-w-44">
                 <button
                   type="button"
+                  onClick={handleProfileClick}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded-lg cursor-pointer"
                 >
                   <User size={14} />
-                  {t.nav.profile}
+                  Profile
                 </button>
                 <button
                   type="button"
+                  onClick={handleSettingsClick}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded-lg cursor-pointer"
                 >
                   <Settings size={14} />
-                  {t.nav.settings}
+                  Settings
                 </button>
                 <div className="my-1 h-px bg-gray-100 dark:bg-neutral-700" />
                 <button
@@ -151,7 +153,7 @@ export function DashboardHeader() {
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 rounded-lg cursor-pointer"
                 >
                   <LogOut size={14} />
-                  {t.nav.logout}
+                  Log out
                 </button>
               </div>
             </>
@@ -164,7 +166,7 @@ export function DashboardHeader() {
           {/* Theme toggle */}
           <NavButton
             onClick={toggleTheme}
-            title={theme === "dark" ? t.nav.lightMode : t.nav.darkMode}
+            title={theme === "dark" ? "Light mode" : "Dark mode"}
           >
             {theme === "dark"
               ? <Sun size={16} className="text-cyan-600 dark:text-cyan-400" />
@@ -172,21 +174,9 @@ export function DashboardHeader() {
             }
           </NavButton>
 
-          {/* Language toggle */}
-          <NavButton
-            onClick={toggleLang}
-            title={lang === "en" ? "Switch to Arabic" : "Switch to English"}
-            wide
-          >
-            <Globe size={14} className="text-gray-500 dark:text-gray-400 shrink-0" />
-            <span className="text-gray-500 dark:text-gray-400 text-xs font-semibold leading-4">
-              {lang === "en" ? "AR" : "EN"}
-            </span>
-          </NavButton>
-
           {/* Notifications */}
           <div className="relative">
-            <NavButton title={t.nav.notifications}>
+            <NavButton title="Notifications">
               <Bell size={16} className="text-gray-500 dark:text-gray-400" />
             </NavButton>
             <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center pointer-events-none">
@@ -199,10 +189,6 @@ export function DashboardHeader() {
       {/* Logout confirmation dialog */}
       {showLogoutConfirm && (
         <LogoutConfirmDialog
-          title={t.nav.logoutConfirmTitle}
-          message={t.nav.logoutConfirmMessage}
-          confirmLabel={t.nav.logoutConfirmButton}
-          cancelLabel={t.nav.cancel}
           onConfirm={() => { setShowLogoutConfirm(false); logout(); }}
           onCancel={() => setShowLogoutConfirm(false)}
         />

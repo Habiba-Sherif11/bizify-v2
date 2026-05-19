@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Home, ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-toastify";
@@ -9,101 +9,131 @@ import {
   type PartnerCardProps,
   type PartnerType,
 } from "@/features/marketplace/components/PartnerCard";
+import { api } from "@/features/auth/lib/api";
+import { useAuth } from "@/features/auth/context/AuthContext";
 
-// ─── Static data ─────────────────────────────────────────────────────────────
+// ─── API types ────────────────────────────────────────────────────────────────
 
-const PARTNERS: PartnerCardProps[] = [
-  {
-    id: "1", name: "Nile Pack Co.", type: "Supplier",
-    specialty: "Sustainable packaging & materials",
-    rating: 4.8, reviewCount: 124,
-    description: "Leading sustainable packaging supplier serving 200+ startups across MENA. Minimum orders from 500 units. Fast 3-day shipping across Egypt and Gulf.",
-    tags: ["Packaging", "Eco-Friendly", "B2B", "MENA"],
-    avatarColor: "bg-cyan-600",
-    onConnect: () => toast.info("Connection request sent!"),
-  },
-  {
-    id: "2", name: "FabTech Egypt", type: "Manufacturer",
-    specialty: "Electronics & PCB assembly",
-    rating: 4.6, reviewCount: 87,
-    description: "Full-service electronics manufacturer with ISO 9001 certification. Specialising in PCB assembly, IoT devices, and consumer electronics prototyping.",
-    tags: ["Electronics", "IoT", "PCB", "ISO Certified"],
-    avatarColor: "bg-indigo-600",
-    onConnect: () => toast.info("Connection request sent!"),
-  },
-  {
-    id: "3", name: "Sara Haddad", type: "Mentor",
-    specialty: "Fintech & payments strategy",
-    rating: 5.0, reviewCount: 43,
-    description: "Former VP at Fawry and advisor to 12+ fintech startups. Helps founders navigate regulatory landscapes, build payment infrastructure, and close Series A rounds.",
-    tags: ["Fintech", "Payments", "Series A", "Strategy"],
-    avatarColor: "bg-amber-500",
-    onConnect: () => toast.info("Connection request sent!"),
-  },
-  {
-    id: "4", name: "Delta Fabrics", type: "Supplier",
-    specialty: "Textiles & custom apparel",
-    rating: 4.4, reviewCount: 211,
-    description: "Premium fabric supplier with custom print-on-demand and private label services. GOTS-certified organic cotton available. Ships to 40+ countries.",
-    tags: ["Textiles", "Fashion", "Custom Print", "GOTS"],
-    avatarColor: "bg-cyan-700",
-    onConnect: () => toast.info("Connection request sent!"),
-  },
-  {
-    id: "5", name: "Cairo Mfg. Group", type: "Manufacturer",
-    specialty: "Plastic injection & moulding",
-    rating: 4.3, reviewCount: 65,
-    description: "Specialised in rapid prototyping and mass production of plastic parts. Supports startup NRE (non-recurring engineering) with low minimums from 100 units.",
-    tags: ["Plastics", "Prototyping", "Low MOQ", "Hardware"],
-    avatarColor: "bg-indigo-500",
-    onConnect: () => toast.info("Connection request sent!"),
-  },
-  {
-    id: "6", name: "Omar Khalil", type: "Mentor",
-    specialty: "Growth hacking & digital marketing",
-    rating: 4.9, reviewCount: 78,
-    description: "Growth advisor who has scaled 3 startups to $1M+ ARR. Expertise in SEO, paid acquisition, content loops, and community-led growth for B2C and B2B SaaS.",
-    tags: ["Growth", "SEO", "SaaS", "B2C", "Marketing"],
-    avatarColor: "bg-amber-600",
-    onConnect: () => toast.info("Connection request sent!"),
-  },
-  {
-    id: "7", name: "SpeedBox Logistics", type: "Supplier",
-    specialty: "Last-mile delivery & fulfilment",
-    rating: 4.5, reviewCount: 156,
-    description: "3PL provider offering warehousing, pick-and-pack, and same-day delivery across 12 cities. Integrates with Shopify, WooCommerce, and Salla.",
-    tags: ["Logistics", "3PL", "E-commerce", "Same-Day"],
-    avatarColor: "bg-cyan-800",
-    onConnect: () => toast.info("Connection request sent!"),
-  },
-  {
-    id: "8", name: "Laila Mostafa", type: "Mentor",
-    specialty: "Product design & UX strategy",
-    rating: 4.7, reviewCount: 29,
-    description: "Product designer with 10+ years at Careem and Instabug. Coaches founders on building user-centric products, running usability tests, and defining MVP scope.",
-    tags: ["Product", "UX", "MVP", "Design Thinking"],
-    avatarColor: "bg-amber-400",
-    onConnect: () => toast.info("Connection request sent!"),
-  },
-];
+interface MarketplacePartner {
+  id: string;
+  partner_type: "MENTOR" | "SUPPLIER" | "MANUFACTURER";
+  company_name: string;
+  description: string;
+  services_json: unknown;
+  experience_json: unknown;
+  display_name: string;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const TYPE_MAP: Record<MarketplacePartner["partner_type"], PartnerType> = {
+  SUPPLIER: "Supplier",
+  MANUFACTURER: "Manufacturer",
+  MENTOR: "Mentor",
+};
+
+const AVATAR_COLORS: Record<PartnerType, string> = {
+  Supplier: "bg-cyan-600",
+  Manufacturer: "bg-indigo-600",
+  Mentor: "bg-amber-500",
+};
+
+function parseTags(raw: unknown): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
+  if (typeof raw === "object") return Object.values(raw as Record<string, unknown>).map(String).filter(Boolean);
+  if (typeof raw !== "string") return [];
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
+    if (parsed && typeof parsed === "object") return Object.values(parsed as Record<string, unknown>).map(String).filter(Boolean);
+    return [trimmed];
+  } catch {
+    return [trimmed];
+  }
+}
+
+function toCardProps(p: MarketplacePartner): PartnerCardProps {
+  const type = TYPE_MAP[p.partner_type] ?? "Supplier";
+  return {
+    id: p.id,
+    name: p.display_name || p.company_name,
+    type,
+    description: p.description,
+    tags: parseTags(p.services_json),
+    avatarColor: AVATAR_COLORS[type],
+  };
+}
+
+// ─── Filter tabs ──────────────────────────────────────────────────────────────
 
 type FilterTab = "All" | PartnerType;
 const FILTER_TABS: FilterTab[] = ["All", "Supplier", "Manufacturer", "Mentor"];
 
+const BACKEND_TYPE: Record<PartnerType, string> = {
+  Supplier: "SUPPLIER",
+  Manufacturer: "MANUFACTURER",
+  Mentor: "MENTOR",
+};
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MarketplacePage() {
+  const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterTab>("All");
   const [search, setSearch] = useState("");
+  const [partners, setPartners] = useState<PartnerCardProps[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState<string | null>(null);
 
-  const filtered = PARTNERS.filter((p) => {
-    const matchType   = activeFilter === "All" || p.type === activeFilter;
-    const matchSearch = search === "" ||
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.specialty.toLowerCase().includes(search.toLowerCase()) ||
-      p.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()));
-    return matchType && matchSearch;
-  });
+  const fetchPartners = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = {};
+      if (activeFilter !== "All") params.type = BACKEND_TYPE[activeFilter];
+      if (search.trim()) params.q = search.trim();
+
+      const { data } = await api.get<MarketplacePartner[]>("/marketplace/partners", { params });
+      setPartners(data.map(toCardProps));
+    } catch (err: unknown) {
+      const e = err as { response?: { status?: number; data?: unknown }; message?: string; code?: string };
+      console.error("[Marketplace] fetch error", { status: e?.response?.status, data: e?.response?.data, message: e?.message, code: e?.code });
+      toast.error("Failed to load marketplace partners.");
+    } finally {
+      setLoading(false);
+    }
+  }, [activeFilter, search]);
+
+  useEffect(() => {
+    const timer = setTimeout(fetchPartners, search ? 400 : 0);
+    return () => clearTimeout(timer);
+  }, [fetchPartners, search]);
+
+  async function handleConnect(partnerId: string) {
+    if (!user?.business_id) {
+      toast.error("No business profile found. Please complete your profile first.");
+      return;
+    }
+    setConnecting(partnerId);
+    try {
+      await api.post(`/marketplace/partners/${partnerId}/requests`, {
+        business_id: user.business_id,
+      });
+      toast.success("Collaboration request sent!");
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { detail?: string; error?: string } } })
+          ?.response?.data?.detail ||
+        (err as { response?: { data?: { error?: string } } })
+          ?.response?.data?.error ||
+        "Failed to send request.";
+      toast.error(msg);
+    } finally {
+      setConnecting(null);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 transition-colors">
@@ -159,11 +189,25 @@ export default function MarketplacePage() {
           />
         </div>
 
-        {/* Grid */}
-        {filtered.length > 0 ? (
+        {/* Content */}
+        {loading ? (
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {filtered.map((p) => (
-              <PartnerCard key={p.id} {...p} />
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 h-64 animate-pulse"
+              />
+            ))}
+          </div>
+        ) : partners.length > 0 ? (
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {partners.map((p) => (
+              <PartnerCard
+                key={p.id}
+                {...p}
+                connecting={connecting === p.id}
+                onConnect={() => handleConnect(p.id)}
+              />
             ))}
           </div>
         ) : (

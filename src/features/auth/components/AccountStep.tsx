@@ -84,6 +84,8 @@ export function AccountStep({ onNext }: Props) {
   // Partner-only fields
   const [companyName, setCompanyName] = useState("");
   const [description, setDescription] = useState("");
+  const [services, setServices] = useState("");
+  const [experience, setExperience] = useState("");
   const [files, setFiles] = useState<File[]>([]);
 
   // Touch states for validation
@@ -95,6 +97,8 @@ export function AccountStep({ onNext }: Props) {
     lastName: false,
     company: false,
     files: false,
+    services: false,
+    experience: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -113,7 +117,7 @@ export function AccountStep({ onNext }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setTouched({ email: true, password: true, confirm: true, firstName: true, lastName: true, company: true, files: true });
+    setTouched({ email: true, password: true, confirm: true, firstName: true, lastName: true, company: true, files: true, services: true, experience: true });
     if (!selectedRole || !isFormReady) return;
 
     setIsSubmitting(true);
@@ -127,6 +131,8 @@ export function AccountStep({ onNext }: Props) {
           confirm_password: confirmPassword,
           company_name: isPartner ? companyName : undefined,
           description: isPartner && description ? description : undefined,
+          services: isPartner && services ? services : undefined,
+          experience: isPartner && experience ? experience : undefined,
           files: isPartner ? files : undefined,
         },
         selectedRole
@@ -331,6 +337,38 @@ export function AccountStep({ onNext }: Props) {
               placeholder="Brief description of your business"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              disabled={isSubmitting}
+              rows={2}
+              className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/20 focus-visible:border-cyan-500 disabled:opacity-50 transition-colors resize-none"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="services" className="text-xs text-gray-500">
+              Services Offered <span className="text-gray-400">(optional)</span>
+            </Label>
+            <textarea
+              id="services"
+              placeholder="List the services your company provides (e.g. CNC machining, logistics, mentoring sessions)"
+              value={services}
+              onChange={(e) => setServices(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, services: true }))}
+              disabled={isSubmitting}
+              rows={2}
+              className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/20 focus-visible:border-cyan-500 disabled:opacity-50 transition-colors resize-none"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="experience" className="text-xs text-gray-500">
+              Industry Experience <span className="text-gray-400">(optional)</span>
+            </Label>
+            <textarea
+              id="experience"
+              placeholder="Describe your experience and background (e.g. 10 years in textile manufacturing, worked with 50+ startups)"
+              value={experience}
+              onChange={(e) => setExperience(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, experience: true }))}
               disabled={isSubmitting}
               rows={2}
               className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/20 focus-visible:border-cyan-500 disabled:opacity-50 transition-colors resize-none"

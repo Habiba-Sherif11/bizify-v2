@@ -84,6 +84,33 @@ export function useSignup() {
   const { fetchUser } = useAuth();
   const router = useRouter();
 
+  /**
+   * Polls GET /api/auth/ping every 5 s until the backend responds (up to 120 s).
+   * Shows a "warming up" toast while waiting and resolves once the backend is awake.
+   */
+  const wakeBackend = async (): Promise<void> => {
+    const POLL_INTERVAL = 5_000;
+    const MAX_WAIT = 120_000;
+    const started = Date.now();
+
+    toast.info("Warming up server… this may take up to 2 minutes on first load.", {
+      autoClose: false,
+      toastId: "wakeup",
+    });
+
+    while (Date.now() - started < MAX_WAIT) {
+      try {
+        const res = await fetch("/api/auth/ping");
+        if (res.ok) return; // backend is awake
+      } catch {
+        // network hiccup — keep polling
+      }
+      await new Promise((r) => setTimeout(r, POLL_INTERVAL));
+    }
+
+    throw new Error("Backend did not respond within 2 minutes. Please try again.");
+  };
+
   const handleStep1 = async (
     data: {
       role: Role;
@@ -103,10 +130,14 @@ export function useSignup() {
     setEmail(data.email);
     setTempPassword(data.password);
 
-    toast.info(
-      "Connecting to server… this may take up to 60 seconds on first load.",
-      { autoClose: false, toastId: "wakeup" }
-    );
+    try {
+      await wakeBackend();
+      toast.dismiss("wakeup");
+    } catch (err) {
+      toast.dismiss("wakeup");
+      toast.error(extractErrorMessage(err, "Could not reach the server. Please try again."));
+      return;
+    }
 
     try {
       if (role === "entrepreneur") {
@@ -128,7 +159,7 @@ export function useSignup() {
         const formData = new FormData();
         formData.append("email", data.email);
         formData.append("full_name", data.full_name);
-        formData.append("role", role);
+        formData.append("role", role.toUpperCase());
         formData.append("password", data.password);
         formData.append("confirm_password", data.confirm_password);
 
@@ -141,16 +172,12 @@ export function useSignup() {
           data.files.forEach((file) => formData.append("files", file));
         }
 
-        await api.post("/auth/register-partner", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await api.post("/auth/register-partner", formData);
       }
 
-      toast.dismiss("wakeup");
       setStep(2);
       toast.success("OTP sent to your email");
     } catch (error) {
-      toast.dismiss("wakeup");
       toast.error(extractErrorMessage(error, "Registration failed. Please try again."));
     }
   };
@@ -172,32 +199,43 @@ export function useSignup() {
       if (selectedRole === "entrepreneur") {
         setStep(3);
       } else {
-        toast.success("Registration successful! Redirecting...");
-        router.push(`/${selectedRole}`);
+        toast.success("Registration successful! Your account is pending review.");
+        router.push("/partner-pending");
       }
     } catch (error) {
       toast.error(extractErrorMessage(error, "OTP verification failed. Please try again."));
     }
   };
 
-  const handleQuestionnaire = async (payload: { choices: string[] }[]) => {
+  const handleQuestionnaire = async (
+    payload: { field: string; question: string; multi: boolean; choices: string[]; label: string }[]
+  ) => {
+    const cleanPayload = payload.filter((p) => p.choices.length > 0);
+
+    if (cleanPayload.length === 0) {
+      toast.error("Please answer at least one question before continuing.");
+      return;
+    }
+
     try {
-      const cleanPayload = payload.filter((p) => p.choices.length > 0);
-      await api.post("/auth/questionnaire", cleanPayload);
+      await api.post("/profile/questionnaire", cleanPayload);
       setStep(4);
     } catch (error) {
-      toast.error(extractErrorMessage(error, "Failed to save questionnaire."));
+      console.error("[Questionnaire] Submit error:", error);
+      toast.error(extractErrorMessage(error, "Failed to save questionnaire. Please try again."), {
+        autoClose: 6000,
+      });
     }
   };
 
-  const handleSkills = async (skills: { predefined_skill_id?: string; skill_name?: string }[]) => {
+  const handleSkills = async (skills: { skill_name: string }[]) => {
     try {
-      // Add each skill one at a time (API requirement)
       for (const skill of skills) {
         await api.post("/profile/skills", skill);
       }
-      // Finalize onboarding
       await api.post("/profile/complete");
+      // Trigger AI pipeline asynchronously — user doesn't need to wait for it to start
+      api.post("/ai/run", {}).catch(() => {});
       setStep(5);
     } catch (error) {
       toast.error(extractErrorMessage(error, "Failed to save skills. Please try again."));

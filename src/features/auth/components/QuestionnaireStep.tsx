@@ -21,7 +21,9 @@ interface ChatMessage {
 }
 
 interface Props {
-  onNext: (payload: { field: string; question: string; multi: boolean; choices: string[]; label: string }[]) => void;
+  onNext: (
+    payload: { field: string; question: string; multi: boolean; choices: string[]; label: string }[]
+  ) => Promise<void> | void;
 }
 
 function ProgressBar({ current, total }: { current: number; total: number }) {
@@ -32,7 +34,7 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
         <span>{current < total ? `Question ${current + 1} of ${total}` : "All done!"}</span>
         <span>{pct}%</span>
       </div>
-      <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+      <div className="h-1 w-full bg-gray-100 dark:bg-neutral-700 rounded-full overflow-hidden">
         <div
           className="h-full rounded-full bg-linear-to-r from-amber-400 to-yellow-500 transition-all duration-500"
           style={{ width: `${pct}%` }}
@@ -114,7 +116,11 @@ export function QuestionnaireStep({ onNext }: Props) {
         choices: answers[q.field] ?? [],
         label: q.label ?? "",
       }));
-      onNext(payload);
+      try {
+        await onNext(payload);
+      } finally {
+        setIsSubmitting(false);
+      }
     } else if (isMulti && selected.length > 0) {
       advance(selected);
     }
@@ -124,8 +130,8 @@ export function QuestionnaireStep({ onNext }: Props) {
     <div className="flex flex-col gap-4" style={{ minHeight: 400 }}>
       {/* Header */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">Tell us about yourself</h2>
-        <p className="text-sm text-gray-400 mt-0.5">This helps us tailor the experience for you</p>
+        <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">Tell us about yourself</h2>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">This helps us tailor the experience for you</p>
       </div>
 
       {/* Progress */}
