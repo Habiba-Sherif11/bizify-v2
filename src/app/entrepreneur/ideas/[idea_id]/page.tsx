@@ -20,6 +20,8 @@ import { MvpPlanningSection }     from "@/features/entrepreneur/components/analy
 import { ProblemsSection }        from "@/features/entrepreneur/components/analysis/ProblemsSection";
 import { UnitEconomicsSection }   from "@/features/entrepreneur/components/analysis/UnitEconomicsSection";
 import { IdeaStrategySection }    from "@/features/entrepreneur/components/analysis/IdeaStrategySection";
+import { SectionControls }        from "@/features/entrepreneur/components/analysis/SectionControls";
+import type { AiSectionKey }      from "@/features/entrepreneur/hooks/useAiSection";
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
@@ -46,6 +48,22 @@ const TABS: { key: TabKey; label: string }[] = [
 
 // ─── Tab content ──────────────────────────────────────────────────────────────
 
+// Maps each tab to (1) its section state key and (2) the AI section key
+// the SectionControls component uses. "risk" (problems) has no per-section
+// AI controls, so it's mapped to undefined.
+const TAB_TO_SECTION: Record<
+  Exclude<TabKey, "overview">,
+  { stateKey: keyof ReturnType<typeof useAiPipeline>["sections"]; aiKey?: AiSectionKey }
+> = {
+  customers:     { stateKey: "customers",       aiKey: "customers" },
+  competition:   { stateKey: "competition",     aiKey: "competition" },
+  market:        { stateKey: "marketPotential", aiKey: "marketPotential" },
+  businessModel: { stateKey: "businessModel",   aiKey: "businessModel" },
+  mvp:           { stateKey: "mvpPlanning",     aiKey: "mvpPlanning" },
+  risk:          { stateKey: "problems"         },
+  financial:     { stateKey: "unitEconomics",   aiKey: "unitEconomics" },
+};
+
 function TabContent({
   tab,
   idea,
@@ -53,6 +71,7 @@ function TabContent({
   hasRun,
   onRun,
   isRunning,
+  onRefreshSection,
 }: {
   tab: TabKey;
   idea: Idea;
@@ -60,6 +79,7 @@ function TabContent({
   hasRun: boolean;
   onRun: () => void;
   isRunning: boolean;
+  onRefreshSection: (key: keyof ReturnType<typeof useAiPipeline>["sections"]) => void;
 }) {
   if (tab === "overview") {
     return <OverviewSection idea={idea} sections={sections} hasRun={hasRun} onRun={onRun} isRunning={isRunning} />;
@@ -75,13 +95,24 @@ function TabContent({
     financial:     <UnitEconomicsSection   {...sections.unitEconomics}   />,
   };
 
-  const s = sections[tab === "market" ? "marketPotential" : tab === "mvp" ? "mvpPlanning" : tab === "risk" ? "problems" : tab === "financial" ? "unitEconomics" : tab] as { data: string | null; isLoading: boolean };
+  const meta = TAB_TO_SECTION[tab as Exclude<TabKey, "overview">];
+  const s = sections[meta.stateKey];
 
   if (!hasRun && !s.data && !s.isLoading) {
     return <PipelineCallToAction onRun={onRun} isRunning={isRunning} />;
   }
 
-  return <>{sectionMap[tab as Exclude<TabKey, "overview">]}</>;
+  return (
+    <>
+      {meta.aiKey && s.data && (
+        <SectionControls
+          sectionKey={meta.aiKey}
+          onRefresh={() => onRefreshSection(meta.stateKey)}
+        />
+      )}
+      {sectionMap[tab as Exclude<TabKey, "overview">]}
+    </>
+  );
 }
 
 function OverviewSection({
@@ -191,7 +222,7 @@ export default function IdeaDetailPage({
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
 
-  const { sections, isRunning, hasRun, runError, runPipeline } = useAiPipeline();
+  const { sections, isRunning, hasRun, runError, runPipeline, fetchSection } = useAiPipeline();
 
   useEffect(() => {
     api
@@ -329,6 +360,7 @@ export default function IdeaDetailPage({
           hasRun={hasRun}
           onRun={runPipeline}
           isRunning={isRunning}
+          onRefreshSection={fetchSection}
         />
       </main>
     </div>

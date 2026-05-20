@@ -49,19 +49,11 @@ export default function TeamDetailPage({
   useEffect(() => {
     async function load() {
       try {
-        const [groupsRes, membersRes] = await Promise.all([
-          api.get<GroupResponse[]>("/groups"),
+        const [groupRes, membersRes] = await Promise.all([
+          api.get<GroupResponse>(`/groups/${id}`),
           api.get<MemberResponse[]>(`/groups/${id}/members`),
         ]);
-        const found = Array.isArray(groupsRes.data)
-          ? groupsRes.data.find((g) => g.id === id)
-          : undefined;
-        if (!found) {
-          toast.error("Team not found");
-          router.push("/entrepreneur/team");
-          return;
-        }
-        setGroup(found);
+        setGroup(groupRes.data);
         setMembers(Array.isArray(membersRes.data) ? membersRes.data : []);
       } catch {
         toast.error("Failed to load team");
