@@ -75,7 +75,7 @@ export default function TeamDetailPage({
     }
   }
 
-  async function handleUpdate(name: string, description: string, _allowMembersToInvite?: boolean) {
+  async function handleUpdate(name: string, description: string) {
     try {
       const { data } = await api.patch<GroupResponse>(`/groups/${id}`, {
         name,
@@ -119,9 +119,6 @@ export default function TeamDetailPage({
     created_at: group.created_at,
     members: members.map((m) => {
       const upperStatus = m.status?.toUpperCase();
-      if (upperStatus !== "ACTIVE" && upperStatus !== "PENDING") {
-        console.warn(`Unknown member status: ${m.status}`);
-      }
       return {
         id: m.id,
         user_id: m.user_id,

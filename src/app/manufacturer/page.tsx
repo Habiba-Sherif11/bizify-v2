@@ -1,2 +1,4 @@
-import { RoleDashboard } from "@/features/auth/components/RoleDashboard";
-export default function ManufacturerDashboard() { return <RoleDashboard />; }
+import { PartnerDashboard } from "@/features/partner/components/PartnerDashboard";
+export default function ManufacturerDashboard() {
+  return <PartnerDashboard role="MANUFACTURER" />;
+}

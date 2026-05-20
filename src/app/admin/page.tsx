@@ -102,10 +102,12 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadStats();
   }, [loadStats]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (tab === "requests" && requests.length === 0) loadRequests();
     if (tab === "users" && users.length === 0) loadUsers();
   }, [tab, loadRequests, loadUsers, requests.length, users.length]);

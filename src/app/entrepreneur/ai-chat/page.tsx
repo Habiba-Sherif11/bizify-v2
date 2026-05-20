@@ -88,27 +88,29 @@ function ConversationItem({
   onDelete: () => void;
 }) {
   return (
-    <div
-      onClick={onSelect}
-      className={cn(
-        "group flex items-start gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-colors",
-        active
-          ? "bg-cyan-50 dark:bg-cyan-900/20"
-          : "hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
-      )}
-    >
-      <MessageSquare
-        size={15}
-        className={cn("mt-0.5 shrink-0", active ? "text-cyan-500" : "text-gray-400 dark:text-gray-500")}
-      />
-      <div className="flex-1 min-w-0">
-        <p className={cn("text-xs font-medium truncate", active ? "text-cyan-700 dark:text-cyan-300" : "text-gray-700 dark:text-gray-200")}>
-          {conv.title}
-        </p>
-        <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate mt-0.5">{conv.preview}</p>
-      </div>
+    <div className="group flex items-start gap-2.5 px-3 py-2.5 rounded-xl transition-colors">
       <button
         type="button"
+        onClick={onSelect}
+        className={cn(
+          "flex items-start gap-2 flex-1 min-w-0 text-left cursor-pointer",
+          active ? "" : "hover:opacity-80"
+        )}
+      >
+        <MessageSquare
+          size={15}
+          className={cn("mt-0.5 shrink-0", active ? "text-cyan-500" : "text-gray-400 dark:text-gray-500")}
+        />
+        <div className="flex-1 min-w-0">
+          <p className={cn("text-xs font-medium truncate", active ? "text-cyan-700 dark:text-cyan-300" : "text-gray-700 dark:text-gray-200")}>
+            {conv.title}
+          </p>
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate mt-0.5">{conv.preview}</p>
+        </div>
+      </button>
+      <button
+        type="button"
+        aria-label={`Delete conversation: ${conv.title}`}
         onClick={(e) => { e.stopPropagation(); onDelete(); }}
         className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-400 cursor-pointer shrink-0 transition-all"
       >

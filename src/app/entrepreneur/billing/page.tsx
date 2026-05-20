@@ -73,6 +73,7 @@ export default function BillingPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
   }, [refresh]);
 
@@ -85,6 +86,7 @@ export default function BillingPage() {
       const redirect =
         data.approval_url ?? data.payment_url ?? data.redirect_url ?? data.iframe_url ?? data.url;
       if (redirect) {
+        // eslint-disable-next-line react-hooks/immutability
         window.location.href = redirect;
       } else {
         toast.success("Subscription started — check your email.");

@@ -26,18 +26,20 @@ function extractList(raw: ListResponse): Notification[] {
   return [];
 }
 
-function isUnread(n: Notification) {
+export function isUnread(n: Notification) {
   if (typeof n.is_read === "boolean") return !n.is_read;
   return (n.status ?? "").toUpperCase() === "UNREAD";
 }
 
-const POLL_MS = 60_000;
+// Fallback poll interval when SSE is unavailable
+const FALLBACK_POLL_MS = 60_000;
 
 export function useNotifications() {
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const esRef = useRef<EventSource | null>(null);
+  const fallbackRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -52,13 +54,66 @@ export function useNotifications() {
     }
   }, []);
 
+  // Add a single new notification (from SSE) without replacing the whole list
+  const appendOrUpdate = useCallback((incoming: Notification) => {
+    setItems((prev) => {
+      const idx = prev.findIndex((n) => n.id === incoming.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = incoming;
+        return next;
+      }
+      return [incoming, ...prev];
+    });
+  }, []);
+
   useEffect(() => {
+    // Initial fetch
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAll();
-    intervalRef.current = setInterval(fetchAll, POLL_MS);
+
+    // Try SSE — it proxies through our Next.js route which forwards the
+    // auth cookie as a Bearer header automatically.
+    if (typeof EventSource !== "undefined") {
+      const es = new EventSource("/api/notifications/stream", { withCredentials: true });
+      esRef.current = es;
+
+      es.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data) as Notification | { notifications?: Notification[] };
+          if ("notifications" in payload && Array.isArray(payload.notifications)) {
+            // Bulk update — replace list
+            setItems(payload.notifications);
+          } else if ("id" in payload) {
+            appendOrUpdate(payload as Notification);
+          }
+        } catch {
+          // malformed SSE chunk — ignore
+        }
+      };
+
+      es.onerror = () => {
+        // SSE failed (backend down, auth error, network) — close and fall back to polling
+        es.close();
+        esRef.current = null;
+        if (!fallbackRef.current) {
+          fallbackRef.current = setInterval(fetchAll, FALLBACK_POLL_MS);
+        }
+      };
+    } else {
+      // No EventSource support — poll
+      fallbackRef.current = setInterval(fetchAll, FALLBACK_POLL_MS);
+    }
+
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      esRef.current?.close();
+      esRef.current = null;
+      if (fallbackRef.current) {
+        clearInterval(fallbackRef.current);
+        fallbackRef.current = null;
+      }
     };
-  }, [fetchAll]);
+  }, [fetchAll, appendOrUpdate]);
 
   const markAsRead = useCallback(async (id: string) => {
     setItems((prev) =>
@@ -67,7 +122,6 @@ export function useNotifications() {
     try {
       await api.patch(`/notifications/${id}/status`, { status: "READ" });
     } catch {
-      // revert on failure
       fetchAll();
     }
   }, [fetchAll]);
