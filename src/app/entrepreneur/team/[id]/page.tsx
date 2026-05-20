@@ -49,19 +49,11 @@ export default function TeamDetailPage({
   useEffect(() => {
     async function load() {
       try {
-        const [groupsRes, membersRes] = await Promise.all([
-          api.get<GroupResponse[]>("/groups"),
+        const [groupRes, membersRes] = await Promise.all([
+          api.get<GroupResponse>(`/groups/${id}`),
           api.get<MemberResponse[]>(`/groups/${id}/members`),
         ]);
-        const found = Array.isArray(groupsRes.data)
-          ? groupsRes.data.find((g) => g.id === id)
-          : undefined;
-        if (!found) {
-          toast.error("Team not found");
-          router.push("/entrepreneur/team");
-          return;
-        }
-        setGroup(found);
+        setGroup(groupRes.data);
         setMembers(Array.isArray(membersRes.data) ? membersRes.data : []);
       } catch {
         toast.error("Failed to load team");
@@ -83,7 +75,7 @@ export default function TeamDetailPage({
     }
   }
 
-  async function handleUpdate(name: string, description: string, _allowMembersToInvite?: boolean) {
+  async function handleUpdate(name: string, description: string) {
     try {
       const { data } = await api.patch<GroupResponse>(`/groups/${id}`, {
         name,
@@ -127,9 +119,6 @@ export default function TeamDetailPage({
     created_at: group.created_at,
     members: members.map((m) => {
       const upperStatus = m.status?.toUpperCase();
-      if (upperStatus !== "ACTIVE" && upperStatus !== "PENDING") {
-        console.warn(`Unknown member status: ${m.status}`);
-      }
       return {
         id: m.id,
         user_id: m.user_id,

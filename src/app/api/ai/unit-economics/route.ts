@@ -1,18 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
-import axios from "axios";
-import { getBearerHeaders } from "@/lib/backend-auth";
-import { handleBackendError } from "@/lib/backend-error";
+import { NextRequest } from "next/server";
+import { proxyBackend } from "@/lib/proxy-backend";
 
 export async function GET(req: NextRequest) {
-  const headers = getBearerHeaders(req);
-  try {
-    const { data } = await axios.get(
-      `${process.env.BACKEND_URL}/api/v1/ai/unit-economics`,
-      { headers, timeout: 60_000 }
-    );
-    return NextResponse.json(data);
-  } catch (error: unknown) {
-    const { message, status } = handleBackendError(error, "Failed to fetch unit economics");
-    return NextResponse.json({ error: message }, { status });
-  }
+  return proxyBackend(req, {
+    method: "GET",
+    path: "/ai/unit-economics",
+    timeout: 60_000,
+    fallback: "Failed to fetch unit economics",
+  });
+}
+
+export async function POST(req: NextRequest) {
+  return proxyBackend(req, {
+    method: "POST",
+    path: "/ai/unit-economics",
+    timeout: 120_000,
+    fallback: "Failed to generate unit economics",
+  });
 }

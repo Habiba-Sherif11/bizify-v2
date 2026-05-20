@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useCallback, use } from "react";
 import Link from "next/link";
 import {
   Home, ChevronRight, FileDown, Share2, Sparkles,
   Play, Loader2, AlertCircle,
 } from "lucide-react";
+import { toast } from "react-toastify";
 import { api } from "@/features/auth/lib/api";
 import { cn } from "@/lib/utils";
 import { formatIdeaDate } from "@/features/entrepreneur/hooks/useIdeas";
@@ -20,6 +21,10 @@ import { MvpPlanningSection }     from "@/features/entrepreneur/components/analy
 import { ProblemsSection }        from "@/features/entrepreneur/components/analysis/ProblemsSection";
 import { UnitEconomicsSection }   from "@/features/entrepreneur/components/analysis/UnitEconomicsSection";
 import { IdeaStrategySection }    from "@/features/entrepreneur/components/analysis/IdeaStrategySection";
+import { GoToMarketSection }      from "@/features/entrepreneur/components/analysis/GoToMarketSection";
+import { FunctionsListSection }   from "@/features/entrepreneur/components/analysis/FunctionsListSection";
+import { SectionControls }        from "@/features/entrepreneur/components/analysis/SectionControls";
+import type { AiSectionKey }      from "@/features/entrepreneur/hooks/useAiSection";
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
@@ -29,22 +34,44 @@ type TabKey =
   | "competition"
   | "market"
   | "businessModel"
+  | "functions"
   | "mvp"
   | "risk"
-  | "financial";
+  | "financial"
+  | "goToMarket";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "overview",      label: "Overview"           },
   { key: "customers",     label: "Customers"          },
-  { key: "competition",   label: "Competitor Analysis"},
+  { key: "competition",   label: "Competition"        },
   { key: "market",        label: "Market"             },
   { key: "businessModel", label: "Business Model"     },
+  { key: "functions",     label: "Functions"          },
   { key: "mvp",           label: "MVP"                },
   { key: "risk",          label: "Risk"               },
   { key: "financial",     label: "Financial"          },
+  { key: "goToMarket",    label: "Go-to-Market"       },
 ];
 
 // ─── Tab content ──────────────────────────────────────────────────────────────
+
+// Maps each tab to (1) its section state key and (2) the AI section key
+// the SectionControls component uses. "risk" (problems) has no per-section
+// AI controls, so it's mapped to undefined.
+const TAB_TO_SECTION: Record<
+  Exclude<TabKey, "overview">,
+  { stateKey: keyof ReturnType<typeof useAiPipeline>["sections"]; aiKey?: AiSectionKey }
+> = {
+  customers:     { stateKey: "customers",       aiKey: "customers" },
+  competition:   { stateKey: "competition",     aiKey: "competition" },
+  market:        { stateKey: "marketPotential", aiKey: "marketPotential" },
+  businessModel: { stateKey: "businessModel",   aiKey: "businessModel" },
+  functions:     { stateKey: "functionsList",   aiKey: "functionsList" },
+  mvp:           { stateKey: "mvpPlanning",     aiKey: "mvpPlanning" },
+  risk:          { stateKey: "problems"         },
+  financial:     { stateKey: "unitEconomics",   aiKey: "unitEconomics" },
+  goToMarket:    { stateKey: "goToMarket",      aiKey: "goToMarket" },
+};
 
 function TabContent({
   tab,
@@ -53,6 +80,7 @@ function TabContent({
   hasRun,
   onRun,
   isRunning,
+  onRefreshSection,
 }: {
   tab: TabKey;
   idea: Idea;
@@ -60,6 +88,7 @@ function TabContent({
   hasRun: boolean;
   onRun: () => void;
   isRunning: boolean;
+  onRefreshSection: (key: keyof ReturnType<typeof useAiPipeline>["sections"]) => void;
 }) {
   if (tab === "overview") {
     return <OverviewSection idea={idea} sections={sections} hasRun={hasRun} onRun={onRun} isRunning={isRunning} />;
@@ -70,18 +99,31 @@ function TabContent({
     competition:   <CompetitionSection     {...sections.competition}     />,
     market:        <MarketPotentialSection {...sections.marketPotential} />,
     businessModel: <BusinessModelSection   {...sections.businessModel}   />,
+    functions:     <FunctionsListSection   {...sections.functionsList}   />,
     mvp:           <MvpPlanningSection     {...sections.mvpPlanning}     />,
     risk:          <ProblemsSection        {...sections.problems}        />,
     financial:     <UnitEconomicsSection   {...sections.unitEconomics}   />,
+    goToMarket:    <GoToMarketSection      {...sections.goToMarket}      />,
   };
 
-  const s = sections[tab === "market" ? "marketPotential" : tab === "mvp" ? "mvpPlanning" : tab === "risk" ? "problems" : tab === "financial" ? "unitEconomics" : tab] as { data: string | null; isLoading: boolean };
+  const meta = TAB_TO_SECTION[tab as Exclude<TabKey, "overview">];
+  const s = sections[meta.stateKey];
 
   if (!hasRun && !s.data && !s.isLoading) {
     return <PipelineCallToAction onRun={onRun} isRunning={isRunning} />;
   }
 
-  return <>{sectionMap[tab as Exclude<TabKey, "overview">]}</>;
+  return (
+    <>
+      {meta.aiKey && s.data && (
+        <SectionControls
+          sectionKey={meta.aiKey}
+          onRefresh={() => onRefreshSection(meta.stateKey)}
+        />
+      )}
+      {sectionMap[tab as Exclude<TabKey, "overview">]}
+    </>
+  );
 }
 
 function OverviewSection({
@@ -191,7 +233,8 @@ export default function IdeaDetailPage({
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
 
-  const { sections, isRunning, hasRun, runError, runPipeline } = useAiPipeline();
+  const { sections, isRunning, hasRun, runError, runPipeline, fetchSection } = useAiPipeline();
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     api
@@ -200,6 +243,46 @@ export default function IdeaDetailPage({
       .catch(() => setFetchError("Failed to load idea."))
       .finally(() => setLoading(false));
   }, [idea_id]);
+
+  const handleExportPdf = useCallback(async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const { data: job } = await api.post<{ id: string }>("/export", {
+        idea_id,
+        format: "pdf",
+      });
+
+      // Poll until ready (max 90 s)
+      const deadline = Date.now() + 90_000;
+      let jobId = job.id;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 2_000));
+        const { data: status } = await api.get<{ id: string; status: string }>(`/export/${jobId}`);
+        jobId = status.id;
+        if (status.status === "done" || status.status === "completed") {
+          // Trigger browser download
+          const link = document.createElement("a");
+          link.href = `/api/export/${jobId}/download`;
+          link.download = `${idea?.title ?? "idea"}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          toast.success("PDF downloaded");
+          return;
+        }
+        if (status.status === "failed" || status.status === "error") {
+          throw new Error("Export failed on server");
+        }
+      }
+      throw new Error("Export timed out");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "PDF export failed";
+      toast.error(msg);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [idea_id, idea?.title, isExporting]);
 
   // ── Loading / error states ──────────────────────────────────────────────────
 
@@ -266,10 +349,23 @@ export default function IdeaDetailPage({
 
             {/* Icon actions */}
             <div className="flex items-center gap-1">
-              <ActionIconButton label="Save as PDF" onClick={() => {}}>
-                <FileDown size={18} className="text-neutral-400" />
+              <ActionIconButton
+                label={isExporting ? "Exporting…" : "Save as PDF"}
+                onClick={handleExportPdf}
+                disabled={isExporting}
+              >
+                {isExporting
+                  ? <Loader2 size={18} className="text-neutral-400 animate-spin" />
+                  : <FileDown size={18} className="text-neutral-400" />}
               </ActionIconButton>
-              <ActionIconButton label="Share" onClick={() => {}}>
+              <ActionIconButton label="Share" onClick={() => {
+                if (navigator.share) {
+                  navigator.share({ title: idea?.title ?? "Idea", url: window.location.href }).catch(() => {});
+                } else {
+                  navigator.clipboard.writeText(window.location.href);
+                  toast.info("Link copied to clipboard");
+                }
+              }}>
                 <Share2 size={18} className="text-neutral-400" />
               </ActionIconButton>
             </div>
@@ -329,6 +425,7 @@ export default function IdeaDetailPage({
           hasRun={hasRun}
           onRun={runPipeline}
           isRunning={isRunning}
+          onRefreshSection={fetchSection}
         />
       </main>
     </div>
@@ -338,10 +435,12 @@ export default function IdeaDetailPage({
 function ActionIconButton({
   label,
   onClick,
+  disabled,
   children,
 }: {
   label: string;
   onClick: () => void;
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -349,7 +448,8 @@ function ActionIconButton({
       <button
         type="button"
         onClick={onClick}
-        className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
+        disabled={disabled}
+        className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {children}
       </button>

@@ -1,10 +1,11 @@
 "use client";
 
-import { Bell, ChevronDown, LogOut, User, Settings, Moon, Sun } from "lucide-react";
+import { ChevronDown, LogOut, User, Settings, Moon, Sun } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { useTheme } from "@/features/dashboard/context/ThemeContext";
+import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 
 // ─── Logout confirmation dialog ───────────────────────────────────────────────
 
@@ -175,14 +176,7 @@ export function DashboardHeader() {
           </NavButton>
 
           {/* Notifications */}
-          <div className="relative">
-            <NavButton title="Notifications">
-              <Bell size={16} className="text-gray-500 dark:text-gray-400" />
-            </NavButton>
-            <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center pointer-events-none">
-              <span className="text-white text-[9px] font-bold leading-3">2</span>
-            </div>
-          </div>
+          <NotificationBell />
         </div>
       </header>
 

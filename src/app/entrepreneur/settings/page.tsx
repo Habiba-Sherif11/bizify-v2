@@ -83,14 +83,17 @@ function Toggle({
   enabled,
   onChange,
   disabled,
+  label,
 }: {
   enabled: boolean;
   onChange: (next: boolean) => void;
   disabled?: boolean;
+  label?: string;
 }) {
   return (
     <button
       type="button"
+      aria-label={label ?? (enabled ? "On" : "Off")}
       onClick={() => !disabled && onChange(!enabled)}
       disabled={disabled}
       className={`w-11 h-6 rounded-full transition-colors relative ${
@@ -135,7 +138,6 @@ export default function SettingsPage() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
     api
       .get<SettingsResponse>("/settings")
       .then(({ data }) => {
@@ -189,6 +191,8 @@ export default function SettingsPage() {
     return () => {
       active = false;
     };
+  // user?.name is only used as a display fallback — intentionally run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSaveProfile = async () => {
@@ -537,6 +541,7 @@ export default function SettingsPage() {
                 </label>
                 <select
                   value={privacy.visibility}
+                  title="Profile visibility"
                   onChange={(e) =>
                     setPrivacy((prev) => ({ ...prev, visibility: e.target.value }))
                   }
@@ -595,6 +600,7 @@ export default function SettingsPage() {
                 </label>
                 <input
                   type="password"
+                  placeholder="Enter current password"
                   value={password.current_password}
                   onChange={(e) =>
                     setPassword((prev) => ({ ...prev, current_password: e.target.value }))
@@ -608,6 +614,7 @@ export default function SettingsPage() {
                 </label>
                 <input
                   type="password"
+                  placeholder="Enter new password"
                   value={password.new_password}
                   onChange={(e) =>
                     setPassword((prev) => ({ ...prev, new_password: e.target.value }))
@@ -621,6 +628,7 @@ export default function SettingsPage() {
                 </label>
                 <input
                   type="password"
+                  placeholder="Confirm new password"
                   value={password.confirm_password}
                   onChange={(e) =>
                     setPassword((prev) => ({ ...prev, confirm_password: e.target.value }))
