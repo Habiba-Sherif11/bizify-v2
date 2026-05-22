@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import {
   Home, ChevronRight, Send, Plus, Bot,
   Sparkles, MessageSquare, Trash2,
@@ -163,7 +163,7 @@ function loadActiveId(conversations: Conversation[]): string {
   return conversations[0]?.id ?? "";
 }
 
-export default function AiChatPage() {
+function AiChatContent() {
   const searchParams = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>(() => loadConversations());
   const [activeId, setActiveId] = useState<string>(() => loadActiveId(loadConversations()));
@@ -411,5 +411,13 @@ export default function AiChatPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AiChatPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-neutral-100 dark:bg-neutral-900" />}>
+      <AiChatContent />
+    </Suspense>
   );
 }
