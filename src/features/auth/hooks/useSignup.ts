@@ -79,7 +79,6 @@ function validateFiles(files: File[]): string | null {
 export function useSignup() {
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
-  const [tempPassword, setTempPassword] = useState("");
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const { fetchUser } = useAuth();
   const router = useRouter();
@@ -128,7 +127,6 @@ export function useSignup() {
   ) => {
     setSelectedRole(role);
     setEmail(data.email);
-    setTempPassword(data.password);
 
     try {
       await wakeBackend();
@@ -193,7 +191,7 @@ export function useSignup() {
       await api.post("/auth/verify-otp", { email, otp_code });
       toast.success("Email verified");
 
-      await api.post("/auth/login", { email, password: tempPassword });
+      // verify-otp returns an access_token and the route sets it as the auth cookie
       await fetchUser();
 
       if (selectedRole === "entrepreneur") {

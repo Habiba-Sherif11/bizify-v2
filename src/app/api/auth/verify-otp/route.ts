@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await axios.post(
+    const { data } = await axios.post(
       `${process.env.BACKEND_URL}/api/v1/auth/verify-otp`,
       { email, otp_code },
       {
@@ -26,7 +26,21 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    return NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true });
+
+    // Backend returns an access_token on successful OTP verification
+    const { access_token } = data ?? {};
+    if (access_token) {
+      response.cookies.set("auth_token", access_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24,
+      });
+    }
+
+    return response;
   } catch (error: unknown) {
     const { message, status } = handleBackendError(error, "OTP verification failed");
 
