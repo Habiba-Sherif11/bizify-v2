@@ -179,7 +179,7 @@ export default function EntrepreneurDashboard() {
             <span className="text-[12px] text-neutral-400 dark:text-neutral-500">4 workspaces</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {FEATURE_CARDS.map((card) => (
               <FeatureCard
                 key={card.id}

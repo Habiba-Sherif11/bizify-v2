@@ -38,7 +38,7 @@ export function ChatBotBubble() {
         <div
           className={cn(
             "fixed bottom-20 inset-s-6 z-50",
-            "w-[320px] sm:w-[360px]",
+            "w-[calc(100vw-3rem)] max-w-80 sm:max-w-90",
             "bg-background dark:bg-neutral-800",
             "rounded-2xl border border-neutral-200 dark:border-neutral-700",
             "shadow-2xl flex flex-col overflow-hidden",

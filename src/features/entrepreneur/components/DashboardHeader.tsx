@@ -218,7 +218,7 @@ export function DashboardHeader() {
             {/* Name + email */}
             <div className="flex flex-col gap-[2.9px]">
               <div className="flex items-center gap-2">
-                <span className="text-black dark:text-white text-sm font-medium leading-none">
+                <span className="text-black dark:text-white text-sm font-medium leading-none max-w-22.5 sm:max-w-40 truncate">
                   {user?.name || user?.email?.split("@")[0] || "User"}
                 </span>
                 <ChevronDown
@@ -230,7 +230,7 @@ export function DashboardHeader() {
                   aria-hidden="true"
                 />
               </div>
-              <span className="text-neutral-500 dark:text-neutral-400 text-xs font-light">
+              <span className="hidden sm:block text-neutral-500 dark:text-neutral-400 text-xs font-light truncate max-w-40">
                 {user?.email}
               </span>
             </div>

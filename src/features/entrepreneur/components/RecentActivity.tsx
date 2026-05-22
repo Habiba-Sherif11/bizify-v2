@@ -51,7 +51,7 @@ export function RecentActivity({ items, onViewAll }: Props) {
               <li
                 key={item.id}
                 className="
-                  grid grid-cols-[36px_1fr_auto_auto] sm:grid-cols-[36px_1fr_auto_auto]
+                  grid grid-cols-[36px_1fr_auto] sm:grid-cols-[36px_1fr_auto_auto]
                   items-center gap-3 sm:gap-4
                   py-3.5
                   border-b border-neutral-100 dark:border-neutral-700/60
