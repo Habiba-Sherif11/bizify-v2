@@ -9,14 +9,14 @@ export function WhyBizifySection() {
             <h3 className="text-neutral-950 text-xl sm:text-2xl font-semibold leading-tight">
               Stop Wondering. Start Building.
             </h3>
-            <p className="text-gray-500 text-sm leading-6">
+            <p className="text-neutral-600 text-sm leading-6">
               Bizify eliminates the guesswork from startup decisions. Get validated insights, expert
-              guidance, and actionable strategies—all in one platform. Transform your idea into a
+              guidance, and actionable strategies — all in one platform. Transform your idea into a
               market-ready business in weeks, not months.
             </p>
           </div>
 
-          <Button type="button" variant="secondary-gradient" size="lg" className="w-full sm:w-52">
+          <Button type="button" variant="primary-gradient" size="lg" className="w-full sm:w-52">
             Start free today
           </Button>
         </div>

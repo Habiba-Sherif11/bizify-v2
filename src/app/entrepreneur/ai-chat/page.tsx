@@ -121,7 +121,7 @@ function ConversationItem({
 function MessageBubble({ msg }: { msg: Message }) {
   const isUser = msg.role === "user";
   return (
-    <div className={cn("flex gap-2.5", isUser && "flex-row-reverse")}>
+    <div className={cn("flex gap-2.5 animate-in fade-in slide-in-from-bottom-1 duration-200", isUser && "flex-row-reverse")}>
       {!isUser && (
         <div className="w-7 h-7 rounded-full bg-linear-to-br from-cyan-500 to-cyan-600 flex items-center justify-center shrink-0 mt-0.5">
           <Sparkles size={13} className="text-white" />
@@ -131,7 +131,7 @@ function MessageBubble({ msg }: { msg: Message }) {
         "max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed",
         isUser
           ? "bg-cyan-500 text-white rounded-tr-sm"
-          : "bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-gray-700 dark:text-gray-200 rounded-tl-sm shadow-sm"
+          : "bg-background dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-gray-700 dark:text-gray-200 rounded-tl-sm shadow-sm"
       )}>
         {msg.text}
         <p className={cn("text-[10px] mt-1.5 opacity-60", isUser ? "text-right" : "text-left")}>
@@ -342,7 +342,7 @@ export default function AiChatPage() {
         </aside>
 
         {/* ── Main chat ── */}
-        <div className="flex-1 flex flex-col bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 shadow-sm overflow-hidden min-w-0">
+        <div className="flex-1 flex flex-col bg-background dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 shadow-sm overflow-hidden min-w-0">
           {/* Chat header */}
           <div className="flex items-center gap-3 px-5 py-3.5 border-b border-neutral-100 dark:border-neutral-700 shrink-0">
             <div className="w-8 h-8 rounded-full bg-linear-to-br from-cyan-500 to-cyan-600 flex items-center justify-center">
@@ -367,12 +367,11 @@ export default function AiChatPage() {
                 <div className="w-7 h-7 rounded-full bg-linear-to-br from-cyan-500 to-cyan-600 flex items-center justify-center shrink-0 mt-0.5">
                   <Sparkles size={13} className="text-white" />
                 </div>
-                <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-sm flex items-center gap-1">
+                <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-background dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-sm flex items-center gap-1">
                   {[0, 1, 2].map((i) => (
                     <span
                       key={i}
-                      className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-500 animate-bounce"
-                      style={{ animationDelay: `${i * 150}ms` }}
+                      className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-500 typing-dot"
                     />
                   ))}
                 </div>

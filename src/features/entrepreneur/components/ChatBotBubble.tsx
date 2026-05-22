@@ -37,9 +37,9 @@ export function ChatBotBubble() {
       {open && (
         <div
           className={cn(
-            "fixed bottom-20 start-6 z-50",
+            "fixed bottom-20 inset-s-6 z-50",
             "w-[320px] sm:w-[360px]",
-            "bg-white dark:bg-neutral-800",
+            "bg-background dark:bg-neutral-800",
             "rounded-2xl border border-neutral-200 dark:border-neutral-700",
             "shadow-2xl flex flex-col overflow-hidden",
             "animate-in slide-in-from-bottom-4 fade-in duration-200"
@@ -97,8 +97,7 @@ export function ChatBotBubble() {
                   {[0, 1, 2].map((i) => (
                     <span
                       key={i}
-                      className="w-1.5 h-1.5 rounded-full bg-neutral-400 dark:bg-neutral-500 animate-bounce"
-                      style={{ animationDelay: `${i * 150}ms` }}
+                      className="w-1.5 h-1.5 rounded-full bg-neutral-400 dark:bg-neutral-500 typing-dot"
                     />
                   ))}
                 </div>
@@ -138,13 +137,14 @@ export function ChatBotBubble() {
         onClick={() => setOpen((v) => !v)}
         title="Chat with Bizify AI"
         className={cn(
-          "fixed bottom-6 start-6 z-50",
+          "fixed bottom-6 inset-s-6 z-50",
           "w-12 h-12 rounded-full",
           "flex items-center justify-center text-white",
-          "shadow-lg cursor-pointer",
+          "cursor-pointer transition-[transform,background-color] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          "hover:scale-105 active:scale-95",
           open
-            ? "bg-neutral-700 dark:bg-neutral-600"
-            : "bg-linear-to-br from-cyan-500 to-cyan-600 shadow-cyan-500/30"
+            ? "bg-neutral-700 dark:bg-neutral-600 shadow-lg"
+            : "bg-linear-to-br from-cyan-500 to-cyan-600 bubble-idle"
         )}
       >
         {open ? <X size={20} /> : <Bot size={20} />}

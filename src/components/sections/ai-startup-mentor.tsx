@@ -9,9 +9,9 @@ export function AiStartupMentorSection() {
             <h3 className="text-neutral-950 text-xl sm:text-2xl font-semibold leading-tight">
               Your 24/7 AI Co-Founder
             </h3>
-            <p className="text-gray-500 text-sm leading-6">
+            <p className="text-neutral-600 text-sm leading-6">
               Get expert guidance whenever you need it. Bizify analyzes markets, validates your ideas,
-              and creates step-by-step action plans tailored to your vision—without the six-figure
+              and creates step-by-step action plans tailored to your vision — without the six-figure
               advisor fees.
             </p>
           </div>

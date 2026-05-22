@@ -14,98 +14,97 @@ import { AiSearchBar } from "@/features/entrepreneur/components/AiSearchBar";
 import { FeatureCard } from "@/features/entrepreneur/components/FeatureCard";
 import { RecentActivity, type ActivityItem } from "@/features/entrepreneur/components/RecentActivity";
 
-const FEATURE_CARD_CONFIGS = [
-  { id: "ideas",       icon: Lightbulb, iconClassName: "bg-cyan-600",                              title: "My Ideas",     description: "All your saved business ideas, roadmaps, tasks, and validation reports in one place." },
-  { id: "aiChat",      icon: Bot,       iconClassName: "bg-linear-to-br from-amber-500 to-yellow-500", title: "AI Chat",      description: "Start a conversation with the AI to generate, refine, and validate new business ideas." },
-  { id: "team",        icon: Users,     iconClassName: "bg-cyan-800",                              title: "Team",         description: "Manage your team: invite members, assign roles, and view team activity." },
-  { id: "marketplace", icon: Store,     iconClassName: "bg-cyan-600",                              title: "Marketplace",  description: "Browse and connect with external partners: suppliers, mentors, and manufacturers." },
+const FEATURE_CARDS = [
+  {
+    id: "ideas",
+    icon: Lightbulb,
+    iconClassName: "bg-cyan-600",
+    title: "My Ideas",
+    description: "Explore and develop your business ideas with AI-powered insights.",
+    route: "/entrepreneur/ideas",
+  },
+  {
+    id: "aiChat",
+    icon: Bot,
+    iconClassName: "bg-gradient-to-br from-amber-500 to-yellow-500",
+    title: "AI Chat",
+    description: "Generate, refine, and validate new business ideas in conversation.",
+    route: "/entrepreneur/ai-chat",
+  },
+  {
+    id: "team",
+    icon: Users,
+    iconClassName: "bg-cyan-800",
+    title: "Team",
+    description: "Collaborate with your co-founders and assign roles to members.",
+    route: "/entrepreneur/team",
+  },
+  {
+    id: "marketplace",
+    icon: Store,
+    iconClassName: "bg-cyan-600",
+    title: "Marketplace",
+    description: "Browse mentors, suppliers, and partners to grow your startup.",
+    route: "/entrepreneur/marketplace",
+  },
 ];
 
 const ACTIVITY_ITEMS: ActivityItem[] = [
   {
     id: "1",
     icon: FileText,
-    iconBg: "bg-cyan-600",
+    iconColor: "bg-cyan-600",
     activity: "Updated business model canvas",
     module: "Ideas",
-    moduleBg: "bg-cyan-600/10",
-    moduleBorder: "border-cyan-600",
-    moduleText: "text-cyan-700",
     time: "2 min ago",
   },
   {
     id: "2",
     icon: MessageCircle,
-    iconBg: "bg-amber-500",
+    iconColor: "bg-amber-500",
     activity: "Completed customer interview #4",
     module: "AI Chat",
-    moduleBg: "bg-amber-500/10",
-    moduleBorder: "border-amber-500",
-    moduleText: "text-amber-700",
     time: "1 hr ago",
   },
   {
     id: "3",
     icon: UserPlus,
-    iconBg: "bg-cyan-800",
+    iconColor: "bg-cyan-800",
     activity: "Alex Johnson joined the team",
     module: "Team",
-    moduleBg: "bg-cyan-800/10",
-    moduleBorder: "border-cyan-800",
-    moduleText: "text-cyan-900",
     time: "3 hr ago",
   },
   {
     id: "4",
     icon: BarChart2,
-    iconBg: "bg-yellow-500",
+    iconColor: "bg-yellow-500",
     activity: "Generated market size report",
     module: "Ideas",
-    moduleBg: "bg-yellow-500/10",
-    moduleBorder: "border-yellow-500",
-    moduleText: "text-yellow-700",
     time: "Yesterday",
   },
   {
     id: "5",
     icon: Link,
-    iconBg: "bg-amber-500",
+    iconColor: "bg-amber-500",
     activity: "Connected Stripe integration",
     module: "AI Chat",
-    moduleBg: "bg-amber-500/10",
-    moduleBorder: "border-amber-500",
-    moduleText: "text-amber-700",
     time: "2 days ago",
   },
 ];
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
-const CARD_ROUTES: Record<string, string> = {
-  ideas:      "/entrepreneur/ideas",
-  team:       "/entrepreneur/team",
-  aiChat:     "/entrepreneur/ai-chat",
-  marketplace:"/entrepreneur/marketplace",
-};
 
 export default function EntrepreneurDashboard() {
   const { user } = useAuth();
   const router = useRouter();
   const firstName = user?.name?.split(" ")[0] || user?.email?.split("@")[0] || "there";
 
-  const featureCards = FEATURE_CARD_CONFIGS.map((c) => ({
-    ...c,
-    onClick: () => router.push(CARD_ROUTES[c.id] ?? "#"),
-  }));
-
   return (
-    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 transition-colors">
+    <div className="min-h-screen bg-[#FAFAFA] dark:bg-neutral-900">
       <DashboardHeader />
       <GuidanceTour />
-
       <ChatBotBubble />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 flex flex-col gap-6 sm:gap-8">
+
         {/* Welcome + AI search */}
         <section
           data-tour="ai-search"
@@ -125,19 +124,19 @@ export default function EntrepreneurDashboard() {
           </div>
         </section>
 
-        {/* Feature cards — responsive grid */}
+        {/* Feature cards — 4-column grid */}
         <section
           data-tour="feature-cards"
           className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5"
         >
-          {featureCards.map((card) => (
+          {FEATURE_CARDS.map((card) => (
             <FeatureCard
               key={card.id}
               icon={card.icon}
               iconClassName={card.iconClassName}
               title={card.title}
               description={card.description}
-              onClick={card.onClick}
+              onClick={() => router.push(card.route)}
             />
           ))}
         </section>
@@ -146,6 +145,7 @@ export default function EntrepreneurDashboard() {
         <section data-tour="recent-activity">
           <RecentActivity items={ACTIVITY_ITEMS} onViewAll={() => {}} />
         </section>
+
       </main>
     </div>
   );

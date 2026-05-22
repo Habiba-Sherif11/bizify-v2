@@ -1,6 +1,8 @@
 :root {
   --anim-duration: 700ms;
-  --anim-easing: cubic-bezier(0.2, 0.9, 0.4, 1.1);
+  --anim-easing: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
   --hover-duration: 250ms;
   --lift-distance: -6px;
   --fade-distance: 24px;
@@ -63,6 +65,86 @@
 /* When stagger goes back to hidden, reset delays instantly */
 .stagger-children:not(.visible) > * {
   transition-delay: 0ms;
+}
+
+/* ============================================================
+   DASHBOARD SECTION ENTRANCE
+============================================================ */
+
+@keyframes section-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.section-enter {
+  animation: section-in 280ms var(--ease-out-expo) both;
+}
+
+.section-enter-1 { animation-delay: 0ms; }
+.section-enter-2 { animation-delay: 80ms; }
+.section-enter-3 { animation-delay: 160ms; }
+
+/* ============================================================
+   HEADER ENTRANCE — slides down from top on mount
+============================================================ */
+
+@keyframes header-in {
+  from { opacity: 0; transform: translateY(-100%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.header-enter {
+  animation: header-in 320ms var(--ease-out-expo) both;
+}
+
+/* ============================================================
+   DROPDOWN / POPOVER ENTRANCE
+============================================================ */
+
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dropdown-enter {
+  animation: dropdown-in 180ms var(--ease-out-expo) both;
+  transform-origin: top left;
+}
+
+.dropdown-enter-right {
+  animation: dropdown-in 180ms var(--ease-out-expo) both;
+  transform-origin: top right;
+}
+
+/* ============================================================
+   TYPING INDICATOR — replaces animate-bounce (banned: bounce easing)
+============================================================ */
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 0.25; transform: scale(0.75); }
+  50%       { opacity: 1;    transform: scale(1.1); }
+}
+
+.typing-dot {
+  animation: dot-pulse 1.4s var(--ease-out-quart) infinite;
+  transform-origin: center;
+}
+
+.typing-dot:nth-child(1) { animation-delay: 0ms; }
+.typing-dot:nth-child(2) { animation-delay: 220ms; }
+.typing-dot:nth-child(3) { animation-delay: 440ms; }
+
+/* ============================================================
+   CHAT BOT BUBBLE — IDLE GLOW PULSE
+============================================================ */
+
+@keyframes bubble-glow {
+  0%, 100% { box-shadow: 0 4px 14px rgba(8, 145, 178, 0.35), 0 2px 6px rgba(0,0,0,0.12); }
+  50%       { box-shadow: 0 4px 24px rgba(8, 145, 178, 0.58), 0 2px 6px rgba(0,0,0,0.12); }
+}
+
+.bubble-idle {
+  animation: bubble-glow 2.8s ease-in-out infinite;
 }
 
 /* ============================================================

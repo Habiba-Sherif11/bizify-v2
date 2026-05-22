@@ -29,7 +29,7 @@ export function ProcessCard({ step }: ProcessCardProps) {
       <h3 className="text-base font-semibold text-neutral-950 mb-1.5">{step.title}</h3>
 
       {/* Description */}
-      <p className="text-neutral-600 text-xs leading-relaxed">{step.description}</p>
+      <p className="text-neutral-600 text-sm leading-relaxed">{step.description}</p>
     </Card>
   );
 }

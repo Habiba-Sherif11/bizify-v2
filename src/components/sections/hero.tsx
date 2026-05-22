@@ -22,7 +22,7 @@ export function Hero() {
       <div className="relative z-10 max-w-3xl mx-auto text-center">
         {/* Text Content */}
         <div className="space-y-6">
-          <h1 className="text-2xl sm:text-3xl lg:text-[2rem] font-bold text-neutral-900 leading-tight">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-neutral-900 leading-tight">
             From idea to launch <br className="hidden sm:inline" /> with an AI co-founder by your
             side.
           </h1>

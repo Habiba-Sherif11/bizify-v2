@@ -49,7 +49,7 @@ function CreateTeamModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-300/40 backdrop-blur-sm p-3 sm:p-4">
-      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-neutral-800 rounded-xl shadow-2xl flex flex-col">
+      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-background dark:bg-neutral-800 rounded-xl shadow-2xl flex flex-col">
         <div className="px-4 sm:px-6 py-5 border-b border-gray-200 dark:border-neutral-700 flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white">Create a New Team</h2>
           <button
@@ -69,7 +69,7 @@ function CreateTeamModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter team name"
-              className="h-12 px-3.5 rounded-lg border border-slate-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-700 dark:text-gray-200 placeholder:text-slate-400 dark:placeholder:text-gray-500 text-sm outline-none focus:border-amber-400 transition-colors"
+              className="h-12 px-3.5 rounded-lg border border-slate-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-700 dark:text-gray-200 placeholder:text-slate-400 dark:placeholder:text-gray-500 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-colors"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -79,7 +79,7 @@ function CreateTeamModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Enter team description"
-              className="h-12 px-3.5 rounded-lg border border-slate-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-700 dark:text-gray-200 placeholder:text-slate-400 dark:placeholder:text-gray-500 text-sm outline-none focus:border-amber-400 transition-colors"
+              className="h-12 px-3.5 rounded-lg border border-slate-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-700 dark:text-gray-200 placeholder:text-slate-400 dark:placeholder:text-gray-500 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-colors"
             />
           </div>
         </div>
@@ -192,7 +192,7 @@ export default function TeamsPage() {
 
         {/* Title row */}
         <div className="mt-4 flex items-center justify-between gap-4">
-          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-white">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-neutral-900 dark:text-white">
             Teams
           </h1>
         </div>
@@ -209,7 +209,7 @@ export default function TeamsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search teams"
-              className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 outline-none focus:border-amber-400 transition-colors"
+              className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-background dark:bg-neutral-800 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-colors"
             />
           </div>
           <button
@@ -224,7 +224,7 @@ export default function TeamsPage() {
         {/* Content */}
         {loading ? (
           <div className="flex items-center justify-center py-24">
-            <div className="w-6 h-6 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+            <div className="w-6 h-6 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
           <EmptyTeams onCreateClick={() => setShowModal(true)} />

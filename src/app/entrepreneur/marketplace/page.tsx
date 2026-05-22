@@ -150,7 +150,7 @@ export default function MarketplacePage() {
         {/* Header */}
         <div className="mt-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-white">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-neutral-900 dark:text-white">
               Marketplace
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -159,7 +159,7 @@ export default function MarketplacePage() {
           </div>
 
           {/* Filter tabs */}
-          <div className="flex items-center gap-1 bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-1 self-start sm:self-auto">
+          <div className="flex items-center gap-1 bg-background dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-1 self-start sm:self-auto">
             {FILTER_TABS.map((tab) => (
               <button
                 key={tab}
@@ -185,7 +185,7 @@ export default function MarketplacePage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search partners, specialties, tags…"
-            className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-cyan-400 dark:focus:border-cyan-500 transition-colors"
+            className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-background dark:bg-neutral-800 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 dark:focus:border-cyan-500 transition-colors"
           />
         </div>
 

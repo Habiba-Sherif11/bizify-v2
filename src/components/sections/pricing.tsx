@@ -8,21 +8,21 @@ import { Button } from "@/components/ui/button";
 
 // Feature and plan data
 const FEATURES = [
-  { name: "Create and send invoices", free: true, starter: true, plus: true, premium: true },
-  { name: "Track expenses", free: true, starter: true, plus: true, premium: true },
-  { name: "Unlimited contacts", free: true, starter: true, plus: true, premium: true },
-  { name: "Track projects profitability", free: true, starter: true, plus: true, premium: true },
-  { name: "Multi-currency", free: true, starter: true, plus: true, premium: true },
-  { name: "Auto exchange rates", free: true, starter: true, plus: true, premium: true },
-  { name: "Download invoice as PDF", free: true, starter: true, plus: true, premium: true },
-  { name: "Invite your accountant", free: true, starter: true, plus: true, premium: true },
-  { name: "Chat channel for your company", free: true, starter: true, plus: true, premium: true },
-  { name: "Multiple roles and permissions", free: false, starter: true, plus: true, premium: true },
-  { name: "Apply tax rates", free: false, starter: true, plus: true, premium: true },
-  { name: "Automatic VAT return", free: false, starter: true, plus: true, premium: true },
+  { name: "AI idea brainstorming", free: true, starter: true, plus: true, premium: true },
+  { name: "Market research reports", free: true, starter: true, plus: true, premium: true },
+  { name: "Competitor analysis", free: false, starter: true, plus: true, premium: true },
+  { name: "Business plan builder", free: false, starter: true, plus: true, premium: true },
+  { name: "AI mentor chat", free: false, starter: true, plus: true, premium: true },
+  { name: "Financial projections", free: false, starter: false, plus: true, premium: true },
+  { name: "Pitch deck generator", free: false, starter: false, plus: true, premium: true },
+  { name: "Milestone tracking", free: false, starter: false, plus: true, premium: true },
   { name: "Priority support", free: false, starter: false, plus: true, premium: true },
-  { name: "Custom branding", free: false, starter: false, plus: true, premium: true },
+  { name: "Custom branding on reports", free: false, starter: false, plus: false, premium: true },
+  { name: "Advanced AI models", free: false, starter: false, plus: false, premium: true },
+  { name: "Team collaboration", free: false, starter: false, plus: false, premium: true },
+  { name: "Dedicated AI advisor", free: false, starter: false, plus: false, premium: true },
   { name: "API access", free: false, starter: false, plus: false, premium: true },
+  { name: "White-label reports", free: false, starter: false, plus: false, premium: true },
 ];
 
 const PLANS = [
@@ -36,7 +36,7 @@ export function PricingSection() {
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
 
   return (
-    <section id="pricing" className="relative w-full py-16 px-4 sm:px-6 lg:px-8 bg-white">
+    <section id="pricing" className="relative w-full py-16 px-4 sm:px-6 lg:px-8 bg-neutral-50">
       {/* Background blobs */}
       <div
         className="absolute top-[-120px] right-[-80px] w-[400px] h-[400px] rounded-full opacity-[0.07]"

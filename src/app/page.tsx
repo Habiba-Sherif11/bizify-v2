@@ -18,7 +18,7 @@ import section33Bg from "@/assets/imgs/landing/section33.png";
 
 export default function Home() {
   return (
-    <div className="flex flex-col bg-white">
+    <div className="flex flex-col bg-background">
       <Navbar />
 
       <main>

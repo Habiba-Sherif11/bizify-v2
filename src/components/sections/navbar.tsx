@@ -26,8 +26,17 @@ export function Navbar() {
   // ---- Effects ----
   // Scroll state
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", handleScroll);
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          setIsScrolled(window.scrollY > 10);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -51,6 +60,7 @@ export function Navbar() {
     <>
       {/* Main Navbar */}
       <nav
+        aria-label="Main navigation"
         className={`fixed top-0 w-full z-50 transition-all duration-300 ${
           isScrolled
             ? "bg-white/95 backdrop-blur-md border-neutral-200 shadow-lg"
@@ -125,9 +135,9 @@ export function Navbar() {
               aria-label="Toggle menu"
             >
               {isMenuOpen ? (
-                <X className="h-6 w-6 text-neutral-700" />
+                <X className="h-6 w-6 text-neutral-700" aria-hidden="true" />
               ) : (
-                <Menu className="h-6 w-6 text-neutral-700" />
+                <Menu className="h-6 w-6 text-neutral-700" aria-hidden="true" />
               )}
             </Button>
           </div>
@@ -140,13 +150,16 @@ export function Navbar() {
           isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"
         }`}
         onClick={() => setIsMenuOpen(false)}
+        onKeyDown={(e) => e.key === "Escape" && setIsMenuOpen(false)}
+        role="presentation"
       />
 
       {/* Mobile Menu Panel */}
       <div
-        className={`fixed top-0 right-0 z-40 h-full w-full max-w-sm bg-white shadow-2xl transform transition-transform duration-300 ease-out lg:hidden ${
+        className={`fixed top-0 right-0 z-40 h-full w-full max-w-sm bg-background shadow-2xl transform transition-transform duration-300 ease-out lg:hidden ${
           isMenuOpen ? "translate-x-0" : "translate-x-full"
         }`}
+        onKeyDown={(e) => e.key === "Escape" && setIsMenuOpen(false)}
       >
         <div className="flex flex-col h-full">
           {/* Mobile Header */}
@@ -166,7 +179,7 @@ export function Navbar() {
               size="icon"
               aria-label="Close menu"
             >
-              <X className="h-5 w-5 text-neutral-700" />
+              <X className="h-5 w-5 text-neutral-700" aria-hidden="true" />
             </Button>
           </div>
 
@@ -178,7 +191,7 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={handleLinkClick}
-                  className="px-4 py-2.5 text-sm font-medium text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 rounded-lg transition-colors"
+                  className="px-4 py-3 min-h-11 flex items-center text-sm font-medium text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 rounded-lg transition-colors"
                 >
                   {link.label}
                 </Link>

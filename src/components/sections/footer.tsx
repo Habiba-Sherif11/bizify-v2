@@ -2,6 +2,7 @@
 
 // External libraries
 import Link from "next/link";
+import { Globe, Share2, Camera, ScreenShare } from "lucide-react";
 
 // Internal components
 import { Button } from "@/components/ui/button";
@@ -27,15 +28,22 @@ export function Footer() {
               The AI-powered platform guiding entrepreneurs from idea to thriving business.
             </p>
             <div className="flex gap-3 pt-2">
-              {[1, 2, 3, 4].map((i) => (
+              {[
+                { icon: Globe, label: "LinkedIn" },
+                { icon: Share2, label: "Twitter / X" },
+                { icon: Camera, label: "Instagram" },
+                { icon: ScreenShare, label: "YouTube" },
+              ].map(({ icon: Icon, label }) => (
                 <Button
-                  key={i}
+                  key={label}
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  className="bg-neutral-200 hover:bg-neutral-300"
-                  aria-label={`Social link ${i}`}
-                />
+                  className="bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-900"
+                  aria-label={label}
+                >
+                  <Icon className="size-3.5" />
+                </Button>
               ))}
             </div>
           </div>
@@ -107,7 +115,7 @@ export function Footer() {
         {/* Divider & Legal */}
         <div className="border-t border-neutral-200 pt-6">
           <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-neutral-600">
-            <p>&copy; 2024 Bizify. All rights reserved.</p>
+            <p>&copy; 2025 Bizify. All rights reserved.</p>
             <div className="flex gap-6 mt-4 sm:mt-0">
               <Link href="#" className="hover:text-neutral-900 transition">
                 Privacy Policy

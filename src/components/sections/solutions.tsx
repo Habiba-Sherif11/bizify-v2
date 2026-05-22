@@ -1,12 +1,22 @@
 "use client";
 
 // External libraries
+import type React from "react";
 import { Zap, BarChart3, Target, TrendingUp, Lightbulb, Rocket } from "lucide-react";
 
+// Types
+interface SolutionCardProps {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  fadedColor: string;
+  iconColor: string;
+}
+
 // Internal component (same file)
-function SolutionCard({ icon: Icon, title, description, fadedColor, iconColor }: any) {
+function SolutionCard({ icon: Icon, title, description, fadedColor, iconColor }: SolutionCardProps) {
   return (
-    <div className="flex justify-start items-end gap-4">
+    <div className="flex justify-start items-start gap-4">
       {/* Colored Icon Box */}
       <div
         className={`w-10 h-10 ${fadedColor} rounded-lg flex items-center justify-center flex-shrink-0`}
@@ -16,7 +26,7 @@ function SolutionCard({ icon: Icon, title, description, fadedColor, iconColor }:
       {/* Text Content */}
       <div className="flex flex-col justify-center items-start gap-1.5">
         <h3 className="text-neutral-950 text-sm font-semibold">{title}</h3>
-        <p className="text-gray-500 text-xs font-normal leading-5">{description}</p>
+        <p className="text-neutral-600 text-sm font-normal leading-5">{description}</p>
       </div>
     </div>
   );
@@ -34,37 +44,37 @@ const SOLUTIONS = [
   {
     icon: BarChart3,
     title: "All Tools in One",
-    description: "Consolidate your workflow - no more juggling multiple platforms",
-    fadedColor: "bg-rose-50",
-    iconColor: "text-rose-600",
+    description: "Consolidate your workflow — no more juggling multiple platforms",
+    fadedColor: "bg-cyan-50",
+    iconColor: "text-cyan-700",
   },
   {
     icon: Target,
     title: "Validate Fast",
     description: "Test your ideas with structured frameworks before investing",
-    fadedColor: "bg-violet-50",
-    iconColor: "text-violet-600",
+    fadedColor: "bg-amber-50",
+    iconColor: "text-amber-600",
   },
   {
     icon: TrendingUp,
     title: "Expert Guidance",
     description: "Get personalized recommendations from AI mentors 24/7",
     fadedColor: "bg-cyan-50",
-    iconColor: "text-cyan-600",
+    iconColor: "text-cyan-700",
   },
   {
     icon: Lightbulb,
     title: "Smart Insights",
-    description: "Get real-time recommendations tailored to your unique business needs",
-    fadedColor: "bg-yellow-50",
-    iconColor: "text-yellow-600",
+    description: "Real-time recommendations tailored to your unique business needs",
+    fadedColor: "bg-amber-50",
+    iconColor: "text-amber-600",
   },
   {
     icon: Rocket,
     title: "Launch Ready",
     description: "Everything you need to go from idea to market in weeks, not months",
-    fadedColor: "bg-green-50",
-    iconColor: "text-green-600",
+    fadedColor: "bg-cyan-50",
+    iconColor: "text-cyan-700",
   },
 ];
 

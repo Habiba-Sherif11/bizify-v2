@@ -58,8 +58,6 @@ export function LoginForm() {
         </div>
       )}
 
-      
-
       {/* Email */}
       <div className="space-y-1.5">
         <Label htmlFor="email">Email</Label>
@@ -109,6 +107,7 @@ export function LoginForm() {
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
             tabIndex={-1}
           >
@@ -147,14 +146,12 @@ export function LoginForm() {
       {/* Divider */}
       <div className="relative flex items-center gap-3">
         <div className="flex-1 h-px bg-gray-200" />
-        <span className="text-xs text-gray-400">or sign in with email</span>
+        <span className="text-xs text-gray-400">or</span>
         <div className="flex-1 h-px bg-gray-200" />
       </div>
 
       {/* Google sign-in */}
       <GoogleButton label="Sign in with Google" />
-
-      
 
       <p className="text-center text-sm text-gray-500">
         Don&apos;t have an account?{" "}

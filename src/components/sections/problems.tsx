@@ -55,15 +55,15 @@ export function ProblemsSection() {
           {PROBLEMS.map((problem, idx) => (
             <Card
               key={idx}
-              className="p-4 sm:p-5 border border-white/70 bg-white/60 backdrop-blur-md shadow-sm transition-colors duration-200 hover:bg-white/70"
+              className="p-4 sm:p-5 border border-neutral-200/80 bg-background shadow-sm transition-shadow duration-200 hover:shadow-md"
             >
               <div className="mb-3 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-cyan-600/10 text-cyan-700 flex items-center justify-center">
-                  <problem.icon className="w-5 h-5" />
+                  <problem.icon className="w-5 h-5" aria-hidden="true" />
                 </div>
               </div>
               <h3 className="text-base font-semibold text-neutral-950 mb-1.5">{problem.title}</h3>
-              <p className="text-neutral-600 text-xs leading-relaxed">{problem.description}</p>
+              <p className="text-neutral-600 text-sm leading-relaxed">{problem.description}</p>
             </Card>
           ))}
         </div>

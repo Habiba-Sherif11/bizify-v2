@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Loader2, Mail } from "lucide-react";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { api } from "../lib/api";
 
 interface Props {
@@ -77,7 +78,7 @@ export function OTPVerification({ onVerify, email }: Props) {
       {/* OTP form */}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
-          <input
+          <Input
             type="text"
             inputMode="numeric"
             maxLength={6}
@@ -89,7 +90,7 @@ export function OTPVerification({ onVerify, email }: Props) {
             }}
             placeholder="000000"
             disabled={isSubmitting}
-            className="w-full text-center text-2xl tracking-[0.6em] font-mono rounded-lg border border-gray-300 bg-white px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/20 focus-visible:border-cyan-500 disabled:opacity-50 transition-colors"
+            className="h-auto py-3 text-center text-2xl tracking-[0.6em] font-mono"
           />
           {error && (
             <p className="text-xs text-red-500 text-center">{error}</p>

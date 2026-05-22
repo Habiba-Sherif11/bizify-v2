@@ -31,7 +31,7 @@ export function FeatureCard({ icon: Icon, iconClassName, title, description, onC
             iconClassName ?? "bg-cyan-600"
           )}
         >
-          <Icon size={18} className="text-white" />
+          <Icon size={18} className="text-white" aria-hidden="true" />
         </div>
 
         <div className="flex flex-col gap-1">

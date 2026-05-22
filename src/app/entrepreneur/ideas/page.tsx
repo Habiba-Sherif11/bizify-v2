@@ -146,7 +146,7 @@ export default function IdeasPage() {
 
         {/* Page header */}
         <div className="mt-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-white shrink-0">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-neutral-900 dark:text-white shrink-0">
             Ideas
           </h1>
 
@@ -198,7 +198,7 @@ export default function IdeasPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search ideas…"
-                className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-cyan-400 dark:focus:border-cyan-500 transition-colors"
+                className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-background dark:bg-neutral-800 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 dark:focus:border-cyan-500 transition-colors"
               />
             </div>
             <div className="flex flex-wrap gap-3 sm:flex-nowrap">

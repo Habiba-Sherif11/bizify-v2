@@ -79,7 +79,7 @@ export function SignupForm() {
     <div className="space-y-0">
       {step < 5 && <ProgressStepper currentStep={step} steps={steps} />}
 
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5 sm:p-6">
+      <div className="rounded-xl border border-gray-200/80 bg-[#FAFAFA] shadow-sm p-5 sm:p-6">
         {step === 1 && <AccountStep onNext={handleStep1} />}
         {step === 2 && <OTPVerification onVerify={handleOtp} email={email} />}
         {step === 3 && <QuestionnaireStep onNext={handleQuestionnaire} />}

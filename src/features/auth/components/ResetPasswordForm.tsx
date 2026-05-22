@@ -8,6 +8,8 @@ import { toast } from "react-toastify";
 import { useSearchParams, useRouter } from "next/navigation";
 import { resetSchema } from "../lib/validations";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { api } from "../lib/api";
 
 const RESEND_COOLDOWN = 60;
@@ -34,7 +36,6 @@ export function ResetPasswordForm() {
     },
   });
 
-  // Countdown tick
   useEffect(() => {
     if (countdown <= 0) return;
     const id = setTimeout(() => setCountdown((c) => c - 1), 1000);
@@ -68,7 +69,7 @@ export function ResetPasswordForm() {
         otp_code: data.otp_code,
         new_password: data.new_password,
       });
-      toast.success("Password reset successfully! Redirecting to login…");
+      toast.success("Password reset successfully! Redirecting to sign in…");
       router.push("/login");
     } catch (error: unknown) {
       const e = error as { response?: { data?: { error?: string } } };
@@ -83,64 +84,59 @@ export function ResetPasswordForm() {
         <div className="w-10 h-10 rounded-full bg-cyan-50 flex items-center justify-center mb-1">
           <Mail className="w-5 h-5 text-cyan-500" />
         </div>
-        <h2 className="text-xl font-semibold text-gray-900">Reset Password</h2>
-        <p className="text-sm text-neutral-500">
+        <h2 className="text-lg font-semibold text-[#1C1C1E]">Reset your password</h2>
+        <p className="text-sm text-[#8C8C8C]">
           Enter the code sent to{" "}
-          <span className="font-medium text-gray-700">{emailFromUrl}</span>
+          <span className="font-medium text-[#1C1C1E]">{emailFromUrl}</span>
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Hidden email field (keeps validation happy) */}
+        {/* Hidden email field */}
         <input {...register("email")} type="hidden" />
 
-        {/* OTP Code */}
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">
-            Reset Code
-          </label>
-          <input
+        {/* Reset code */}
+        <div className="space-y-1.5">
+          <Label htmlFor="otp_code">Reset code</Label>
+          <Input
             {...register("otp_code")}
+            id="otp_code"
             type="text"
             inputMode="numeric"
             maxLength={6}
-            placeholder="Enter 6-digit code"
-            className="w-full text-center text-xl tracking-[0.5em] font-mono rounded-lg border border-neutral-300 bg-white px-4 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/20 focus-visible:border-cyan-500 transition-colors"
+            placeholder="000000"
+            className="h-auto py-3 text-center text-xl tracking-[0.5em] font-mono"
           />
           {errors.otp_code && (
-            <p className="text-red-500 text-xs mt-1">{errors.otp_code.message}</p>
+            <p className="text-red-500 text-xs">{errors.otp_code.message}</p>
           )}
         </div>
 
-        {/* New Password */}
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">
-            New Password
-          </label>
-          <input
+        {/* New password */}
+        <div className="space-y-1.5">
+          <Label htmlFor="new_password">New password</Label>
+          <Input
             {...register("new_password")}
+            id="new_password"
             type="password"
             placeholder="Enter new password"
-            className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/20 focus-visible:border-cyan-500 transition-colors"
           />
           {errors.new_password && (
-            <p className="text-red-500 text-xs mt-1">{errors.new_password.message}</p>
+            <p className="text-red-500 text-xs">{errors.new_password.message}</p>
           )}
         </div>
 
-        {/* Confirm Password */}
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">
-            Confirm New Password
-          </label>
-          <input
+        {/* Confirm password */}
+        <div className="space-y-1.5">
+          <Label htmlFor="confirm_password">Confirm new password</Label>
+          <Input
             {...register("confirm_password")}
+            id="confirm_password"
             type="password"
             placeholder="Confirm new password"
-            className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/20 focus-visible:border-cyan-500 transition-colors"
           />
           {errors.confirm_password && (
-            <p className="text-red-500 text-xs mt-1">{errors.confirm_password.message}</p>
+            <p className="text-red-500 text-xs">{errors.confirm_password.message}</p>
           )}
         </div>
 
@@ -157,22 +153,22 @@ export function ResetPasswordForm() {
               Resetting…
             </span>
           ) : (
-            "Reset Password"
+            "Reset password"
           )}
         </Button>
       </form>
 
       {/* Resend */}
-      <p className="text-center text-xs text-gray-400">
+      <p className="text-center text-xs text-[#8C8C8C]">
         Didn&apos;t get the code?{" "}
         {countdown > 0 ? (
-          <span className="text-gray-500 tabular-nums">Resend in {countdown}s</span>
+          <span className="text-[#8C8C8C] tabular-nums">Resend in {countdown}s</span>
         ) : (
           <button
             type="button"
             onClick={handleResend}
             disabled={isResending}
-            className="text-cyan-600 font-medium disabled:opacity-50 cursor-pointer"
+            className="text-cyan-600 font-medium hover:underline disabled:opacity-50 cursor-pointer"
           >
             {isResending ? (
               <span className="inline-flex items-center gap-1">

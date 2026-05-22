@@ -1,17 +1,13 @@
 "use client";
 
-import { type LucideIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { type LucideIcon, Clock } from "lucide-react";
 
 export interface ActivityItem {
   id: string;
   icon: LucideIcon;
-  iconBg: string;
+  iconColor: string;
   activity: string;
   module: string;
-  moduleBg: string;
-  moduleBorder: string;
-  moduleText: string;
   time: string;
 }
 
@@ -20,97 +16,72 @@ interface Props {
   onViewAll?: () => void;
 }
 
-function ModuleBadge({ item }: { item: ActivityItem }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border",
-        item.moduleBg,
-        item.moduleBorder,
-        item.moduleText
-      )}
-    >
-      {item.module}
-    </span>
-  );
-}
-
 export function RecentActivity({ items, onViewAll }: Props) {
   return (
-    <div className="flex flex-col gap-4">
-      {/* Section header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-widest">
+    <div
+      className="bg-white dark:bg-neutral-800
+                 border border-[#E9E9E9] dark:border-neutral-700
+                 rounded-2xl p-5
+                 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)]
+                 dark:shadow-[0_2px_8px_-2px_rgba(0,0,0,0.3),0_0_1px_rgba(0,0,0,0.2)]"
+    >
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-[#1C1C1E] dark:text-white">
           Recent Activity
         </h2>
-        {onViewAll && (
+        {onViewAll && items.length > 0 && (
           <button
             type="button"
             onClick={onViewAll}
-            className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="text-xs text-[#8C8C8C] dark:text-neutral-500
+                       hover:text-[#1C1C1E] dark:hover:text-white transition-colors"
           >
             View all
           </button>
         )}
       </div>
 
-      {/* Table */}
-      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-        {/* Table head — 2-col on mobile, 3-col on sm+ */}
-        <div className="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_120px_100px] border-b border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/60">
-          <div className="px-4 sm:px-5 py-3 text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-            Activity
+      {items.length === 0 ? (
+        <div className="py-6 flex flex-col items-center gap-2.5 text-center">
+          <div className="w-9 h-9 rounded-full bg-[#F5F5F5] dark:bg-neutral-700 flex items-center justify-center">
+            <Clock size={16} className="text-[#8C8C8C] dark:text-neutral-500" aria-hidden="true" />
           </div>
-          <div className="hidden sm:block px-3 py-3 text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-center">
-            Module
-          </div>
-          <div className="px-4 sm:px-5 py-3" />
+          <p className="text-sm text-[#8C8C8C] dark:text-neutral-400 leading-snug">
+            Your first action will appear here.
+          </p>
         </div>
+      ) : (
+        <div className="relative">
+          <div
+            className="absolute left-2.75 top-2 bottom-2 w-px bg-[#E9E9E9] dark:bg-neutral-700"
+            aria-hidden="true"
+          />
 
-        {/* Rows */}
-        {items.map((item) => {
-          const Icon = item.icon;
-          return (
-            <div
-              key={item.id}
-              className="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_120px_100px] border-b border-zinc-100 dark:border-neutral-700/50 last:border-0 hover:bg-gray-50/50 dark:hover:bg-neutral-700/30 transition-colors"
-            >
-              {/* Activity */}
-              <div className="px-4 sm:px-5 py-3 sm:py-3.5 flex items-center gap-3 min-w-0">
-                <div
-                  className={cn(
-                    "w-7 h-7 rounded-lg flex items-center justify-center shrink-0",
-                    item.iconBg
-                  )}
-                >
-                  <Icon size={13} className="text-white" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-sm text-gray-800 dark:text-gray-100 block truncate">
-                    {item.activity}
-                  </span>
-                  {/* Module badge shown inline on mobile only */}
-                  <div className="mt-1 sm:hidden">
-                    <ModuleBadge item={item} />
+          <ol className="flex flex-col gap-5">
+            {items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <li key={item.id} className="flex items-start gap-3 relative">
+                  <div
+                    className={`w-5.5 h-5.5 rounded-full flex items-center justify-center shrink-0 relative z-10 ${item.iconColor}`}
+                    aria-hidden="true"
+                  >
+                    <Icon size={11} className="text-white" />
                   </div>
-                </div>
-              </div>
-
-              {/* Module badge — desktop only */}
-              <div className="hidden sm:flex px-3 py-3.5 items-center justify-center">
-                <ModuleBadge item={item} />
-              </div>
-
-              {/* Time */}
-              <div className="px-4 sm:px-5 py-3 sm:py-3.5 flex items-center justify-end">
-                <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
-                  {item.time}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                  <div className="flex-1 min-w-0 pt-0.5">
+                    <p className="text-sm text-[#1C1C1E] dark:text-white leading-snug">{item.activity}</p>
+                    <p className="text-[11px] text-[#8C8C8C] dark:text-neutral-500 mt-0.5">
+                      {item.module}
+                      <span className="mx-1.5 text-[#E9E9E9] dark:text-neutral-600">·</span>
+                      {item.time}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
     </div>
   );
 }
