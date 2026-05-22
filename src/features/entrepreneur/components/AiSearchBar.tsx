@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Search, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const SUGGESTIONS = [
@@ -14,50 +14,84 @@ export function AiSearchBar() {
   const [query, setQuery] = useState("");
   const router = useRouter();
 
-  const handleSubmit = (value: string) => {
-    const trimmed = value.trim();
-    if (!trimmed) return;
-    // Encode the query so the AI chat page can pre-fill it
-    router.push(`/entrepreneur/ai-chat?q=${encodeURIComponent(trimmed)}`);
+  const submit = (value: string) => {
+    const v = value.trim();
+    if (!v) return;
+    router.push(`/entrepreneur/ai-chat?q=${encodeURIComponent(v)}`);
   };
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Input */}
-      <div className="bg-background dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 shadow-sm flex items-center gap-3 px-4 py-3">
-        <label htmlFor="ai-search" className="sr-only">
-          Ask Bizify
-        </label>
-        <Sparkles size={16} className="text-cyan-600 dark:text-cyan-400 shrink-0" aria-hidden="true" />
+      <div
+        className="
+          flex items-center gap-3 sm:gap-4
+          bg-card dark:bg-neutral-800
+          border border-border dark:border-neutral-700
+          rounded-2xl px-4 sm:px-5 py-3 sm:py-0
+          sm:h-[72px]
+          shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08),0_0_1px_rgba(0,0,0,0.06)]
+          focus-within:border-cyan-500 dark:focus-within:border-cyan-500
+          transition-colors
+        "
+      >
+        <Search
+          size={18}
+          strokeWidth={1.75}
+          className="text-neutral-400 dark:text-neutral-500 shrink-0"
+        />
+        <label htmlFor="ai-search" className="sr-only">Ask Bizify</label>
         <input
           id="ai-search"
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSubmit(query)}
+          onKeyDown={(e) => e.key === "Enter" && submit(query)}
           placeholder="Ask Bizify anything — validate an idea, find a supplier, draft a pitch…"
-          className="flex-1 text-sm text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 bg-transparent outline-none min-w-0"
+          className="
+            flex-1 bg-transparent outline-none min-w-0
+            text-sm sm:text-[15px]
+            text-neutral-900 dark:text-white
+            placeholder:text-neutral-400 dark:placeholder:text-neutral-500
+          "
         />
         <button
           type="button"
-          onClick={() => handleSubmit(query)}
-          className="shrink-0 px-3 sm:px-4 py-2 min-h-11 rounded-lg text-xs font-medium text-white bg-linear-to-r from-amber-500 to-yellow-500 shadow-[0_2px_12px_rgba(245,158,11,0.35)] hover:shadow-[0_2px_16px_rgba(245,158,11,0.5)] transition-shadow whitespace-nowrap cursor-pointer"
+          onClick={() => submit(query)}
+          className="
+            shrink-0 flex items-center gap-2
+            h-[44px] sm:h-[52px] px-4 sm:px-5
+            rounded-xl
+            bg-linear-to-r from-amber-500 to-yellow-500
+            hover:from-amber-400 hover:to-yellow-400
+            text-[#1C1C1E] text-sm font-medium
+            shadow-[0_2px_8px_rgba(245,158,11,0.4)] hover:shadow-[0_4px_12px_rgba(245,158,11,0.6)]
+            transition-all duration-150
+            cursor-pointer whitespace-nowrap
+          "
         >
           Ask AI
+          <ArrowRight size={14} strokeWidth={2} />
         </button>
       </div>
 
-      {/* Suggestions */}
-      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-        <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide font-medium shrink-0">
-          Try:
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-[11px] font-semibold tracking-[0.08em] uppercase text-neutral-400 dark:text-neutral-500 shrink-0">
+          Try
         </span>
         {SUGGESTIONS.map((s) => (
           <button
             key={s}
             type="button"
-            onClick={() => handleSubmit(s)}
-            className="px-3 py-1.5 rounded-full border border-amber-400/70 dark:border-amber-500/50 text-amber-600 dark:text-amber-400 text-[11px] font-medium bg-background dark:bg-neutral-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors cursor-pointer"
+            onClick={() => submit(s)}
+            className="
+              h-8 px-3.5 rounded-full
+              border border-neutral-200 dark:border-neutral-700
+              bg-card dark:bg-neutral-800
+              text-[12px] sm:text-[13px] text-neutral-700 dark:text-neutral-300
+              hover:bg-neutral-50 dark:hover:bg-neutral-700/60
+              hover:border-neutral-300 dark:hover:border-neutral-600
+              transition-colors cursor-pointer
+            "
           >
             {s}
           </button>

@@ -154,17 +154,17 @@
 @media (min-width: 1024px) {
 
   /* Buttons */
-  button,
-  a[role="button"],
-  .btn {
+  button:not(.no-lift),
+  a[role="button"]:not(.no-lift),
+  .btn:not(.no-lift) {
     transition: transform var(--hover-duration) ease,
                 box-shadow var(--hover-duration) ease,
                 background-color var(--hover-duration) ease;
   }
 
-  button:hover,
-  a[role="button"]:hover,
-  .btn:hover {
+  button:not(.no-lift):hover,
+  a[role="button"]:not(.no-lift):hover,
+  .btn:not(.no-lift):hover {
     box-shadow: 0 12px 20px -10px rgba(0, 0, 0, 0.2);
   }
 

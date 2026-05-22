@@ -37,10 +37,6 @@ export function LoginForm() {
   const isPasswordError = passwordTouched && password.length === 0;
   const isFormReady = emailValid && password.length > 0;
 
-  const errorMessage =
-    (error as { response?: { data?: { error?: string } } } | null)
-      ?.response?.data?.error ?? "Invalid credentials. Please try again.";
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setEmailTouched(true);
@@ -118,13 +114,6 @@ export function LoginForm() {
           <p className="text-xs text-red-500">Password is required</p>
         )}
       </div>
-
-      {/* Inline API error */}
-      {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2.5">
-          <p className="text-sm text-red-700">{errorMessage}</p>
-        </div>
-      )}
 
       <Button
         type="submit"

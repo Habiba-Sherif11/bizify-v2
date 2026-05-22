@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { handleBackendError } from "@/lib/backend-error";
 
+/** Decode a JWT payload without verifying the signature. */
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+    const decoded = Buffer.from(base64 + padding, "base64").toString("utf8");
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const token = request.cookies.get("auth_token")?.value;
 
@@ -9,33 +23,43 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ user: null });
   }
 
-  const headers = { Authorization: `Bearer ${token}` };
+  // The backend embeds email and role in the JWT payload.
+  // Decode it directly — no extra backend call needed.
+  const payload = decodeJwtPayload(token);
 
-  try {
-    const { data } = await axios.get(
-      `${process.env.BACKEND_URL}/api/v1/users/me`,
-      { headers, timeout: 65_000 }
-    );
-
-    const rawRole = (data.role || "ENTREPRENEUR") as string;
-    const user = {
-      email: data.email || "",
-      role: rawRole.toLowerCase() as "entrepreneur" | "manufacturer" | "mentor" | "supplier" | "admin",
-      name: data.full_name || "",
-      approval_status: data.approval_status as "PENDING" | "APPROVED" | "REJECTED" | undefined,
-      business_id: data.business_id as string | undefined,
-    };
-
-    return NextResponse.json({ user });
-  } catch (err: unknown) {
-    const e = err as { response?: { status?: number; data?: unknown }; code?: string };
-    console.error(
-      "[/api/auth/me] Failed:",
-      e.response?.status ?? e.code,
-      JSON.stringify(e.response?.data)
-    );
+  if (!payload) {
+    console.warn("[/api/auth/me] Could not decode JWT payload");
     return NextResponse.json({ user: null });
   }
+
+  // Reject expired tokens immediately
+  const exp = payload.exp as number | undefined;
+  if (exp && exp * 1000 < Date.now()) {
+    return NextResponse.json({ user: null });
+  }
+
+  const rawRole = ((payload.role as string) || "ENTREPRENEUR").toLowerCase();
+
+  const user = {
+    email: (payload.email as string) || "",
+    role: rawRole as "entrepreneur" | "manufacturer" | "mentor" | "supplier" | "admin",
+    name: "",
+    approval_status: undefined as "PENDING" | "APPROVED" | "REJECTED" | undefined,
+    business_id: undefined as string | undefined,
+  };
+
+  // Best-effort: fetch full_name and partner approval status from settings
+  try {
+    const { data } = await axios.get(
+      `${process.env.BACKEND_URL}/api/v1/settings/`,
+      { headers: { Authorization: `Bearer ${token}` }, timeout: 10_000 }
+    );
+    if (data.full_name) user.name = data.full_name;
+  } catch {
+    // Non-critical — name falls back to email prefix in the UI
+  }
+
+  return NextResponse.json({ user });
 }
 
 export async function PATCH(request: NextRequest) {

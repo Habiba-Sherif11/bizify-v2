@@ -129,6 +129,18 @@ export function DashboardHeader() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    function handleOutsideClick(e: MouseEvent) {
+      if (menuContainerRef.current && !menuContainerRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showMenu]);
 
   const handleMenuKeyDown = useCallback((e: React.KeyboardEvent) => {
     const items = Array.from(
@@ -189,18 +201,18 @@ export function DashboardHeader() {
         </div>
 
         {/* ── Left: user identity ── */}
-        <div className="relative flex items-center gap-2.5">
+        <div ref={menuContainerRef} className="relative flex items-center gap-2.5 ">
           <button
             type="button"
             onClick={() => setShowMenu((v) => !v)}
             aria-expanded={showMenu}
             aria-haspopup="menu"
             aria-label="User menu"
-            className="flex items-center gap-2.5 cursor-pointer"
+            className="no-lift flex items-center gap-2.5 cursor-pointer"
           >
             {/* Avatar */}
-            <div className="w-9 h-9 rounded-full bg-amber-100 dark:bg-amber-900/30 border border-amber-200/60 dark:border-amber-800/40 flex items-center justify-center shrink-0 overflow-hidden">
-              <span className="text-amber-700 dark:text-amber-400 text-xs font-semibold">{initials}</span>
+            <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 flex items-center justify-center shrink-0 overflow-hidden">
+              <span className="text-neutral-700 dark:text-neutral-200 text-xs font-semibold">{initials}</span>
             </div>
 
             {/* Name + email */}
@@ -226,45 +238,42 @@ export function DashboardHeader() {
 
           {/* Dropdown menu */}
           {showMenu && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-              <div
-                ref={menuRef}
-                role="menu"
-                aria-label="User options"
-                onKeyDown={handleMenuKeyDown}
-                className="absolute top-full mt-2 inset-s-0 bg-background dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-1 z-50 min-w-44 dropdown-enter"
+            <div
+              ref={menuRef}
+              role="menu"
+              aria-label="User options"
+              onKeyDown={handleMenuKeyDown}
+              className="absolute top-full mt-2 inset-s-0 bg-background dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-1 z-50 min-w-44 dropdown-enter"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleProfileClick}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
               >
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={handleProfileClick}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
-                >
-                  <User size={14} aria-hidden="true" />
-                  Profile
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={handleSettingsClick}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
-                >
-                  <Settings size={14} aria-hidden="true" />
-                  Settings
-                </button>
-                <div role="separator" className="my-1 h-px bg-gray-100 dark:bg-neutral-700" />
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={handleLogoutClick}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 rounded-lg cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-                >
-                  <LogOut size={14} aria-hidden="true" />
-                  Log out
-                </button>
-              </div>
-            </>
+                <User size={14} aria-hidden="true" />
+                Profile
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleSettingsClick}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+              >
+                <Settings size={14} aria-hidden="true" />
+                Settings
+              </button>
+              <div role="separator" className="my-1 h-px bg-gray-100 dark:bg-neutral-700" />
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleLogoutClick}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 rounded-lg cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+              >
+                <LogOut size={14} aria-hidden="true" />
+                Log out
+              </button>
+            </div>
           )}
         </div>
 
@@ -277,8 +286,8 @@ export function DashboardHeader() {
             title={theme === "dark" ? "Light mode" : "Dark mode"}
           >
             {theme === "dark"
-              ? <Sun size={16} className="text-cyan-600 dark:text-cyan-400" aria-hidden="true" />
-              : <Moon size={16} className="text-cyan-600" aria-hidden="true" />
+              ? <Sun size={16} className="text-neutral-500 dark:text-neutral-400" aria-hidden="true" />
+              : <Moon size={16} className="text-neutral-500" aria-hidden="true" />
             }
           </NavButton>
 

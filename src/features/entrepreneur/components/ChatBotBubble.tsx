@@ -47,7 +47,7 @@ export function ChatBotBubble() {
           style={{ height: 440 }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-linear-to-r from-cyan-500 to-cyan-600 shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 bg-cyan-600 shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
                 <Bot size={16} className="text-white" />
@@ -144,7 +144,7 @@ export function ChatBotBubble() {
           "hover:scale-105 active:scale-95",
           open
             ? "bg-neutral-700 dark:bg-neutral-600 shadow-lg"
-            : "bg-linear-to-br from-cyan-500 to-cyan-600 bubble-idle"
+            : "bg-cyan-600 hover:bg-cyan-700 shadow-lg"
         )}
       >
         {open ? <X size={20} /> : <Bot size={20} />}

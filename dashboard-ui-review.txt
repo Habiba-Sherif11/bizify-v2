@@ -1,0 +1,1052 @@
+================================================================================
+BIZIFY DASHBOARD — FULL UI CODE FOR DESIGN REVIEW
+================================================================================
+Generated: 2026-05-23
+Purpose: Complete source of all dashboard UI files for design review.
+
+TABLE OF CONTENTS
+─────────────────
+1.  Layout              src/app/entrepreneur/layout.tsx
+2.  Dashboard Home      src/app/entrepreneur/page.tsx
+3.  DashboardHeader     src/features/entrepreneur/components/DashboardHeader.tsx
+4.  AiSearchBar         src/features/entrepreneur/components/AiSearchBar.tsx
+5.  FeatureCard         src/features/entrepreneur/components/FeatureCard.tsx
+6.  RecentActivity      src/features/entrepreneur/components/RecentActivity.tsx
+7.  ChatBotBubble       src/features/entrepreneur/components/ChatBotBubble.tsx
+8.  IdeaCard            src/features/entrepreneur/components/IdeaCard.tsx
+9.  TeamCard            src/features/entrepreneur/components/TeamCard.tsx
+10. Ideas Page          src/app/entrepreneur/ideas/page.tsx
+11. Idea Detail Page    src/app/entrepreneur/ideas/[idea_id]/page.tsx
+12. AI Chat Page        src/app/entrepreneur/ai-chat/page.tsx
+13. Team Page           src/app/entrepreneur/team/page.tsx
+14. Team Detail Page    src/app/entrepreneur/team/[id]/page.tsx
+15. Marketplace Page    src/app/entrepreneur/marketplace/page.tsx
+16. Profile Page        src/app/entrepreneur/profile/page.tsx
+17. Settings Page       src/app/entrepreneur/settings/page.tsx
+
+DESIGN TOKENS (Tailwind)
+─────────────────────────
+Primary accent:   cyan-500 / cyan-600  (buttons, active states, AI elements)
+Secondary accent: amber-500 / yellow-500  (CTA buttons, AI gradient)
+Background:       #FAFAFA (light) / neutral-900 (dark)
+Card:             white (light) / neutral-800 (dark)
+Border:           #E9E9E9 / neutral-200 (light) | neutral-700 (dark)
+Text primary:     #1C1C1E / white
+Text secondary:   #8C8C8C / neutral-400
+Brand font:       Cormorant SC (header wordmark)
+Border radius:    rounded-xl (cards), rounded-2xl (panels), rounded-full (avatars)
+
+================================================================================
+FILE 1 — src/app/entrepreneur/layout.tsx
+================================================================================
+
+export default function EntrepreneurLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 transition-colors">
+      <main>{children}</main>
+    </div>
+  );
+}
+
+
+================================================================================
+FILE 2 — src/app/entrepreneur/page.tsx  (Dashboard Home)
+================================================================================
+
+"use client";
+
+import {
+  Lightbulb, Bot, Users, Store,
+  FileText, MessageCircle, UserPlus, BarChart2, Link,
+} from "lucide-react";
+
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { DashboardHeader } from "@/features/entrepreneur/components/DashboardHeader";
+import { GuidanceTour } from "@/features/guidance/components/GuidanceTour";
+import { ChatBotBubble } from "@/features/entrepreneur/components/ChatBotBubble";
+import { AiSearchBar } from "@/features/entrepreneur/components/AiSearchBar";
+import { FeatureCard } from "@/features/entrepreneur/components/FeatureCard";
+import { RecentActivity, type ActivityItem } from "@/features/entrepreneur/components/RecentActivity";
+
+const FEATURE_CARDS = [
+  {
+    id: "ideas",
+    icon: Lightbulb,
+    iconClassName: "bg-cyan-600",
+    title: "My Ideas",
+    description: "Explore and develop your business ideas with AI-powered insights.",
+    route: "/entrepreneur/ideas",
+  },
+  {
+    id: "aiChat",
+    icon: Bot,
+    iconClassName: "bg-gradient-to-br from-amber-500 to-yellow-500",
+    title: "AI Chat",
+    description: "Generate, refine, and validate new business ideas in conversation.",
+    route: "/entrepreneur/ai-chat",
+  },
+  {
+    id: "team",
+    icon: Users,
+    iconClassName: "bg-cyan-800",
+    title: "Team",
+    description: "Collaborate with your co-founders and assign roles to members.",
+    route: "/entrepreneur/team",
+  },
+  {
+    id: "marketplace",
+    icon: Store,
+    iconClassName: "bg-cyan-600",
+    title: "Marketplace",
+    description: "Browse mentors, suppliers, and partners to grow your startup.",
+    route: "/entrepreneur/marketplace",
+  },
+];
+
+const ACTIVITY_ITEMS: ActivityItem[] = [
+  {
+    id: "1",
+    icon: FileText,
+    iconColor: "bg-cyan-600",
+    activity: "Updated business model canvas",
+    module: "Ideas",
+    time: "2 min ago",
+  },
+  {
+    id: "2",
+    icon: MessageCircle,
+    iconColor: "bg-amber-500",
+    activity: "Completed customer interview #4",
+    module: "AI Chat",
+    time: "1 hr ago",
+  },
+  {
+    id: "3",
+    icon: UserPlus,
+    iconColor: "bg-cyan-800",
+    activity: "Alex Johnson joined the team",
+    module: "Team",
+    time: "3 hr ago",
+  },
+  {
+    id: "4",
+    icon: BarChart2,
+    iconColor: "bg-yellow-500",
+    activity: "Generated market size report",
+    module: "Ideas",
+    time: "Yesterday",
+  },
+  {
+    id: "5",
+    icon: Link,
+    iconColor: "bg-amber-500",
+    activity: "Connected Stripe integration",
+    module: "AI Chat",
+    time: "2 days ago",
+  },
+];
+
+export default function EntrepreneurDashboard() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const firstName = user?.name?.split(" ")[0] || user?.email?.split("@")[0] || "there";
+
+  return (
+    <div className="min-h-screen bg-[#FAFAFA] dark:bg-neutral-900">
+      <DashboardHeader />
+      <GuidanceTour />
+      <ChatBotBubble />
+
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 flex flex-col gap-6 sm:gap-8">
+
+        {/* Welcome + AI search */}
+        <section
+          data-tour="ai-search"
+          className="flex flex-col items-center gap-4 sm:gap-6 pt-4 sm:pt-6"
+        >
+          <div className="text-center space-y-2 px-4">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-neutral-900 dark:text-white">
+              Welcome back, {firstName}
+            </h1>
+            <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400">
+              What would you like to work on today?
+            </p>
+          </div>
+
+          <div className="w-full max-w-2xl">
+            <AiSearchBar />
+          </div>
+        </section>
+
+        {/* Feature cards — 4-column grid */}
+        <section
+          data-tour="feature-cards"
+          className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5"
+        >
+          {FEATURE_CARDS.map((card) => (
+            <FeatureCard
+              key={card.id}
+              icon={card.icon}
+              iconClassName={card.iconClassName}
+              title={card.title}
+              description={card.description}
+              onClick={() => router.push(card.route)}
+            />
+          ))}
+        </section>
+
+        {/* Recent activity */}
+        <section data-tour="recent-activity">
+          <RecentActivity items={ACTIVITY_ITEMS} onViewAll={() => {}} />
+        </section>
+
+      </main>
+    </div>
+  );
+}
+
+
+================================================================================
+FILE 3 — src/features/entrepreneur/components/DashboardHeader.tsx
+================================================================================
+
+"use client";
+
+import { Bell, ChevronDown, LogOut, User, Settings, Moon, Sun } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { useTheme } from "@/features/dashboard/context/ThemeContext";
+
+function LogoutConfirmDialog({ onConfirm, onCancel }) {
+  const cancelRef = useRef(null);
+
+  useEffect(() => { cancelRef.current?.focus(); }, []);
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Escape") { onCancel(); return; }
+    if (e.key !== "Tab") return;
+    const focusable = Array.from(
+      e.currentTarget.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last?.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first?.focus(); }
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onCancel}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="logout-dialog-title"
+        aria-describedby="logout-dialog-desc"
+        onKeyDown={handleKeyDown}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-background dark:bg-neutral-800 rounded-2xl p-6 shadow-xl w-full max-w-sm mx-4"
+      >
+        <h3 id="logout-dialog-title" className="text-base font-semibold text-gray-900 dark:text-white">
+          Log out?
+        </h3>
+        <p id="logout-dialog-desc" className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          Are you sure you want to log out of your account?
+        </p>
+        <div className="mt-5 flex gap-3 justify-end">
+          <button ref={cancelRef} type="button" onClick={onCancel}
+            className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-neutral-100 dark:bg-neutral-700 cursor-pointer">
+            Cancel
+          </button>
+          <button type="button" onClick={onConfirm}
+            className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-red-500 cursor-pointer">
+            Log out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NavButton({ children, onClick, title, "aria-label": ariaLabel }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={ariaLabel ?? title}
+      className="w-11 h-11 justify-center bg-background dark:bg-neutral-800 rounded-[10px] ring-1 ring-black/10 dark:ring-white/10 flex items-center cursor-pointer transition-colors hover:bg-neutral-200/60 dark:hover:bg-neutral-700/60"
+    >
+      {children}
+    </button>
+  );
+}
+
+export function DashboardHeader() {
+  const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const router = useRouter();
+  const [showMenu, setShowMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const menuRef = useRef(null);
+
+  const initials = (user?.name || user?.email || "U")
+    .split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+
+  return (
+    <>
+      <header className="sticky top-0 z-40 bg-[#FAFAFA]/90 dark:bg-neutral-900/90 backdrop-blur-md border-b border-[#E9E9E9] dark:border-neutral-800/80 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between header-enter">
+
+        {/* Center: brand wordmark */}
+        <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none">
+          <span
+            className="text-xl font-normal tracking-[0.02em] text-neutral-900 dark:text-white leading-none"
+            style={{ fontFamily: "var(--font-cormorant-sc)" }}
+          >
+            Bizify
+          </span>
+        </div>
+
+        {/* Left: user identity button */}
+        <div className="relative flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setShowMenu((v) => !v)}
+            aria-expanded={showMenu}
+            aria-haspopup="menu"
+            aria-label="User menu"
+            className="flex items-center gap-2.5 cursor-pointer"
+          >
+            {/* Avatar */}
+            <div className="w-9 h-9 rounded-full bg-amber-100 dark:bg-amber-900/30 border border-amber-200/60 dark:border-amber-800/40 flex items-center justify-center shrink-0 overflow-hidden">
+              <span className="text-amber-700 dark:text-amber-400 text-xs font-semibold">{initials}</span>
+            </div>
+
+            {/* Name + email */}
+            <div className="flex flex-col gap-[2.9px]">
+              <div className="flex items-center gap-2">
+                <span className="text-black dark:text-white text-sm font-medium leading-none">
+                  {user?.name || user?.email?.split("@")[0] || "User"}
+                </span>
+                <ChevronDown size={16} className={cn("text-black dark:text-white shrink-0 transition-transform", showMenu && "rotate-180")} />
+              </div>
+              <span className="text-neutral-500 dark:text-neutral-400 text-xs font-light">
+                {user?.email}
+              </span>
+            </div>
+          </button>
+
+          {/* Dropdown menu */}
+          {showMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+              <div
+                ref={menuRef}
+                role="menu"
+                aria-label="User options"
+                className="absolute top-full mt-2 bg-background dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-1 z-50 min-w-44"
+              >
+                <button type="button" role="menuitem"
+                  onClick={() => { setShowMenu(false); router.push("/entrepreneur/profile"); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700">
+                  <User size={14} /> Profile
+                </button>
+                <button type="button" role="menuitem"
+                  onClick={() => { setShowMenu(false); router.push("/entrepreneur/settings"); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700">
+                  <Settings size={14} /> Settings
+                </button>
+                <div role="separator" className="my-1 h-px bg-gray-100 dark:bg-neutral-700" />
+                <button type="button" role="menuitem"
+                  onClick={() => { setShowMenu(false); setShowLogoutConfirm(true); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 rounded-lg cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/30">
+                  <LogOut size={14} /> Log out
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Right: action buttons */}
+        <div className="flex items-center gap-2 sm:gap-3">
+
+          {/* Theme toggle */}
+          <NavButton onClick={toggleTheme} title={theme === "dark" ? "Light mode" : "Dark mode"}>
+            {theme === "dark"
+              ? <Sun size={16} className="text-cyan-600 dark:text-cyan-400" />
+              : <Moon size={16} className="text-cyan-600" />}
+          </NavButton>
+
+          {/* Notifications */}
+          <div className="relative">
+            <NavButton aria-label="Notifications" onClick={() => setShowNotifications((v) => !v)}>
+              <Bell size={16} className="text-gray-500 dark:text-gray-400" />
+            </NavButton>
+
+            {showNotifications && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                <div className="absolute top-full right-0 mt-2 bg-background dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-4 z-50 w-64">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-[#1C1C1E] dark:text-white mb-3">
+                    Notifications
+                  </p>
+                  <p className="text-sm text-[#8C8C8C] dark:text-neutral-400">
+                    No notifications yet.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {showLogoutConfirm && (
+        <LogoutConfirmDialog
+          onConfirm={() => { setShowLogoutConfirm(false); logout(); }}
+          onCancel={() => setShowLogoutConfirm(false)}
+        />
+      )}
+    </>
+  );
+}
+
+
+================================================================================
+FILE 4 — src/features/entrepreneur/components/AiSearchBar.tsx
+================================================================================
+
+"use client";
+
+import { useState } from "react";
+import { Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
+
+const SUGGESTIONS = [
+  "Analyze my target market",
+  "Draft a pitch deck outline",
+  "Suggest validation experiments",
+];
+
+export function AiSearchBar() {
+  const [query, setQuery] = useState("");
+  const router = useRouter();
+
+  const handleSubmit = (value) => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    router.push(`/entrepreneur/ai-chat?q=${encodeURIComponent(trimmed)}`);
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Input */}
+      <div className="bg-background dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 shadow-sm flex items-center gap-3 px-4 py-3">
+        <Sparkles size={16} className="text-cyan-600 dark:text-cyan-400 shrink-0" />
+        <input
+          id="ai-search"
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSubmit(query)}
+          placeholder="Ask Bizify anything — validate an idea, find a supplier, draft a pitch…"
+          className="flex-1 text-sm text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 bg-transparent outline-none min-w-0"
+        />
+        <button
+          type="button"
+          onClick={() => handleSubmit(query)}
+          className="shrink-0 px-3 sm:px-4 py-2 min-h-11 rounded-lg text-xs font-medium text-white bg-linear-to-r from-amber-500 to-yellow-500 shadow-[0_2px_12px_rgba(245,158,11,0.35)] hover:shadow-[0_2px_16px_rgba(245,158,11,0.5)] transition-shadow whitespace-nowrap cursor-pointer"
+        >
+          Ask AI
+        </button>
+      </div>
+
+      {/* Suggestion chips */}
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+        <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide font-medium shrink-0">
+          Try:
+        </span>
+        {SUGGESTIONS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => handleSubmit(s)}
+            className="px-3 py-1.5 rounded-full border border-amber-400/70 dark:border-amber-500/50 text-amber-600 dark:text-amber-400 text-[11px] font-medium bg-background dark:bg-neutral-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors cursor-pointer"
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+================================================================================
+FILE 5 — src/features/entrepreneur/components/FeatureCard.tsx
+================================================================================
+
+"use client";
+
+import { type LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface Props {
+  icon: LucideIcon;
+  iconClassName?: string;
+  title: string;
+  description: string;
+  onClick?: () => void;
+}
+
+export function FeatureCard({ icon: Icon, iconClassName, title, description, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "w-full text-left p-4 sm:p-5",
+        "bg-white dark:bg-neutral-800",
+        "rounded-xl border border-neutral-200 dark:border-neutral-700",
+        "shadow-sm hover:shadow-md hover:border-neutral-300 dark:hover:border-neutral-600",
+        "transition-all group cursor-pointer"
+      )}
+    >
+      <div className="flex flex-col gap-3 h-full">
+        <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", iconClassName ?? "bg-cyan-600")}>
+          <Icon size={18} className="text-white" />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-cyan-700 dark:group-hover:text-cyan-400 transition-colors">
+            {title}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{description}</p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+
+================================================================================
+FILE 6 — src/features/entrepreneur/components/RecentActivity.tsx
+================================================================================
+
+"use client";
+
+import { type LucideIcon, Clock } from "lucide-react";
+
+export interface ActivityItem {
+  id: string;
+  icon: LucideIcon;
+  iconColor: string;
+  activity: string;
+  module: string;
+  time: string;
+}
+
+export function RecentActivity({ items, onViewAll }) {
+  return (
+    <div
+      className="bg-white dark:bg-neutral-800
+                 border border-[#E9E9E9] dark:border-neutral-700
+                 rounded-2xl p-5
+                 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)]"
+    >
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-[#1C1C1E] dark:text-white">
+          Recent Activity
+        </h2>
+        {onViewAll && items.length > 0 && (
+          <button type="button" onClick={onViewAll}
+            className="text-xs text-[#8C8C8C] dark:text-neutral-500 hover:text-[#1C1C1E] dark:hover:text-white transition-colors">
+            View all
+          </button>
+        )}
+      </div>
+
+      {items.length === 0 ? (
+        <div className="py-6 flex flex-col items-center gap-2.5 text-center">
+          <div className="w-9 h-9 rounded-full bg-[#F5F5F5] dark:bg-neutral-700 flex items-center justify-center">
+            <Clock size={16} className="text-[#8C8C8C] dark:text-neutral-500" />
+          </div>
+          <p className="text-sm text-[#8C8C8C] dark:text-neutral-400 leading-snug">
+            Your first action will appear here.
+          </p>
+        </div>
+      ) : (
+        <div className="relative">
+          {/* Vertical timeline line */}
+          <div className="absolute left-2.75 top-2 bottom-2 w-px bg-[#E9E9E9] dark:bg-neutral-700" />
+
+          <ol className="flex flex-col gap-5">
+            {items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <li key={item.id} className="flex items-start gap-3 relative">
+                  <div className={`w-5.5 h-5.5 rounded-full flex items-center justify-center shrink-0 relative z-10 ${item.iconColor}`}>
+                    <Icon size={11} className="text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0 pt-0.5">
+                    <p className="text-sm text-[#1C1C1E] dark:text-white leading-snug">{item.activity}</p>
+                    <p className="text-[11px] text-[#8C8C8C] dark:text-neutral-500 mt-0.5">
+                      {item.module}
+                      <span className="mx-1.5 text-[#E9E9E9] dark:text-neutral-600">·</span>
+                      {item.time}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+================================================================================
+FILE 7 — src/features/entrepreneur/components/ChatBotBubble.tsx
+================================================================================
+
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import { X, Send, Bot, Sparkles, Minimize2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+export function ChatBotBubble() {
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState("");
+  const { messages, isLoading, sendMessage } = useGeneralChat();
+
+  return (
+    <>
+      {/* Chat panel — fixed bottom-left, 440px tall */}
+      {open && (
+        <div
+          className={cn(
+            "fixed bottom-20 inset-s-6 z-50",
+            "w-[320px] sm:w-[360px]",
+            "bg-background dark:bg-neutral-800",
+            "rounded-2xl border border-neutral-200 dark:border-neutral-700",
+            "shadow-2xl flex flex-col overflow-hidden",
+            "animate-in slide-in-from-bottom-4 fade-in duration-200"
+          )}
+          style={{ height: 440 }}
+        >
+          {/* Header: cyan gradient */}
+          <div className="flex items-center justify-between px-4 py-3 bg-linear-to-r from-cyan-500 to-cyan-600 shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                <Bot size={16} className="text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white leading-none">Bizify AI</p>
+                <p className="text-[10px] text-cyan-100 mt-0.5">Always here to help</p>
+              </div>
+            </div>
+            <button type="button" onClick={() => setOpen(false)}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 cursor-pointer">
+              <Minimize2 size={14} />
+            </button>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+            {messages.map((m) => (
+              <div key={m.id} className={cn("flex gap-2", m.role === "user" && "flex-row-reverse")}>
+                {m.role === "assistant" && (
+                  <div className="w-6 h-6 rounded-full bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center shrink-0 mt-0.5">
+                    <Sparkles size={11} className="text-cyan-600 dark:text-cyan-400" />
+                  </div>
+                )}
+                <div className={cn(
+                  "max-w-[80%] px-3 py-2 rounded-2xl text-sm leading-relaxed",
+                  m.role === "user"
+                    ? "bg-cyan-500 text-white rounded-tr-sm"
+                    : "bg-neutral-100 dark:bg-neutral-700 text-gray-800 dark:text-gray-100 rounded-tl-sm"
+                )}>
+                  {m.text}
+                </div>
+              </div>
+            ))}
+
+            {/* Typing indicator */}
+            {isLoading && (
+              <div className="flex gap-2">
+                <div className="w-6 h-6 rounded-full bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
+                  <Sparkles size={11} className="text-cyan-600 dark:text-cyan-400" />
+                </div>
+                <div className="px-3 py-2 rounded-2xl rounded-tl-sm bg-neutral-100 dark:bg-neutral-700 flex gap-1 items-center">
+                  {[0, 1, 2].map((i) => (
+                    <span key={i} className="w-1.5 h-1.5 rounded-full bg-neutral-400 dark:bg-neutral-500 typing-dot" />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Input */}
+          <div className="px-3 pb-3 shrink-0">
+            <div className="flex items-center gap-2 bg-neutral-100 dark:bg-neutral-700 rounded-xl px-3 py-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                placeholder="Ask me anything…"
+                className="flex-1 text-sm bg-transparent outline-none text-gray-700 dark:text-gray-200 placeholder:text-gray-400 min-w-0"
+              />
+              <button type="button" onClick={handleSend} disabled={!input.trim() || isLoading}
+                className="w-7 h-7 rounded-lg bg-cyan-500 flex items-center justify-center text-white disabled:opacity-40 cursor-pointer shrink-0">
+                <Send size={13} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating trigger button — fixed bottom-left */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        title="Chat with Bizify AI"
+        className={cn(
+          "fixed bottom-6 inset-s-6 z-50",
+          "w-12 h-12 rounded-full",
+          "flex items-center justify-center text-white cursor-pointer",
+          "transition-[transform,background-color] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          "hover:scale-105 active:scale-95",
+          open
+            ? "bg-neutral-700 dark:bg-neutral-600 shadow-lg"
+            : "bg-linear-to-br from-cyan-500 to-cyan-600 bubble-idle"
+        )}
+      >
+        {open ? <X size={20} /> : <Bot size={20} />}
+      </button>
+    </>
+  );
+}
+
+
+================================================================================
+FILE 8 — src/features/entrepreneur/components/IdeaCard.tsx
+================================================================================
+
+"use client";
+
+import { Check, X, Clock, Pencil, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+
+const STATUS_MAP = {
+  DRAFT:    { label: "Draft",    bg: "bg-amber-500", Icon: Clock  },
+  ACTIVE:   { label: "Active",   bg: "bg-green-600", Icon: Check  },
+  VERIFIED: { label: "Verified", bg: "bg-green-600", Icon: Check  },
+  REJECTED: { label: "Rejected", bg: "bg-red-500",   Icon: X      },
+};
+const DEFAULT_STATUS = { label: "Draft", bg: "bg-amber-500", Icon: Clock };
+
+export function IdeaCard({ id, title, date, status, description, skills, onEdit, onDelete }) {
+  const { label, bg, Icon } = STATUS_MAP[status] ?? DEFAULT_STATUS;
+
+  return (
+    <div className="bg-background dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col gap-3">
+      {/* Header: title link + edit/delete icons */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <Link href={`/entrepreneur/ideas/${id}`}
+            className="text-base font-semibold text-gray-900 dark:text-white leading-6 truncate hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+            {title}
+          </Link>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{date}</p>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button type="button" onClick={onEdit}
+            className="w-7 h-7 flex items-center justify-center text-neutral-400 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer">
+            <Pencil size={14} />
+          </button>
+          <button type="button" onClick={onDelete}
+            className="w-7 h-7 flex items-center justify-center text-neutral-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 cursor-pointer">
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* Status badge */}
+      <div className={cn("self-start flex items-center gap-1 px-2 py-0.5 rounded-lg", bg)}>
+        <Icon size={11} className="text-white" />
+        <span className="text-xs font-semibold text-white leading-4">{label}</span>
+      </div>
+
+      {/* Description */}
+      <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed flex-1">
+        {description}
+      </p>
+
+      {/* Skill tags (max 3 shown + overflow count) */}
+      {skills && skills.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {skills.slice(0, 3).map((skill) => (
+            <span key={skill}
+              className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-700 text-xs font-medium text-neutral-600 dark:text-neutral-300">
+              {skill}
+            </span>
+          ))}
+          {skills.length > 3 && (
+            <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-700 text-xs font-medium text-neutral-400">
+              +{skills.length - 3}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+================================================================================
+FILE 9 — src/features/entrepreneur/components/TeamCard.tsx
+================================================================================
+
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { MoreVertical } from "lucide-react";
+
+function MemberAvatar({ name }) {
+  const initial = name.trim()[0]?.toUpperCase() ?? "?";
+  return (
+    <div className="w-8 h-8 rounded-full border-2 border-white dark:border-neutral-800 bg-linear-to-br from-neutral-300 to-neutral-400 dark:from-neutral-600 dark:to-neutral-700 flex items-center justify-center text-[11px] font-semibold text-white -ms-2 first:ms-0 shrink-0">
+      {initial}
+    </div>
+  );
+}
+
+export function TeamCard({ name, date, description, members, overflowCount, overflowColor = "amber", onDeleteClick }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+  return (
+    <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col gap-4">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white leading-6 truncate">{name}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{date}</p>
+        </div>
+        {/* MoreVertical menu → Delete confirm inline */}
+        <div className="relative shrink-0">
+          <button type="button" onClick={() => setMenuOpen((p) => !p)}
+            className="w-7 h-7 flex items-center justify-center text-gray-400 cursor-pointer rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700">
+            <MoreVertical size={15} />
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-9 z-20 min-w-30 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 shadow-lg p-1">
+              {!deleteConfirm ? (
+                <button type="button" onClick={() => setDeleteConfirm(true)}
+                  className="w-full px-3 py-1.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md cursor-pointer">
+                  Delete
+                </button>
+              ) : (
+                <div className="px-2 py-1.5 flex flex-col gap-2">
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Are you sure?</p>
+                  <div className="flex gap-1.5">
+                    <button type="button" onClick={() => setDeleteConfirm(false)}
+                      className="flex-1 px-2 py-1 text-xs bg-neutral-100 dark:bg-neutral-700 text-gray-700 rounded-md cursor-pointer">No</button>
+                    <button type="button" onClick={onDeleteClick}
+                      className="flex-1 px-2 py-1 text-xs bg-red-600 text-white rounded-md cursor-pointer">Yes</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="flex flex-col gap-3 flex-1">
+        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed flex-1">{description}</p>
+        {/* Stacked member avatars */}
+        <div className="flex items-center">
+          {members.map((m) => <MemberAvatar key={m.id} name={m.name} />)}
+          {overflowCount > 0 && (
+            <div className={`w-8 h-8 rounded-full border-2 border-white dark:border-neutral-800 flex items-center justify-center text-xs font-semibold text-white -ms-2 ${overflowColor === "amber" ? "bg-amber-500" : "bg-cyan-600"}`}>
+              +{overflowCount}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+================================================================================
+FILE 10 — src/app/entrepreneur/ideas/page.tsx  (Ideas List)
+================================================================================
+
+LAYOUT OVERVIEW:
+  - Breadcrumb: Home > Ideas
+  - Page header: "Ideas" title + tab bar (All Ideas / Favorites / Archive / Share / Compare) + "Create new Idea" button
+  - Toolbar (All tab only): search input + Budget select + Feasibility select + Sort select
+  - Content: 3-column card grid (sm:2, lg:3) | loading spinner | empty state
+  - Modals: CreateIdeaModal, ArchivedIdeasDrawer
+
+KEY CLASSES:
+  Container:   min-h-screen bg-neutral-100 dark:bg-neutral-900
+  Grid:        grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6
+  Tabs:        flex items-center gap-1, active = text-cyan-600 dark:text-cyan-400
+  Create btn:  bg-linear-to-r from-amber-500 to-yellow-500 shadow-[0_2px_16px_rgba(255,183,3,0.3)]
+  Search:      rounded-lg border border-neutral-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20
+  Empty state: mt-24 flex flex-col items-center, icon in w-12 h-12 rounded-full bg-neutral-200
+
+
+================================================================================
+FILE 11 — src/app/entrepreneur/ideas/[idea_id]/page.tsx  (Idea Detail)
+================================================================================
+
+LAYOUT OVERVIEW:
+  - Breadcrumb: Home > Ideas > {idea title}
+  - Header row: idea title + date | pipeline status indicator | PDF/Share icons | "Edit with AI" button
+  - Horizontal tab bar (scrollable, 8 tabs): Overview / Customers / Competitor Analysis / Market / Business Model / MVP / Risk / Financial
+  - Tab content: Overview shows meta card (budget/feasibility/status) + AI Strategy section; other tabs show analysis components
+  - Empty pipeline CTA: dashed border card with "Run Pipeline" amber button
+
+KEY CLASSES:
+  Tab bar:     bg-gray-200 dark:bg-neutral-800 rounded-lg px-2 py-1.5 flex overflow-x-auto
+  Active tab:  bg-white dark:bg-neutral-700 shadow-sm border border-neutral-300
+  Run button:  bg-gradient-to-r from-amber-500 to-yellow-500 shadow-[0_2px_16px_rgba(255,183,3,0.3)]
+  Meta card:   bg-card rounded-xl border border-border p-6
+  CTA card:    h-72 border-2 border-dashed border-border rounded-2xl
+
+
+================================================================================
+FILE 12 — src/app/entrepreneur/ai-chat/page.tsx  (AI Chat)
+================================================================================
+
+LAYOUT OVERVIEW:
+  - Full-height two-column layout (100vh - 110px)
+  - Left sidebar (hidden on mobile, w-60): "New chat" button (cyan) + conversation list grouped by date
+  - Right panel (flex-1): chat header with bot icon + conversation title | messages list | input textarea + send button
+  - Message bubbles: user = cyan-500 bg, rounded-tr-sm; assistant = bg-background border, rounded-tl-sm
+  - Typing indicator: 3 animated dots
+
+KEY CLASSES:
+  Layout:      flex gap-4, height calc(100vh - 110px)
+  Sidebar:     hidden md:flex flex-col w-60 shrink-0
+  New chat:    bg-linear-to-r from-cyan-500 to-cyan-600 rounded-xl
+  Active conv: bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300
+  Chat panel:  flex-1 flex-col bg-background dark:bg-neutral-800 rounded-2xl border
+  User msg:    bg-cyan-500 text-white rounded-tr-sm
+  AI msg:      bg-background border border-neutral-200 rounded-tl-sm shadow-sm
+  Input area:  bg-neutral-50 dark:bg-neutral-700/50 rounded-xl border, textarea (no scrollbar)
+  Send btn:    w-8 h-8 rounded-lg bg-cyan-500
+
+
+================================================================================
+FILE 13 — src/app/entrepreneur/team/page.tsx  (Teams List)
+================================================================================
+
+LAYOUT OVERVIEW:
+  - Breadcrumb: Home > Teams
+  - Title: "Teams"
+  - Search input (flex-1) + "Create a New Team" button (amber gradient)
+  - Content: 3-col card grid | loading spinner | EmptyTeams state
+  - CreateTeamModal: centered overlay, name + description inputs, Cancel/Create buttons
+
+KEY CLASSES:
+  Grid:        grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6
+  Create btn:  bg-linear-to-r from-amber-500 to-yellow-500 shadow-[0_2px_16px_rgba(255,183,3,0.4)]
+  Modal:       fixed inset-0 z-50 flex items-center justify-center bg-zinc-300/40 backdrop-blur-sm
+
+
+================================================================================
+FILE 14 — src/app/entrepreneur/team/[id]/page.tsx  (Team Detail)
+================================================================================
+
+LAYOUT OVERVIEW:
+  - Breadcrumb: Home > Teams > {team name}
+  - Title row: team name + optional description | "Invite Member" (amber) + gear icon (Settings)
+  - TeamMembersCard below (members list with role badges, remove actions)
+  - InviteTeamMemberModal: email + role dropdown
+  - TeamSettingsModal: name/description edit + delete team (danger zone)
+
+
+================================================================================
+FILE 15 — src/app/entrepreneur/marketplace/page.tsx  (Marketplace)
+================================================================================
+
+LAYOUT OVERVIEW:
+  - Breadcrumb: Home > Marketplace
+  - Header: title "Marketplace" + subtitle | filter tab bar (All / Suppliers / Manufacturers / Mentors)
+  - Search input (w-80)
+  - Content: 4-col skeleton grid (loading) | PartnerCard grid | empty state
+
+KEY CLASSES:
+  Filter tabs: bg-background rounded-xl border p-1; active = bg-cyan-500 text-white
+  Grid:        grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5
+  Skeleton:    bg-white dark:bg-neutral-800 rounded-xl h-64 animate-pulse
+  Partner avatar colors: Supplier=cyan-600, Manufacturer=indigo-600, Mentor=amber-500
+
+
+================================================================================
+FILE 16 — src/app/entrepreneur/profile/page.tsx  (Profile)
+================================================================================
+
+LAYOUT OVERVIEW:
+  - Breadcrumb: Home > Profile
+  - Title: "Your profile" + subtitle
+  - Status banners: amber (incomplete) or emerald (complete)
+  - 3 sections (each: rounded-xl border bg-white dark:bg-neutral-800 p-5 sm:p-6):
+      1. Identity card: avatar (cyan gradient circle) + name/email + guide_status badge + Edit link
+      2. Your answers: questionnaire rows in 2-col grid (bg-gray-50 tiles) + Start/Edit/Reset buttons
+      3. Skills: skill rows with star ratings (1-5 amber stars) + Add/Remove buttons
+  - Inline forms (QuestionnaireStep, SkillsStep) expand within their sections
+
+KEY CLASSES:
+  Section:     rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-5 sm:p-6
+  Avatar:      w-14 h-14 rounded-full bg-linear-to-br from-cyan-500 to-cyan-600
+  Status row:  grid grid-cols-1 sm:grid-cols-2 gap-2
+  Skill row:   rounded-lg bg-gray-50 dark:bg-neutral-900/40 px-4 py-3
+  Stars:       text-amber-400 fill-amber-400 (filled) / text-neutral-300 (empty)
+  Banners:     amber-50/emerald-50 border rounded-xl px-4 py-3.5
+
+
+================================================================================
+FILE 17 — src/app/entrepreneur/settings/page.tsx  (Settings)
+================================================================================
+
+LAYOUT OVERVIEW:
+  - Breadcrumb: Home > Settings
+  - Title: "Settings" + subtitle
+  - 5 sections in a vertical grid (gap-6):
+      1. Account: email (readonly) + last password change (readonly) + Active/Inactive badge
+      2. Profile: full name + interests (comma-sep) + bio textarea + "Save changes" button
+      3. Notifications: 3 toggle rows (master / email / push) + "Save changes" button
+      4. Privacy: visibility select (public/private) + show contact info toggle + "Save changes"
+      5. Security: 3 password inputs (current/new/confirm) + "Update password" button
+      6. Danger zone: red border section — deactivate (2-step confirm) + delete account (2-step confirm)
+
+KEY CLASSES:
+  Section:      rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-5 sm:p-6
+  Save buttons: bg-linear-to-r from-amber-500 to-yellow-500 shadow-[0_2px_16px_rgba(255,183,3,0.4)]
+  Toggle:       w-11 h-6 rounded-full; enabled=bg-amber-500, disabled=bg-slate-200; thumb=w-5 h-5 bg-white
+  Danger zone:  rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30
+  Deactivate:   text-red-700 bg-white border border-red-200 (outline style)
+  Delete:       bg-red-600 text-white
+
+
+================================================================================
+END OF DOCUMENT
+================================================================================

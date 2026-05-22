@@ -61,7 +61,16 @@ export default function RootLayout({
             <AuthProvider>
               <AnimationProvider>
                 {children}
-                <ToastContainer position="top-right" />
+                <ToastContainer
+                  position="top-center"
+                  autoClose={4000}
+                  hideProgressBar={false}
+                  newestOnTop
+                  closeOnClick
+                  pauseOnFocusLoss={false}
+                  pauseOnHover
+                  style={{ zIndex: 99999 }}
+                />
               </AnimationProvider>
             </AuthProvider>
           </ThemeProvider>

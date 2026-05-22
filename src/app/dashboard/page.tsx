@@ -13,6 +13,9 @@ const roleRoutes: Record<User["role"], string> = {
   admin: "/admin",
 };
 
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1500;
+
 export default function DashboardRedirect() {
   const { user, fetchUser } = useAuth();
   const router = useRouter();
@@ -20,17 +23,39 @@ export default function DashboardRedirect() {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    // Always re-fetch after login so we have fresh user + role
-    fetchUser()
-      .then((u) => {
+    let cancelled = false;
+
+    async function tryFetch() {
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        const u = await fetchUser();
+        if (cancelled) return;
+
         if (u?.role && roleRoutes[u.role]) {
           router.replace(roleRoutes[u.role]);
-        } else {
-          setFailed(true);
+          return;
         }
-      })
-      .catch(() => setFailed(true))
-      .finally(() => setFetching(false));
+
+        if (attempt < MAX_RETRIES - 1) {
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+        }
+      }
+
+      if (!cancelled) {
+        setFailed(true);
+        setFetching(false);
+      }
+    }
+
+    tryFetch().catch(() => {
+      if (!cancelled) {
+        setFailed(true);
+        setFetching(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
