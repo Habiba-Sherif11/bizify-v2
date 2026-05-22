@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, ChevronDown, LogOut, User, Settings, Moon, Sun } from "lucide-react";
+import { Bell, ChevronDown, LogOut, User, Settings, Moon, Sun, Menu, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -128,6 +128,7 @@ export function DashboardHeader() {
   const [showMenu, setShowMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuContainerRef = useRef<HTMLDivElement>(null);
 
@@ -191,7 +192,7 @@ export function DashboardHeader() {
       <header className="sticky top-0 z-40 bg-[#FAFAFA]/90 dark:bg-neutral-900/90 backdrop-blur-md border-b border-[#E9E9E9] dark:border-neutral-800/80 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between header-enter">
 
         {/* ── Center: brand ── */}
-        <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none">
+        <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none hidden sm:block">
           <span
             className="text-xl font-normal tracking-[0.02em] text-neutral-900 dark:text-white leading-none"
             style={{ fontFamily: "var(--font-cormorant-sc)" }}
@@ -280,36 +281,79 @@ export function DashboardHeader() {
         {/* ── Right: action buttons ── */}
         <div className="flex items-center gap-2 sm:gap-3">
 
-          {/* Theme toggle */}
-          <NavButton
-            onClick={toggleTheme}
-            title={theme === "dark" ? "Light mode" : "Dark mode"}
-          >
-            {theme === "dark"
-              ? <Sun size={16} className="text-neutral-500 dark:text-neutral-400" aria-hidden="true" />
-              : <Moon size={16} className="text-neutral-500" aria-hidden="true" />
-            }
-          </NavButton>
-
-          {/* Notifications */}
-          <div className="relative">
+          {/* Desktop: theme + notifications (hidden on mobile) */}
+          <div className="hidden sm:flex items-center gap-3">
             <NavButton
-              aria-label="Notifications"
-              onClick={() => setShowNotifications((v) => !v)}
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Light mode" : "Dark mode"}
             >
-              <Bell size={16} className="text-gray-500 dark:text-gray-400" aria-hidden="true" />
+              {theme === "dark"
+                ? <Sun size={16} className="text-neutral-500 dark:text-neutral-400" aria-hidden="true" />
+                : <Moon size={16} className="text-neutral-500" aria-hidden="true" />
+              }
             </NavButton>
 
-            {showNotifications && (
+            <div className="relative">
+              <NavButton
+                aria-label="Notifications"
+                onClick={() => setShowNotifications((v) => !v)}
+              >
+                <Bell size={16} className="text-gray-500 dark:text-gray-400" aria-hidden="true" />
+              </NavButton>
+
+              {showNotifications && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                  <div className="absolute top-full right-0 mt-2 bg-background dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-4 z-50 w-64 dropdown-enter-right">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-[#1C1C1E] dark:text-white mb-3">
+                      Notifications
+                    </p>
+                    <p className="text-sm text-[#8C8C8C] dark:text-neutral-400">
+                      No notifications yet.
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile: hamburger (hidden on sm+) */}
+          <div className="relative sm:hidden">
+            <NavButton
+              aria-label={showMobileMenu ? "Close menu" : "Open menu"}
+              onClick={() => setShowMobileMenu((v) => !v)}
+            >
+              {showMobileMenu
+                ? <X size={16} className="text-neutral-500" aria-hidden="true" />
+                : <Menu size={16} className="text-neutral-500" aria-hidden="true" />
+              }
+            </NavButton>
+
+            {showMobileMenu && (
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-                <div className="absolute top-full right-0 mt-2 bg-background dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-4 z-50 w-64 dropdown-enter-right">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-[#1C1C1E] dark:text-white mb-3">
-                    Notifications
-                  </p>
-                  <p className="text-sm text-[#8C8C8C] dark:text-neutral-400">
-                    No notifications yet.
-                  </p>
+                <div className="fixed inset-0 z-40" onClick={() => setShowMobileMenu(false)} />
+                <div className="absolute top-full right-0 mt-2 bg-background dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-1 z-50 w-52 dropdown-enter-right">
+                  <button
+                    type="button"
+                    onClick={() => { toggleTheme(); setShowMobileMenu(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+                  >
+                    {theme === "dark"
+                      ? <Sun size={15} className="text-neutral-500 dark:text-neutral-400 shrink-0" aria-hidden="true" />
+                      : <Moon size={15} className="text-neutral-500 shrink-0" aria-hidden="true" />
+                    }
+                    {theme === "dark" ? "Light mode" : "Dark mode"}
+                  </button>
+                  <div className="my-1 h-px bg-gray-100 dark:bg-neutral-700" />
+                  <div className="px-3 py-2.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400 mb-2 flex items-center gap-2">
+                      <Bell size={13} aria-hidden="true" />
+                      Notifications
+                    </p>
+                    <p className="text-sm text-neutral-400 dark:text-neutral-500">
+                      No notifications yet.
+                    </p>
+                  </div>
                 </div>
               </>
             )}
