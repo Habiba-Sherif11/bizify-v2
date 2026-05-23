@@ -87,15 +87,11 @@ function ArchivedIdeaCard({
           <h3 className="text-sm font-semibold text-gray-800 dark:text-white truncate">{idea.title ?? "Untitled idea"}</h3>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{formatIdeaDate(idea.created_at)}</p>
         </div>
-        {(idea.skills?.length ?? 0) > 0 && (() => {
-          const s = idea.skills![0];
-          const label = typeof s.name === "string" ? s.name : String(Object.values(s)[0] ?? "");
-          return label ? (
-            <span className="shrink-0 px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-700 text-xs font-medium text-neutral-600 dark:text-neutral-300">
-              {label}
-            </span>
-          ) : null;
-        })()}
+        {(idea.skills?.length ?? 0) > 0 && idea.skills![0] ? (
+          <span className="shrink-0 px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-700 text-xs font-medium text-neutral-600 dark:text-neutral-300">
+            {idea.skills![0]}
+          </span>
+        ) : null}
       </div>
 
       <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
