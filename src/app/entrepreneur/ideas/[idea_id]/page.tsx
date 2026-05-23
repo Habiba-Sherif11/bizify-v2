@@ -191,7 +191,7 @@ export default function IdeaDetailPage({
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
 
-  const { sections, isRunning, hasRun, runError, runPipeline } = useAiPipeline();
+  const { sections, isRunning, hasRun, runError, runPipeline } = useAiPipeline(idea_id);
 
   useEffect(() => {
     api
