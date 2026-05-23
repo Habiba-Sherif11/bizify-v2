@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { api } from "@/features/auth/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -81,7 +81,7 @@ function extractSectionText(key: SectionKey, data: unknown): string {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useAiPipeline() {
+export function useAiPipeline(ideaId?: string) {
   const [sections, setSections] = useState<PipelineSections>(emptyPipeline);
   const [isRunning, setIsRunning] = useState(false);
   const [hasRun, setHasRun] = useState(false);
@@ -95,14 +95,15 @@ export function useAiPipeline() {
     async (key: SectionKey) => {
       setSection(key, { isLoading: true, error: null });
       try {
-        const { data } = await api.get(SECTION_ENDPOINTS[key]);
+        const params = ideaId ? { idea_id: ideaId } : undefined;
+        const { data } = await api.get(SECTION_ENDPOINTS[key], { params });
         const text = extractSectionText(key, data);
         setSection(key, { data: text || null, isLoading: false });
       } catch {
         setSection(key, { isLoading: false, error: "Failed to load this section." });
       }
     },
-    [setSection]
+    [setSection, ideaId]
   );
 
   const fetchAll = useCallback(async () => {
@@ -122,17 +123,17 @@ export function useAiPipeline() {
           throw new Error(data.error ?? "Pipeline encountered an error");
         }
         // Fetch sections as they become ready, not just at the end
-        if (data?.idea_ready) fetchSection("idea").catch(() => {});
-        if (data?.customers_ready) fetchSection("customers").catch(() => {});
-        if (data?.competition_ready) fetchSection("competition").catch(() => {});
-        if (data?.market_potential_ready) fetchSection("marketPotential").catch(() => {});
-        if (data?.idea_strategy_ready) fetchSection("ideaStrategy").catch(() => {});
-        if (data?.business_model_ready) fetchSection("businessModel").catch(() => {});
-        if (data?.functions_list_ready) fetchSection("functionsList").catch(() => {});
-        if (data?.mvp_planning_ready) fetchSection("mvpPlanning").catch(() => {});
-        if (data?.unit_economics_ready) fetchSection("unitEconomics").catch(() => {});
-        if (data?.go_to_market_ready) fetchSection("goToMarket").catch(() => {});
-        if (data?.problems_ready) fetchSection("problems").catch(() => {});
+        if (data?.idea_ready)              fetchSection("idea").catch(() => {});
+        if (data?.customers_ready)         fetchSection("customers").catch(() => {});
+        if (data?.competition_ready)       fetchSection("competition").catch(() => {});
+        if (data?.market_potential_ready)  fetchSection("marketPotential").catch(() => {});
+        if (data?.idea_strategy_ready)     fetchSection("ideaStrategy").catch(() => {});
+        if (data?.business_model_ready)    fetchSection("businessModel").catch(() => {});
+        if (data?.functions_list_ready)    fetchSection("functionsList").catch(() => {});
+        if (data?.mvp_planning_ready)      fetchSection("mvpPlanning").catch(() => {});
+        if (data?.unit_economics_ready)    fetchSection("unitEconomics").catch(() => {});
+        if (data?.go_to_market_ready)      fetchSection("goToMarket").catch(() => {});
+        if (data?.problems_ready)          fetchSection("problems").catch(() => {});
 
         if (data?.pipeline_complete || data?.status === "done") {
           return;
@@ -161,6 +162,19 @@ export function useAiPipeline() {
       setIsRunning(false);
     }
   }, [pollUntilDone]);
+
+  // Auto-load existing sections when the page first mounts
+  useEffect(() => {
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Re-fetch sections when general chat runs an analysis (same-tab CustomEvent)
+  useEffect(() => {
+    const handler = () => { fetchAll(); };
+    window.addEventListener("bizify:sections_updated", handler);
+    return () => window.removeEventListener("bizify:sections_updated", handler);
+  }, [fetchAll]);
 
   return {
     sections,

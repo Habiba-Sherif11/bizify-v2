@@ -10,6 +10,7 @@ import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { api } from "@/features/auth/lib/api";
 import type { HistoryEntry } from "@/features/entrepreneur/hooks/useGeneralChat";
+import { FLOATING_CONV_ID } from "@/features/entrepreneur/hooks/useGeneralChat";
 
 const CREATE_IDEA_PATTERN = /create.*idea|add.*idea|save.*idea|new.*idea|make.*idea/i;
 
@@ -47,32 +48,7 @@ function ts() {
 
 // ─── Initial data ─────────────────────────────────────────────────────────────
 
-const INITIAL_CONVERSATIONS: Conversation[] = [
-  {
-    id: "c1",
-    title: "Validating Cafe Noir",
-    preview: "How do I test if people would pay for…",
-    date: "Today",
-    history: [],
-    messages: [
-      { id: "1", role: "user",      text: "How do I test if people would pay for a specialty coffee subscription?", time: "09:14" },
-      { id: "2", role: "assistant", text: "Great question! The fastest way to validate pricing is to create a simple landing page with a 'Pre-order for 10% off' CTA. If 3–5% of visitors convert to waitlist sign-ups, that's strong signal. You can also run 5 customer interviews asking about current coffee spending. What city are you targeting?", time: "09:14" },
-      { id: "3", role: "user",      text: "Cairo, mainly Maadi and Zamalek areas.", time: "09:15" },
-      { id: "4", role: "assistant", text: "Perfect — those are high-income, specialty-coffee-aware demographics. I'd estimate your TAM in those two areas at around $2M/year. Your biggest competitors would be Cilantro and imported brands like Nespresso. Your differentiation story should focus on curation + discovery. Want me to draft a customer interview script?", time: "09:15" },
-    ],
-  },
-  {
-    id: "c2",
-    title: "Fundraising strategy",
-    preview: "What slides should I focus on for…",
-    date: "Yesterday",
-    history: [],
-    messages: [
-      { id: "1", role: "user",      text: "What slides should I focus on for a pre-seed pitch?", time: "15:22" },
-      { id: "2", role: "assistant", text: "For pre-seed, investors bet on the team and the problem, not the product. Prioritise: (1) Problem slide — make it visceral, use a story. (2) Team slide — show relevant experience and why you uniquely. (3) Traction — even early signals count. The rest is secondary. You have ~90 seconds per slide. Want me to review your current deck?", time: "15:23" },
-    ],
-  },
-];
+// No hardcoded conversations — all sessions come from localStorage
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -103,12 +79,13 @@ function ConversationItem({
       />
       <div className="flex-1 min-w-0">
         <p className={cn("text-xs font-medium truncate", active ? "text-cyan-700 dark:text-cyan-300" : "text-gray-700 dark:text-gray-200")}>
-          {conv.title}
+          {conv.id === FLOATING_CONV_ID ? "💬 Quick Chat" : conv.title}
         </p>
         <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate mt-0.5">{conv.preview}</p>
       </div>
       <button
         type="button"
+        title="Delete conversation"
         onClick={(e) => { e.stopPropagation(); onDelete(); }}
         className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-400 cursor-pointer shrink-0 transition-all"
       >
@@ -150,9 +127,12 @@ const ACTIVE_KEY  = "bizify_ai_active_id";
 function loadConversations(): Conversation[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as Conversation[];
+    if (raw) {
+      const parsed = JSON.parse(raw) as Conversation[];
+      if (parsed.length > 0) return parsed;
+    }
   } catch {}
-  return INITIAL_CONVERSATIONS;
+  return [];
 }
 
 function loadActiveId(conversations: Conversation[]): string {
@@ -175,6 +155,37 @@ function AiChatContent() {
 
   const active = conversations.find((c) => c.id === activeId) ?? conversations[0];
 
+  // Auto-create a first conversation when the list is empty
+  useEffect(() => {
+    if (conversations.length === 0) {
+      const id = `c${Date.now()}`;
+      setConversations([{
+        id,
+        title: "New conversation",
+        preview: "Start a new conversation…",
+        date: "Today",
+        history: [],
+        messages: [{ id: "0", role: "assistant", text: "Hi! I'm Bizify AI. What would you like to work on today?", time: ts() }],
+      }]);
+      setActiveId(id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Re-read conversations from localStorage when the floating chat updates them
+  useEffect(() => {
+    const handler = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const updated = JSON.parse(e.newValue) as Conversation[];
+          setConversations(updated);
+        } catch {}
+      }
+    };
+    window.addEventListener("storage", handler);
+    return () => window.removeEventListener("storage", handler);
+  }, []);
+
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations)); } catch {}
   }, [conversations]);
@@ -191,6 +202,7 @@ function AiChatContent() {
     setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
 
   const handleSend = async () => {
+    if (!active) return;
     const text = input.trim();
     if (!text || thinking) return;
 
@@ -238,6 +250,18 @@ function AiChatContent() {
         history: updatedHistory,
         title: newTitle,
       });
+
+      // Auto-save to My Ideas when the AI generates an idea
+      if (replyText.includes("💡")) {
+        const ideaMatch = replyText.match(/💡\s*IDEA\s*[:\-]?\s*(.+)/i);
+        if (ideaMatch) {
+          fetch("/api/ideas", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: ideaMatch[1].trim(), description: replyText }),
+          }).catch(() => {});
+        }
+      }
     } catch {
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -397,6 +421,7 @@ function AiChatContent() {
               />
               <button
                 type="button"
+                title="Send message"
                 onClick={handleSend}
                 disabled={!input.trim() || thinking}
                 className="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center text-white disabled:opacity-40 cursor-pointer shrink-0"
