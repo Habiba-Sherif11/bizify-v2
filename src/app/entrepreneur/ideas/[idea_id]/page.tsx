@@ -118,14 +118,11 @@ function OverviewSection({
 
         {(idea.skills?.length ?? 0) > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {idea.skills!.map((s, i) => {
-              const label = typeof s.name === "string" ? s.name : String(Object.values(s)[0] ?? i);
-              return (
-                <span key={label + i} className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium">
-                  {label}
-                </span>
-              );
-            })}
+            {idea.skills!.map((skill, i) => (
+              <span key={i} className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium">
+                {skill}
+              </span>
+            ))}
           </div>
         )}
       </div>

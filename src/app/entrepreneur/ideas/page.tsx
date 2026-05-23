@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import {
   Home, ChevronRight, Search, Lightbulb,
   Plus, LayoutList, Heart, Archive, Share2, GitCompare, Loader2,
+  X, Send, GitFork,
 } from "lucide-react";
 import Link from "next/link";
 import { IdeaCard, type IdeaCardProps } from "@/features/entrepreneur/components/IdeaCard";
@@ -27,7 +28,7 @@ const SORT_OPTIONS = [
   { value: "title_desc",      label: "Z → A" },
 ];
 
-// ─── Budget range helpers ─────────────────────────────────────────────────────
+// ─── Budget / feasibility helpers ────────────────────────────────────────────
 
 function budgetToRange(label: string): { min?: number; max?: number } {
   if (label === "Low (< $10k)")         return { max: 10_000 };
@@ -74,6 +75,8 @@ const TABS: { id: IdeaTab; label: string; Icon: React.ElementType }[] = [
   { id: "compare",   label: "Compare",    Icon: GitCompare },
 ];
 
+const SELECTION_MODES: IdeaTab[] = ["share", "compare"];
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function IdeasPage() {
@@ -89,6 +92,15 @@ export default function IdeasPage() {
   const [sort, setSort]               = useState(SORT_OPTIONS[0].value);
   const [showCreate, setShowCreate]   = useState(false);
   const [showArchive, setShowArchive] = useState(false);
+
+  // Favourites — local state until backend supports it
+  // Backend needed: PATCH /ideas/:id/favorite (toggle) + GET /ideas?favorited=true
+  const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set());
+
+  // Selection mode (share / compare)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const isSelectionMode = SELECTION_MODES.includes(activeTab);
 
   // Load ideas whenever filters change
   useEffect(() => {
@@ -106,32 +118,59 @@ export default function IdeasPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort, budget, feasibility]);
 
-  const handleArchiveTabOpen = () => {
-    setActiveTab("archive");
-    setShowArchive(true);
-    fetchArchivedIdeas();
-  };
+  // Clear selection when leaving selection mode
+  useEffect(() => {
+    if (!isSelectionMode) setSelectedIds(new Set());
+  }, [isSelectionMode]);
 
   const handleTabClick = (id: IdeaTab) => {
     if (id === "archive") {
-      handleArchiveTabOpen();
+      setActiveTab("archive");
+      setShowArchive(true);
+      fetchArchivedIdeas();
     } else {
       setActiveTab(id);
     }
   };
 
-  // Client-side search filter (on top of server-side budget/feasibility)
+  const toggleFavorite = (id: string) => {
+    setFavoritedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelectionMode = () => {
+    setActiveTab("all");
+    setSelectedIds(new Set());
+  };
+
+  // Client-side search + favorites filter
   const filtered = ideas.filter((idea) => {
     const q = search.toLowerCase();
-    return (
+    const matchesSearch =
       (idea.title ?? "").toLowerCase().includes(q) ||
-      (idea.description ?? "").toLowerCase().includes(q)
-    );
+      (idea.description ?? "").toLowerCase().includes(q);
+    const matchesFav = activeTab === "favorites" ? favoritedIds.has(idea.id) : true;
+    return matchesSearch && matchesFav;
   });
+
+  const compareLimit = 3;
+  const canCompare = activeTab === "compare" && selectedIds.size >= 2 && selectedIds.size <= compareLimit;
+  const canShare   = activeTab === "share"   && selectedIds.size >= 1;
 
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 transition-colors">
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-1.5 pt-6 text-sm text-gray-500 dark:text-gray-400">
           <Link
@@ -185,8 +224,26 @@ export default function IdeasPage() {
           </div>
         </div>
 
-        {/* Toolbar (only on All Ideas tab) */}
-        {activeTab === "all" && (
+        {/* Selection mode banner */}
+        {isSelectionMode && (
+          <div className="mt-5 flex items-center gap-3 px-4 py-3 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800">
+            <div className="flex-1 text-sm text-cyan-800 dark:text-cyan-200">
+              {activeTab === "compare"
+                ? `Select 2–${compareLimit} ideas to compare. ${selectedIds.size} selected.`
+                : `Select the ideas you want to share. ${selectedIds.size} selected.`}
+            </div>
+            <button
+              type="button"
+              onClick={exitSelectionMode}
+              className="flex items-center gap-1.5 text-xs text-cyan-700 dark:text-cyan-300 hover:text-cyan-900 dark:hover:text-cyan-100 transition-colors cursor-pointer"
+            >
+              <X size={13} /> Cancel
+            </button>
+          </div>
+        )}
+
+        {/* Toolbar (only on All / Favorites tab) */}
+        {(activeTab === "all" || activeTab === "favorites") && (
           <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
             <div className="relative w-full sm:w-72 shrink-0">
               <Search
@@ -201,21 +258,18 @@ export default function IdeasPage() {
                 className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-background dark:bg-neutral-800 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 dark:focus:border-cyan-500 transition-colors"
               />
             </div>
-            <div className="flex flex-wrap gap-3 sm:flex-nowrap">
-              <Select value={budget}      onChange={setBudget}      options={toOptions(BUDGETS)}      className="w-48" />
-              <Select value={feasibility} onChange={setFeasibility} options={toOptions(FEASIBILITY)}  className="w-44" />
-              <Select
-                value={sort}
-                onChange={setSort}
-                options={SORT_OPTIONS}
-                className="w-40"
-              />
-            </div>
+            {activeTab === "all" && (
+              <div className="flex flex-wrap gap-3 sm:flex-nowrap">
+                <Select value={budget}      onChange={setBudget}      options={toOptions(BUDGETS)}      className="w-48" />
+                <Select value={feasibility} onChange={setFeasibility} options={toOptions(FEASIBILITY)}  className="w-44" />
+                <Select value={sort}        onChange={setSort}        options={SORT_OPTIONS}             className="w-40" />
+              </div>
+            )}
           </div>
         )}
 
         {/* Content */}
-        {activeTab === "all" ? (
+        {(activeTab === "all" || activeTab === "favorites" || isSelectionMode) ? (
           isLoading ? (
             <div className="flex items-center justify-center pt-24">
               <Loader2 size={28} className="animate-spin text-cyan-500" />
@@ -226,15 +280,20 @@ export default function IdeasPage() {
                 <IdeaCard
                   key={idea.id}
                   {...toCardProps(idea)}
+                  isFavorited={favoritedIds.has(idea.id)}
+                  onToggleFavorite={() => toggleFavorite(idea.id)}
                   onDelete={() => archiveIdea(idea.id)}
+                  isSelectable={isSelectionMode}
+                  isSelected={selectedIds.has(idea.id)}
+                  onSelect={() => toggleSelect(idea.id)}
                 />
               ))}
             </div>
           ) : (
             <EmptyState
-              icon={<Lightbulb size={22} />}
-              message="No ideas found"
-              hint="Adjust your filters or create a new idea"
+              icon={activeTab === "favorites" ? <Heart size={22} /> : <Lightbulb size={22} />}
+              message={activeTab === "favorites" ? "No favourites yet" : "No ideas found"}
+              hint={activeTab === "favorites" ? "Heart an idea to save it here" : "Adjust your filters or create a new idea"}
             />
           )
         ) : activeTab !== "archive" ? (
@@ -258,6 +317,56 @@ export default function IdeasPage() {
           onClose={() => { setShowArchive(false); setActiveTab("all"); }}
           onUnarchive={unarchiveIdea}
         />
+      )}
+
+      {/* Floating action bar — selection mode */}
+      {isSelectionMode && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-4 fade-in duration-200">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-neutral-900 dark:bg-neutral-950 border border-neutral-700 shadow-2xl">
+            <span className="text-sm text-neutral-300 whitespace-nowrap">
+              {selectedIds.size} {selectedIds.size === 1 ? "idea" : "ideas"} selected
+            </span>
+            <div className="w-px h-4 bg-neutral-700" />
+
+            {activeTab === "compare" ? (
+              <button
+                type="button"
+                disabled={!canCompare}
+                className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-sm font-medium bg-cyan-500 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-cyan-400 transition-colors cursor-pointer"
+                onClick={() => {
+                  // TODO: pass selectedIds to compare endpoint
+                  // Backend: POST /ideas/compare { idea_ids: string[] }
+                  alert(`Compare: ${[...selectedIds].join(", ")}`);
+                }}
+              >
+                <GitFork size={14} />
+                Compare ideas
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={!canShare}
+                className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-sm font-medium bg-cyan-500 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-cyan-400 transition-colors cursor-pointer"
+                onClick={() => {
+                  // TODO: pass selectedIds to share endpoint
+                  // Backend: POST /ideas/share { idea_ids: string[] } → returns share link
+                  alert(`Share: ${[...selectedIds].join(", ")}`);
+                }}
+              >
+                <Send size={14} />
+                Share ideas
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={exitSelectionMode}
+              className="w-7 h-7 flex items-center justify-center text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-700 transition-colors cursor-pointer"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

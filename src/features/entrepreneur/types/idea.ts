@@ -7,7 +7,7 @@ export interface Idea {
   status: "draft" | "active" | "archived";
   ai_score: number | null;
   budget: number | null;
-  skills: Record<string, unknown>[] | null;
+  skills: string[] | null;
   feasibility: number | null;
   is_score_outdated: boolean;
   is_archived: boolean;
