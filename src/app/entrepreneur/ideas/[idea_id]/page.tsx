@@ -20,6 +20,7 @@ import { MvpPlanningSection }     from "@/features/entrepreneur/components/analy
 import { ProblemsSection }        from "@/features/entrepreneur/components/analysis/ProblemsSection";
 import { UnitEconomicsSection }   from "@/features/entrepreneur/components/analysis/UnitEconomicsSection";
 import { IdeaStrategySection }    from "@/features/entrepreneur/components/analysis/IdeaStrategySection";
+import type { SkillsGap }         from "@/features/entrepreneur/types/idea";
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
@@ -104,7 +105,7 @@ function OverviewSection({
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex flex-col gap-1">
             <h3 className="text-base font-semibold text-foreground">Idea Overview</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl whitespace-pre-wrap">
               {idea.description}
             </p>
           </div>
@@ -116,14 +117,8 @@ function OverviewSection({
           <MetaStat label="Status" value={idea.status ?? "—"} />
         </div>
 
-        {(idea.skills?.length ?? 0) > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {idea.skills!.map((skill, i) => (
-              <span key={i} className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium">
-                {skill}
-              </span>
-            ))}
-          </div>
+        {idea.skills && !Array.isArray(idea.skills) && (
+          <SkillsAnalysis skills={idea.skills as SkillsGap} />
         )}
       </div>
 
@@ -142,6 +137,36 @@ function MetaStat({ label, value }: { label: string; value: string }) {
     <div>
       <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
       <p className="text-sm font-semibold text-foreground mt-0.5 capitalize">{value}</p>
+    </div>
+  );
+}
+
+function SkillsAnalysis({ skills }: { skills: SkillsGap }) {
+  const groups: { label: string; items: string[]; color: string }[] = [
+    { label: "Your Skills",      items: skills.your_skills     ?? [], color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
+    { label: "Required Skills",  items: skills.required_skills ?? [], color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+    { label: "Skill Gaps",       items: skills.skill_gaps      ?? [], color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+  ].filter((g) => g.items.length > 0);
+
+  if (groups.length === 0) return null;
+
+  return (
+    <div className="bg-card rounded-xl border border-border p-5 flex flex-col gap-4">
+      <h3 className="text-sm font-semibold text-foreground">Skills Analysis</h3>
+      <div className="flex flex-col gap-3">
+        {groups.map(({ label, items, color }) => (
+          <div key={label} className="flex flex-col gap-1.5">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {items.map((skill) => (
+                <span key={skill} className={cn("px-2.5 py-0.5 rounded-full text-xs font-medium", color)}>
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

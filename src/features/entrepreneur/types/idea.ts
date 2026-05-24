@@ -1,3 +1,9 @@
+export interface SkillsGap {
+  your_skills:     string[];
+  required_skills: string[];
+  skill_gaps:      string[];
+}
+
 export interface Idea {
   id: string;
   owner_id: string;
@@ -7,7 +13,7 @@ export interface Idea {
   status: "draft" | "active" | "archived";
   ai_score: number | null;
   budget: number | null;
-  skills: string[] | null;
+  skills: SkillsGap | Record<string, unknown>[] | null;
   feasibility: number | null;
   is_score_outdated: boolean;
   is_archived: boolean;

@@ -71,14 +71,44 @@ function extractIdeaTitle(reply: string): string | null {
   return m ? m[1].trim() : null;
 }
 
+function extractBudgetFromReply(text: string): number | null {
+  const m = text.match(/startup[\s-]cost[^:]*:\s*\$?\s*([\d,]+)/i);
+  if (m) return parseFloat(m[1].replace(/,/g, ""));
+  return null;
+}
+
+function extractFeasibilityFromReply(text: string): number | null {
+  const m = text.match(/risk[\s-]level[^:]*:\s*(low|medium|high)/i);
+  if (!m) return null;
+  return { low: 8, medium: 6, high: 4 }[m[1].toLowerCase()] ?? null;
+}
+
+function cleanIdeaDescription(text: string): string {
+  return text
+    .split("\n")
+    .filter((line) => {
+      const s = line.trim();
+      if (!s) return false;
+      if (/^[━─=\- \t]+$/.test(s)) return false;
+      if (s.includes("💡 IDEA:") || s.toUpperCase().startsWith("IDEA:")) return false;
+      if (/^what do you think/i.test(s)) return false;
+      return true;
+    })
+    .join("\n")
+    .trim();
+}
+
 async function saveIdeaToBackend(reply: string): Promise<void> {
   const title = extractIdeaTitle(reply);
   if (!title) return;
+  const description = cleanIdeaDescription(reply);
+  const budget      = extractBudgetFromReply(reply);
+  const feasibility = extractFeasibilityFromReply(reply);
   try {
     await fetch("/api/ideas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, description: reply }),
+      body: JSON.stringify({ title, description, budget, feasibility }),
     });
   } catch {
     // Non-critical

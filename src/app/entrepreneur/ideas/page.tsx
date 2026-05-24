@@ -46,6 +46,24 @@ function feasibilityToRange(label: string): number | undefined {
 
 // ─── Map backend Idea → IdeaCardProps ────────────────────────────────────────
 
+function skillToString(skill: Record<string, unknown>): string {
+  if (typeof skill.name === "string") return skill.name;
+  const values = Object.values(skill).filter((v) => typeof v === "string");
+  return (values[0] as string) ?? "";
+}
+
+function flattenSkills(skills: Idea["skills"]): string[] {
+  if (!skills) return [];
+  if (Array.isArray(skills)) return skills.map(skillToString).filter(Boolean);
+  // SkillsGap dict format: show gap skills first, then required
+  const gap = (skills as { skill_gaps?: string[]; your_skills?: string[]; required_skills?: string[] });
+  return [
+    ...(gap.skill_gaps      ?? []),
+    ...(gap.required_skills ?? []),
+    ...(gap.your_skills     ?? []),
+  ].filter((s): s is string => typeof s === "string");
+}
+
 function toCardProps(idea: Idea): IdeaCardProps {
   return {
     id: idea.id,
@@ -53,7 +71,7 @@ function toCardProps(idea: Idea): IdeaCardProps {
     date: formatIdeaDate(idea.created_at),
     status: (idea.status ?? "draft").toUpperCase(),
     description: idea.description ?? "",
-    skills: idea.skills?.filter(Boolean) ?? [],
+    skills: flattenSkills(idea.skills),
   };
 }
 
