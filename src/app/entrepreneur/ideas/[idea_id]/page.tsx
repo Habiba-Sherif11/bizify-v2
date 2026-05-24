@@ -10,6 +10,7 @@ import { api } from "@/features/auth/lib/api";
 import { cn } from "@/lib/utils";
 import { formatIdeaDate } from "@/features/entrepreneur/hooks/useIdeas";
 import { useAiPipeline } from "@/features/entrepreneur/hooks/useAiPipeline";
+import type { SectionState } from "@/features/entrepreneur/hooks/useAiPipeline";
 import type { Idea } from "@/features/entrepreneur/types/idea";
 
 import { CustomersSection }       from "@/features/entrepreneur/components/analysis/CustomersSection";
@@ -76,9 +77,9 @@ function TabContent({
     financial:     <UnitEconomicsSection   {...sections.unitEconomics}   />,
   };
 
-  const s = sections[tab === "market" ? "marketPotential" : tab === "mvp" ? "mvpPlanning" : tab === "risk" ? "problems" : tab === "financial" ? "unitEconomics" : tab] as { data: string | null; isLoading: boolean };
+  const s = sections[tab === "market" ? "marketPotential" : tab === "mvp" ? "mvpPlanning" : tab === "risk" ? "problems" : tab === "financial" ? "unitEconomics" : tab] as SectionState;
 
-  if (!hasRun && !s.data && !s.isLoading) {
+  if (!hasRun && !s.data && !s.isLoading && !s.error) {
     return <PipelineCallToAction onRun={onRun} isRunning={isRunning} />;
   }
 
