@@ -87,8 +87,22 @@ function ArchivedIdeaCard({
           <h3 className="text-sm font-semibold text-gray-800 dark:text-white truncate">{idea.title ?? "Untitled idea"}</h3>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{formatIdeaDate(idea.created_at)}</p>
         </div>
-        {(idea.skills?.length ?? 0) > 0 && (() => {
-          const s = idea.skills![0];
+        {(() => {
+          const raw = idea.skills;
+          if (!raw) return null;
+          // New SkillsGap dict format
+          if (!Array.isArray(raw)) {
+            const gap = raw as { your_skills?: string[]; skill_gaps?: string[] };
+            const label = gap.your_skills?.[0] ?? gap.skill_gaps?.[0] ?? null;
+            return label ? (
+              <span className="shrink-0 px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-700 text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                {label}
+              </span>
+            ) : null;
+          }
+          // Legacy array format
+          if (raw.length === 0) return null;
+          const s = raw[0];
           const label = typeof s.name === "string" ? s.name : String(Object.values(s)[0] ?? "");
           return label ? (
             <span className="shrink-0 px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-700 text-xs font-medium text-neutral-600 dark:text-neutral-300">
