@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect, Suspense } from "react";
 import {
-  Home, ChevronRight, Send, Plus, Bot,
-  Sparkles, MessageSquare, Trash2,
+  Home, ChevronRight, Send, Plus,
+  MessageSquare, Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -69,16 +69,16 @@ function ConversationItem({
       className={cn(
         "group flex items-start gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-colors",
         active
-          ? "bg-cyan-50 dark:bg-cyan-900/20"
+          ? "bg-amber-50 dark:bg-amber-900/20"
           : "hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
       )}
     >
       <MessageSquare
         size={15}
-        className={cn("mt-0.5 shrink-0", active ? "text-cyan-500" : "text-gray-400 dark:text-gray-500")}
+        className={cn("mt-0.5 shrink-0", active ? "text-amber-500" : "text-gray-400 dark:text-gray-500")}
       />
       <div className="flex-1 min-w-0">
-        <p className={cn("text-xs font-medium truncate", active ? "text-cyan-700 dark:text-cyan-300" : "text-gray-700 dark:text-gray-200")}>
+        <p className={cn("text-xs font-medium truncate", active ? "text-amber-700 dark:text-amber-300" : "text-gray-700 dark:text-gray-200")}>
           {conv.id === FLOATING_CONV_ID ? "💬 Quick Chat" : conv.title}
         </p>
         <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate mt-0.5">{conv.preview}</p>
@@ -100,15 +100,18 @@ function MessageBubble({ msg }: { msg: Message }) {
   return (
     <div className={cn("flex gap-2.5 animate-in fade-in slide-in-from-bottom-1 duration-200", isUser && "flex-row-reverse")}>
       {!isUser && (
-        <div className="w-7 h-7 rounded-full bg-linear-to-br from-cyan-500 to-cyan-600 flex items-center justify-center shrink-0 mt-0.5">
-          <Sparkles size={13} className="text-white" />
+        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446A9 9 0 1 1 12 3Z"/>
+            <path d="M20 12.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0Z"/>
+          </svg>
         </div>
       )}
       <div className={cn(
         "max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed",
         isUser
-          ? "bg-cyan-500 text-white rounded-tr-sm"
-          : "bg-background dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-gray-700 dark:text-gray-200 rounded-tl-sm shadow-sm"
+          ? "bg-cyan-600/10 dark:bg-cyan-900/20 border border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-gray-200 rounded-tr-sm"
+          : "bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-gray-200 rounded-tl-sm shadow-sm"
       )}>
         {msg.text}
         <p className={cn("text-[10px] mt-1.5 opacity-60", isUser ? "text-right" : "text-left")}>
@@ -337,7 +340,7 @@ function AiChatContent() {
           <button
             type="button"
             onClick={handleNewChat}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-linear-to-r from-cyan-500 to-cyan-600 shadow-sm cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-amber-400 to-yellow-500 shadow-sm cursor-pointer"
           >
             <Plus size={15} />
             New chat
@@ -369,8 +372,11 @@ function AiChatContent() {
         <div className="flex-1 flex flex-col bg-background dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 shadow-sm overflow-hidden min-w-0">
           {/* Chat header */}
           <div className="flex items-center gap-3 px-5 py-3.5 border-b border-neutral-100 dark:border-neutral-700 shrink-0">
-            <div className="w-8 h-8 rounded-full bg-linear-to-br from-cyan-500 to-cyan-600 flex items-center justify-center">
-              <Bot size={16} className="text-white" />
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center shadow-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446A9 9 0 1 1 12 3Z"/>
+                <path d="M20 12.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0Z"/>
+              </svg>
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-900 dark:text-white leading-none">
@@ -388,10 +394,13 @@ function AiChatContent() {
 
             {thinking && (
               <div className="flex gap-2.5">
-                <div className="w-7 h-7 rounded-full bg-linear-to-br from-cyan-500 to-cyan-600 flex items-center justify-center shrink-0 mt-0.5">
-                  <Sparkles size={13} className="text-white" />
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446A9 9 0 1 1 12 3Z"/>
+                    <path d="M20 12.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0Z"/>
+                  </svg>
                 </div>
-                <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-background dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-sm flex items-center gap-1">
+                <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-sm flex items-center gap-1">
                   {[0, 1, 2].map((i) => (
                     <span
                       key={i}
@@ -424,7 +433,7 @@ function AiChatContent() {
                 title="Send message"
                 onClick={handleSend}
                 disabled={!input.trim() || thinking}
-                className="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center text-white disabled:opacity-40 cursor-pointer shrink-0"
+                className="w-8 h-8 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 flex items-center justify-center text-white disabled:opacity-40 cursor-pointer shrink-0"
               >
                 <Send size={14} />
               </button>

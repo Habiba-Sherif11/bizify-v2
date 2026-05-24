@@ -20,13 +20,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const params = new URLSearchParams({ email, otp_code, new_password });
     await axios.post(
-      `${process.env.BACKEND_URL}/api/v1/auth/reset-password`,
-      { email, otp_code, new_password },
-      {
-        headers: { "Content-Type": "application/json" },
-        timeout: 65_000,
-      }
+      `${process.env.BACKEND_URL}/api/v1/auth/reset-password?${params.toString()}`,
+      null,
+      { timeout: 65_000 }
     );
 
     return NextResponse.json({ success: true });

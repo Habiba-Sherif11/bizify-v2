@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   Clock,
   Plus,
-  Star,
   User,
 } from "lucide-react";
 import { toast } from "react-toastify";
@@ -33,7 +32,7 @@ type ProfileResponse = {
   bio?: string | null;
   skills_json?: SkillRecord[] | null;
   questionnaire_json?: QuestionnaireData | null;
-  guide_status?: "NOT_STARTED" | "COMPLETED" | "POSTPONED" | "SKIPPED" | string;
+  guide_status?: "not_started" | "completed" | "postponed" | "skipped" | string;
   onboarding_completed?: boolean;
   updated_at?: string | null;
 };
@@ -72,11 +71,10 @@ type QuestionnaireRow = {
   value: string;
 };
 
-// Skill from the backend: { id, name, rating }
+// Backend returns: { id: string, name: string, rating: number }
 type SkillRecord = {
   id?: string;
   name?: string;
-  skill_name?: string;
   rating?: number;
   [key: string]: unknown;
 };
@@ -155,36 +153,13 @@ function parseQuestionnaire(raw: unknown): QuestionnaireRow[] | null {
 }
 
 function getSkillId(skill: SkillRecord): string | undefined {
-  for (const c of [skill.id, skill.skill_id]) {
-    if (typeof c === "string" || typeof c === "number") return String(c);
-  }
+  if (typeof skill.id === "string" || typeof skill.id === "number") return String(skill.id);
   return undefined;
 }
 
 function getSkillLabel(skill: SkillRecord): string {
-  for (const c of [skill.name, skill.skill_name]) {
-    if (typeof c === "string" && c.trim()) return c.trim();
-  }
+  if (typeof skill.name === "string" && skill.name.trim()) return skill.name.trim();
   return "Skill";
-}
-
-function RatingStars({ rating }: { rating?: number }) {
-  if (!rating) return null;
-  return (
-    <div className="flex items-center gap-0.5" title={`${rating}/5`}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <Star
-          key={n}
-          size={11}
-          className={cn(
-            n <= rating
-              ? "text-amber-400 fill-amber-400"
-              : "text-neutral-300 dark:text-neutral-600"
-          )}
-        />
-      ))}
-    </div>
-  );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -214,6 +189,7 @@ export default function ProfilePage() {
     try {
       const { data } = await api.get<ProfileResponse>("/profile");
       setProfile(data);
+      setQuestionnaireRows(parseQuestionnaire(data.questionnaire_json));
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to load profile"));
     }
@@ -247,12 +223,12 @@ export default function ProfilePage() {
     let active = true;
     const loadAll = async () => {
       setLoading(true);
-      await Promise.allSettled([loadProfile(), loadQuestionnaire(), loadSkills()]);
+      await Promise.all([loadProfile(), loadSkills()]);
       if (active) setLoading(false);
     };
     loadAll();
     return () => { active = false; };
-  }, [loadProfile, loadQuestionnaire, loadSkills]);
+  }, [loadProfile, loadSkills]);
 
   const handleQuestionnaireSubmit = async (payload: { field: string; question: string; multi: boolean; choices: string[]; label: string }[]) => {
     const cleanPayload = payload.filter((p) => p.choices.length > 0);
@@ -264,7 +240,7 @@ export default function ProfilePage() {
       await api.post("/profile/questionnaire", cleanPayload);
       toast.success("Answers saved");
       setShowQuestionnaireForm(false);
-      await Promise.all([loadQuestionnaire(), loadProfile()]);
+      await loadProfile();
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to save answers"));
     }
@@ -293,7 +269,7 @@ export default function ProfilePage() {
       toast.success("Skills saved");
       setShowSkillsForm(false);
       setSkillsKey((k) => k + 1);
-      await Promise.all([loadSkills(), loadProfile()]);
+      await loadSkills();
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to save skills"));
     }
@@ -304,7 +280,7 @@ export default function ProfilePage() {
     if (!skillId) return;
     try {
       await api.delete(`/profile/skills/${encodeURIComponent(skillId)}`);
-      setSkills((prev) => prev.filter((s) => getSkillId(s) !== skillId));
+      await loadSkills();
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to remove skill"));
     }
@@ -382,7 +358,7 @@ export default function ProfilePage() {
                 <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                   {user?.email || "—"}
                 </p>
-                {profile?.guide_status && profile.guide_status !== "NOT_STARTED" && (
+                {profile?.guide_status && profile.guide_status !== "not_started" && (
                   <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 text-[10px] font-medium text-cyan-700 dark:text-cyan-300">
                     <User size={9} />
                     {profile.guide_status.replace(/_/g, " ").toLowerCase()}
@@ -504,30 +480,27 @@ export default function ProfilePage() {
                 Loading…
               </div>
             ) : !showSkillsForm && skills.length > 0 ? (
-              <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
                 {skills.map((skill) => {
                   const label = getSkillLabel(skill);
                   const id = getSkillId(skill);
                   return (
-                    <div
+                    <span
                       key={`${label}-${id ?? "custom"}`}
-                      className="rounded-lg bg-gray-50 dark:bg-neutral-900/40 px-4 py-3 flex items-center justify-between gap-4"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-cyan-50 border-cyan-200 text-cyan-700 dark:bg-cyan-900/30 dark:border-cyan-700 dark:text-cyan-300"
                     >
-                      <div className="flex flex-col gap-1 min-w-0">
-                        <p className="text-sm text-neutral-800 dark:text-gray-100 truncate">{label}</p>
-                        <RatingStars rating={skill.rating} />
-                      </div>
+                      {label}
                       {id && (
                         <button
                           type="button"
                           onClick={() => handleRemoveSkill(skill)}
-                          className="shrink-0 text-gray-400 hover:text-red-500 transition-colors"
+                          className="opacity-60 hover:opacity-100 transition-opacity"
                           aria-label={`Remove ${label}`}
                         >
-                          <X size={14} />
+                          <X size={11} />
                         </button>
                       )}
-                    </div>
+                    </span>
                   );
                 })}
               </div>

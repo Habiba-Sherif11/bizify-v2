@@ -84,15 +84,17 @@ export function SkillsStep({
       .finally(() => setLoadingCategories(false));
   }, []);
 
-  const searchSkills = useCallback((q: string) => {
+  const searchSkills = useCallback((q: string, category?: string) => {
     if (!q.trim()) {
       setSearchResults([]);
       setLoadingSearch(false);
       return;
     }
     setLoadingSearch(true);
+    const params = new URLSearchParams({ q });
+    if (category) params.set("category", category);
     api
-      .get(`/profile/skills/search?q=${encodeURIComponent(q)}`)
+      .get(`/profile/skills/search?${params.toString()}`)
       .then((res) => {
         const results = res.data;
         setSearchResults(Array.isArray(results) ? (results as string[]) : []);
@@ -107,11 +109,14 @@ export function SkillsStep({
       setSearchResults([]);
       return;
     }
-    debounceRef.current = setTimeout(() => searchSkills(query), 300);
+    debounceRef.current = setTimeout(
+      () => searchSkills(query, selectedCategory ?? undefined),
+      300
+    );
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query, searchSkills]);
+  }, [query, selectedCategory, searchSkills]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -163,12 +168,9 @@ export function SkillsStep({
     setSelectedCategory(cat.name);
     setCategorySkills([]);
     if (cat.subcategories.length === 0) {
-      // Use the first word of the category name as the search key so the
-      // backend returns actual skill names (not the category label itself).
-      const keyword = cat.name.split(/\s*[&,]\s*/)[0].trim();
       setLoadingCategorySkills(true);
       api
-        .get(`/profile/skills/search?q=${encodeURIComponent(keyword)}`)
+        .get(`/profile/skills/search?category=${encodeURIComponent(cat.name)}`)
         .then((res) => {
           const results = Array.isArray(res.data) ? (res.data as string[]) : [];
           setCategorySkills(results);

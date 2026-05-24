@@ -1,11 +1,22 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Send, Bot, Sparkles, Minimize2 } from "lucide-react";
+import { X, Send, Bot, Minimize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGeneralChat } from "@/features/entrepreneur/hooks/useGeneralChat";
 
-// ─── Component ────────────────────────────────────────────────────────────────
+function AiAvatar({ size = "sm" }: { size?: "sm" | "xs" }) {
+  const dim = size === "xs" ? "w-6 h-6" : "w-8 h-8";
+  const svgSize = size === "xs" ? 11 : 14;
+  return (
+    <div className={cn(dim, "rounded-full bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center shrink-0 shadow-sm")}>
+      <svg width={svgSize} height={svgSize} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446A9 9 0 1 1 12 3Z"/>
+        <path d="M20 12.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0Z"/>
+      </svg>
+    </div>
+  );
+}
 
 export function ChatBotBubble() {
   const [open, setOpen] = useState(false);
@@ -39,7 +50,7 @@ export function ChatBotBubble() {
           className={cn(
             "fixed bottom-20 inset-s-6 z-50",
             "w-[calc(100vw-3rem)] max-w-80 sm:max-w-90",
-            "bg-background dark:bg-neutral-800",
+            "bg-white dark:bg-neutral-800",
             "rounded-2xl border border-neutral-200 dark:border-neutral-700",
             "shadow-2xl flex flex-col overflow-hidden",
             "animate-in slide-in-from-bottom-4 fade-in duration-200"
@@ -47,20 +58,18 @@ export function ChatBotBubble() {
           style={{ height: 440 }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-cyan-600 shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <Bot size={16} className="text-white" />
-              </div>
+              <AiAvatar size="sm" />
               <div>
-                <p className="text-sm font-semibold text-white leading-none">Bizify AI</p>
-                <p className="text-[10px] text-cyan-100 mt-0.5">Always here to help</p>
+                <p className="text-sm font-semibold text-neutral-900 dark:text-white leading-none">Bizify AI</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">Always here to help</p>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 cursor-pointer transition-colors"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer transition-colors"
             >
               <Minimize2 size={14} />
             </button>
@@ -69,18 +78,14 @@ export function ChatBotBubble() {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
             {messages.map((m) => (
-              <div key={m.id} className={cn("flex gap-2", m.role === "user" && "flex-row-reverse")}>
-                {m.role === "assistant" && (
-                  <div className="w-6 h-6 rounded-full bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center shrink-0 mt-0.5">
-                    <Sparkles size={11} className="text-cyan-600 dark:text-cyan-400" />
-                  </div>
-                )}
+              <div key={m.id} className={cn("flex gap-2 items-start", m.role === "user" && "flex-row-reverse")}>
+                {m.role === "assistant" && <AiAvatar size="xs" />}
                 <div
                   className={cn(
-                    "max-w-[80%] px-3 py-2 rounded-2xl text-sm leading-relaxed",
+                    "max-w-[80%] min-w-0 px-3 py-2 rounded-2xl text-sm leading-relaxed wrap-break-word whitespace-pre-wrap",
                     m.role === "user"
-                      ? "bg-cyan-500 text-white rounded-tr-sm"
-                      : "bg-neutral-100 dark:bg-neutral-700 text-gray-800 dark:text-gray-100 rounded-tl-sm"
+                      ? "bg-cyan-600/10 dark:bg-cyan-900/20 border border-neutral-200 dark:border-neutral-600 text-neutral-800 dark:text-gray-200 rounded-tr-sm"
+                      : "bg-white dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 text-neutral-600 dark:text-gray-200 rounded-tl-sm shadow-sm"
                   )}
                 >
                   {m.text}
@@ -89,15 +94,13 @@ export function ChatBotBubble() {
             ))}
 
             {isLoading && (
-              <div className="flex gap-2">
-                <div className="w-6 h-6 rounded-full bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
-                  <Sparkles size={11} className="text-cyan-600 dark:text-cyan-400" />
-                </div>
-                <div className="px-3 py-2 rounded-2xl rounded-tl-sm bg-neutral-100 dark:bg-neutral-700 flex gap-1 items-center">
+              <div className="flex gap-2 items-start">
+                <AiAvatar size="xs" />
+                <div className="px-3 py-2 rounded-2xl rounded-tl-sm bg-white dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 shadow-sm flex gap-1 items-center">
                   {[0, 1, 2].map((i) => (
                     <span
                       key={i}
-                      className="w-1.5 h-1.5 rounded-full bg-neutral-400 dark:bg-neutral-500 typing-dot"
+                      className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-500 typing-dot"
                     />
                   ))}
                 </div>
@@ -108,7 +111,7 @@ export function ChatBotBubble() {
 
           {/* Input */}
           <div className="px-3 pb-3 shrink-0">
-            <div className="flex items-center gap-2 bg-neutral-100 dark:bg-neutral-700 rounded-xl px-3 py-2">
+            <div className="flex items-center gap-2 bg-neutral-50 dark:bg-neutral-700/50 rounded-xl border border-neutral-200 dark:border-neutral-600 px-3 py-2">
               <input
                 ref={inputRef}
                 type="text"
@@ -122,7 +125,7 @@ export function ChatBotBubble() {
                 type="button"
                 onClick={handleSend}
                 disabled={!input.trim() || isLoading}
-                className="w-7 h-7 rounded-lg bg-cyan-500 flex items-center justify-center text-white disabled:opacity-40 cursor-pointer shrink-0"
+                className="w-7 h-7 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 flex items-center justify-center text-white disabled:opacity-40 cursor-pointer shrink-0"
               >
                 <Send size={13} />
               </button>
@@ -141,10 +144,10 @@ export function ChatBotBubble() {
           "w-12 h-12 rounded-full",
           "flex items-center justify-center text-white",
           "cursor-pointer transition-[transform,background-color] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]",
-          "hover:scale-105 active:scale-95",
+          "hover:scale-105 active:scale-95 shadow-lg",
           open
-            ? "bg-neutral-700 dark:bg-neutral-600 shadow-lg"
-            : "bg-cyan-600 hover:bg-cyan-700 shadow-lg"
+            ? "bg-neutral-700 dark:bg-neutral-600"
+            : "bg-gradient-to-br from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600"
         )}
       >
         {open ? <X size={20} /> : <Bot size={20} />}
