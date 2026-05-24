@@ -151,7 +151,7 @@ export function useAiPipeline(ideaId?: string) {
     setRunError(null);
     try {
       // POST /ai/run returns 202 immediately — pipeline runs async on backend
-      await api.post("/ai/run", {}, { timeout: 30_000 });
+      await api.post("/ai/run", ideaId ? { idea_id: ideaId } : {}, { timeout: 30_000 });
       // Poll status and incrementally fetch sections as they complete
       await pollUntilDone();
       setHasRun(true);
