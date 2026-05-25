@@ -22,6 +22,7 @@ interface Message {
 interface Session {
   id: string;
   section_slug: string | null;
+  idea_id: string | null;
   title: string;
   preview: string;
   created_at: string;
@@ -166,7 +167,7 @@ function AiChatContent() {
   useEffect(() => {
     api.get("/chat/sessions")
       .then(({ data }) => {
-        const loaded: Session[] = (data as Array<{ id: string; section_slug: string | null; title: string; preview: string; created_at: string }>).map((s) => ({
+        const loaded: Session[] = (data as Array<{ id: string; section_slug: string | null; idea_id: string | null; title: string; preview: string; created_at: string }>).map((s) => ({
           ...s,
           messages: [],
           history: [],
@@ -262,7 +263,11 @@ function AiChatContent() {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text, history: active.history }),
+          body: JSON.stringify({
+            message: text,
+            history: active.history,
+            idea_id: active.idea_id ?? undefined,
+          }),
         });
 
         const placeholderMsg: Message = { id: (Date.now() + 1).toString(), role: "assistant", text: "", time: ts() };
@@ -380,6 +385,7 @@ function AiChatContent() {
       const { data } = await api.post("/chat/sessions", { title: "New conversation" });
       const newSession: Session = {
         ...data,
+        idea_id: data.idea_id ?? null,
         messages: [{ id: "0", role: "assistant", text: "Hi! I'm Bizify AI. What would you like to work on today?", time: ts() }],
         history: [],
         messagesLoaded: true,
@@ -392,6 +398,7 @@ function AiChatContent() {
       const newSession: Session = {
         id,
         section_slug: null,
+        idea_id: null,
         title: "New conversation",
         preview: "",
         created_at: new Date().toISOString(),
@@ -448,8 +455,7 @@ function AiChatContent() {
 
       {/* Two-column layout */}
       <div
-        className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-6 flex gap-4 min-h-0"
-        style={{ height: "calc(100vh - 110px)" }}
+        className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-6 flex gap-4 min-h-0 h-[calc(100vh-110px)]"
       >
         {/* ── Sidebar ── */}
         <aside className="hidden md:flex flex-col w-60 shrink-0 gap-3">
@@ -556,8 +562,7 @@ function AiChatContent() {
                 placeholder={active?.section_slug
                   ? `Ask about ${SECTION_LABEL[active.section_slug] ?? "this section"}…`
                   : "Ask anything — validate an idea, research a market, draft a pitch…"}
-                className="flex-1 text-sm bg-transparent outline-none resize-none text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 max-h-32 min-w-0"
-                style={{ scrollbarWidth: "none" }}
+                className="flex-1 text-sm bg-transparent outline-none resize-none text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 max-h-32 min-w-0 [scrollbar-width:none]"
               />
               <button
                 type="button"
