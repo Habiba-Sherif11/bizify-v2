@@ -40,6 +40,19 @@ const SECTION_ENDPOINTS: Record<SectionKey, string> = {
   idea:            "/ai/idea",
 };
 
+// URL path segment used for regenerate/regenerate-custom sub-routes (matches backend route names)
+const SECTION_URL_SLUG: Partial<Record<SectionKey, string>> = {
+  customers:       "customers",
+  competition:     "competition",
+  marketPotential: "market-potential",
+  ideaStrategy:    "idea-strategy",
+  businessModel:   "business-model",
+  functionsList:   "functions-list",
+  mvpPlanning:     "mvp-planning",
+  unitEconomics:   "unit-economics",
+  goToMarket:      "go-to-market",
+};
+
 // Maps each section key to the field name returned in the backend response.
 // GET /api/v1/ai/idea          → { current_idea: string, ... }
 // GET /api/v1/ai/customers     → { customers: {...}, ... }
@@ -191,6 +204,38 @@ export function useAiPipeline(ideaId?: string) {
     return () => window.removeEventListener("bizify:sections_updated", handler);
   }, [fetchAll]);
 
+  const regenerateSection = useCallback(
+    async (key: SectionKey) => {
+      const slug = SECTION_URL_SLUG[key];
+      if (!slug) return;
+      setSection(key, { isLoading: true, error: null });
+      try {
+        await api.post(`/ai/${slug}/regenerate`, {}, { timeout: 120_000 });
+        await fetchSection(key);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to regenerate this section.";
+        setSection(key, { isLoading: false, error: msg });
+      }
+    },
+    [setSection, fetchSection]
+  );
+
+  const regenerateSectionCustom = useCallback(
+    async (key: SectionKey, customPrompt: string) => {
+      const slug = SECTION_URL_SLUG[key];
+      if (!slug) return;
+      setSection(key, { isLoading: true, error: null });
+      try {
+        await api.post(`/ai/${slug}/regenerate-custom`, { custom_prompt: customPrompt }, { timeout: 120_000 });
+        await fetchSection(key);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to regenerate this section.";
+        setSection(key, { isLoading: false, error: msg });
+      }
+    },
+    [setSection, fetchSection]
+  );
+
   return {
     sections,
     isRunning,
@@ -198,6 +243,8 @@ export function useAiPipeline(ideaId?: string) {
     runError,
     runPipeline,
     runSection,
+    regenerateSection,
+    regenerateSectionCustom,
     fetchSection,
     fetchAll,
   };
