@@ -2,9 +2,10 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Home, ChevronRight, FileDown, Share2, Sparkles,
-  Play, Loader2, AlertCircle,
+  Play, Loader2, AlertCircle, RefreshCw, Wand2, MessageCircle, X,
 } from "lucide-react";
 import { api } from "@/features/auth/lib/api";
 import { cn } from "@/lib/utils";
@@ -270,7 +271,12 @@ export default function IdeaDetailPage({
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
 
-  const { sections, isRunning, hasRun, runError, runPipeline, runSection } = useAiPipeline(idea_id);
+  const router = useRouter();
+  const { sections, isRunning, hasRun, runError, runPipeline, runSection, regenerateSection, regenerateSectionCustom } = useAiPipeline(idea_id);
+
+  const [customPromptOpen, setCustomPromptOpen]       = useState(false);
+  const [customPromptSection, setCustomPromptSection] = useState<SectionKey | null>(null);
+  const [customPromptText, setCustomPromptText]       = useState("");
 
   useEffect(() => {
     api
@@ -378,27 +384,120 @@ export default function IdeaDetailPage({
           </p>
         )}
 
-        {/* Tab bar */}
-        <div className="px-2 py-1.5 bg-gray-200 dark:bg-neutral-800 rounded-lg flex items-center justify-between gap-1 overflow-x-auto mb-8 scrollbar-hide">
-          {TABS.map(({ key, label }) => {
-            const active = activeTab === key;
-            return (
+        {/* Tab bar + section action icons */}
+        {(() => {
+          const activeSectionKey = activeTab !== "overview"
+            ? TAB_STATE_KEY[activeTab as Exclude<TabKey, "overview">]
+            : null;
+          const activeSectionHasData = activeSectionKey ? !!sections[activeSectionKey].data : false;
+          const activeSectionLoading = activeSectionKey ? sections[activeSectionKey].isLoading : false;
+
+          return (
+            <div className="flex items-center gap-2 mb-8">
+              <div className="flex-1 min-w-0 px-2 py-1.5 bg-gray-200 dark:bg-neutral-800 rounded-lg flex items-center gap-1 overflow-x-auto scrollbar-hide">
+                {TABS.map(({ key, label }) => {
+                  const active = activeTab === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setActiveTab(key)}
+                      className={cn(
+                        "shrink-0 min-h-10 px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer whitespace-nowrap",
+                        active
+                          ? "bg-white dark:bg-neutral-700 text-foreground shadow-sm border border-neutral-300 dark:border-neutral-600"
+                          : "text-neutral-600 dark:text-neutral-400 hover:bg-white/50 dark:hover:bg-neutral-700/50"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Section action icons — only when the active tab has data */}
+              {activeSectionHasData && activeSectionKey && (
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <SectionIconButton
+                    tooltip="Regenerate"
+                    disabled={activeSectionLoading}
+                    onClick={() => regenerateSection(activeSectionKey)}
+                  >
+                    <RefreshCw size={16} />
+                  </SectionIconButton>
+                  <SectionIconButton
+                    tooltip="Regenerate with custom prompt"
+                    disabled={activeSectionLoading}
+                    onClick={() => {
+                      setCustomPromptSection(activeSectionKey);
+                      setCustomPromptText("");
+                      setCustomPromptOpen(true);
+                    }}
+                  >
+                    <Wand2 size={16} />
+                  </SectionIconButton>
+                  <SectionIconButton
+                    tooltip="Chat with AI"
+                    onClick={() => router.push(`/entrepreneur/ai-chat?idea_id=${idea_id}&section=${activeSectionKey}`)}
+                  >
+                    <MessageCircle size={16} />
+                  </SectionIconButton>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Custom prompt modal */}
+        {customPromptOpen && (
+          <div
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+            onClick={() => setCustomPromptOpen(false)}
+          >
+            <div
+              className="bg-white dark:bg-neutral-800 rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 flex flex-col gap-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground">Custom Regeneration</h3>
+                <button
+                  type="button"
+                  onClick={() => setCustomPromptOpen(false)}
+                  className="p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
+                >
+                  <X size={15} className="text-neutral-500" />
+                </button>
+              </div>
+              <textarea
+                value={customPromptText}
+                onChange={(e) => setCustomPromptText(e.target.value)}
+                placeholder="Describe what you want to change or focus on…"
+                rows={4}
+                className="w-full text-sm border border-border rounded-xl p-3 resize-none bg-transparent focus:outline-none focus:ring-2 focus:ring-amber-400 text-foreground placeholder:text-muted-foreground"
+                autoFocus
+              />
               <button
-                key={key}
                 type="button"
-                onClick={() => setActiveTab(key)}
+                disabled={!customPromptText.trim()}
+                onClick={() => {
+                  if (customPromptSection && customPromptText.trim()) {
+                    regenerateSectionCustom(customPromptSection, customPromptText.trim());
+                    setCustomPromptOpen(false);
+                    setCustomPromptText("");
+                  }
+                }}
                 className={cn(
-                  "shrink-0 min-h-10 px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer whitespace-nowrap",
-                  active
-                    ? "bg-white dark:bg-neutral-700 text-foreground shadow-sm border border-neutral-300 dark:border-neutral-600"
-                    : "text-neutral-600 dark:text-neutral-400 hover:bg-white/50 dark:hover:bg-neutral-700/50"
+                  "flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-opacity cursor-pointer",
+                  "bg-gradient-to-r from-amber-500 to-yellow-500 shadow-[0_2px_12px_rgba(255,183,3,0.3)]",
+                  !customPromptText.trim() && "opacity-50 cursor-not-allowed"
                 )}
               >
-                {label}
+                <Wand2 size={14} />
+                Generate
               </button>
-            );
-          })}
-        </div>
+            </div>
+          </div>
+        )}
 
         {/* Tab content */}
         <TabContent
@@ -434,6 +533,37 @@ function ActionIconButton({
         {children}
       </button>
       <span className="text-[8px] font-medium text-neutral-400 leading-6">{label}</span>
+    </div>
+  );
+}
+
+function SectionIconButton({
+  tooltip,
+  onClick,
+  disabled,
+  children,
+}: {
+  tooltip: string;
+  onClick: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative group">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className={cn(
+          "p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer text-neutral-500 dark:text-neutral-400",
+          disabled && "opacity-40 cursor-not-allowed"
+        )}
+      >
+        {children}
+      </button>
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-neutral-800 dark:bg-neutral-100 text-white dark:text-neutral-900 text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+        {tooltip}
+      </div>
     </div>
   );
 }
