@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CreateIdeaPayload } from "@/features/entrepreneur/types/idea";
@@ -15,13 +15,16 @@ export function CreateIdeaModal({ onClose, onCreate }: Props) {
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const submittingRef = useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (!title.trim() || !description.trim()) {
       setError("Title and description are required.");
       return;
     }
+    submittingRef.current = true;
     setError(null);
     setIsSubmitting(true);
     try {
@@ -30,6 +33,7 @@ export function CreateIdeaModal({ onClose, onCreate }: Props) {
     } catch {
       setError("Failed to create idea. Please try again.");
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };

@@ -543,6 +543,427 @@ function SectionChatPopup({
   );
 }
 
+// ─── PDF export ───────────────────────────────────────────────────────────────
+
+function safeParseJson(raw: string | null): Record<string, unknown> | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function esc(s: unknown): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function strList(items: unknown[]): string {
+  if (!items.length) return "";
+  return `<ul>${items.map((v) => `<li>${esc(v)}</li>`).join("")}</ul>`;
+}
+
+// ─── MVP-specific PDF builder ─────────────────────────────────────────────────
+
+interface PdfMvpData {
+  mvp_goal?: string;
+  summary?: string;
+  riskiest_assumptions?: Array<{
+    id?: string; assumption?: string; risk_level?: string;
+    validation_method?: string; kill_signal?: string;
+  }>;
+  scope?: { included?: string[]; excluded?: string[] };
+  core_user_flows?: Array<{
+    id?: string; name?: string; steps?: string[]; success_metric?: string;
+  }>;
+  build_plan?: {
+    phases?: Array<{ phase?: string | number; name?: string; tasks?: string[]; milestone?: string }>;
+    total_timeline?: string;
+    no_code_tools_needed?: string[];
+  };
+  validation_experiments?: Array<{
+    id?: string; hypothesis?: string; method?: string;
+    success_metric?: string; timeline?: string; cost_usd?: number;
+  }>;
+  launch_criteria?: { must_be_true?: string[]; success_metrics?: string[]; kill_criteria?: string[] };
+  testing_plan?: Array<{ area?: string; method?: string; pass_criteria?: string }>;
+  qa_checklist?: string[];
+  first_100_users_plan?: string;
+  source_mode?: string;
+  sources_used?: number;
+  sources_list?: Array<{ url?: string; title?: string }>;
+}
+
+function buildMvpPdfHtml(idea: Idea, raw: string | null): string {
+  const date = idea.created_at
+    ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+    : "";
+
+  let mvp: PdfMvpData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") mvp = p as PdfMvpData;
+  } catch { /* render what we have */ }
+
+  const riskBadge = (level?: string) => {
+    const l = (level ?? "").toLowerCase();
+    const bg = l === "high" ? "#fee2e2" : l === "medium" ? "#fef3c7" : "#d1fae5";
+    const color = l === "high" ? "#b91c1c" : l === "medium" ? "#92400e" : "#065f46";
+    return level
+      ? `<span style="background:${bg};color:${color};padding:1px 7px;border-radius:999px;font-size:8pt;font-weight:700;text-transform:uppercase;">${esc(level)} risk</span>`
+      : "";
+  };
+
+  // Goal
+  const goalHtml = (mvp.mvp_goal || mvp.summary) ? `
+    <section class="goal-card">
+      ${mvp.mvp_goal ? `<div class="goal-label">MVP Goal</div><p class="goal-text">${esc(mvp.mvp_goal)}</p>` : ""}
+      ${mvp.summary ? `<p class="summary-text">${esc(mvp.summary)}</p>` : ""}
+    </section>` : "";
+
+  // Assumptions
+  const assumptionsHtml = mvp.riskiest_assumptions?.length ? `
+    <section>
+      <h2>Riskiest Assumptions</h2>
+      <div class="grid2">
+        ${mvp.riskiest_assumptions.map((a, i) => `
+          <div class="card">
+            <div class="card-header">
+              <span class="card-id">${esc(a.id ?? `A${i + 1}`)}</span>
+              ${riskBadge(a.risk_level)}
+            </div>
+            ${a.assumption ? `<p class="card-title">${esc(a.assumption)}</p>` : ""}
+            ${a.validation_method ? `<div class="sublabel">Validation</div><p class="subtext">${esc(a.validation_method)}</p>` : ""}
+            ${a.kill_signal ? `<div class="kill-signal"><span class="kill-label">Kill signal</span><p>${esc(a.kill_signal)}</p></div>` : ""}
+          </div>`).join("")}
+      </div>
+    </section>` : "";
+
+  // Scope
+  const scopeHtml = (mvp.scope?.included?.length || mvp.scope?.excluded?.length) ? `
+    <section>
+      <h2>Scope</h2>
+      <div class="grid2">
+        <div class="card scope-in">
+          <div class="scope-title green">✓ Included</div>
+          ${strList(mvp.scope?.included ?? [])}
+        </div>
+        <div class="card scope-out">
+          <div class="scope-title gray">✕ Excluded</div>
+          ${strList(mvp.scope?.excluded ?? [])}
+        </div>
+      </div>
+    </section>` : "";
+
+  // User flows
+  const flowsHtml = mvp.core_user_flows?.length ? `
+    <section>
+      <h2>Core User Flows</h2>
+      <div class="grid2">
+        ${mvp.core_user_flows.map((f, i) => `
+          <div class="card">
+            <div class="card-header">
+              <span class="flow-badge">${esc(f.id ?? `UF${i + 1}`)}</span>
+              <span class="card-title-inline">${esc(f.name ?? "Flow")}</span>
+            </div>
+            ${f.steps?.length ? `<ol class="steps">${f.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>` : ""}
+            ${f.success_metric ? `<div class="metric-box"><span class="metric-label">Success metric</span><p>${esc(f.success_metric)}</p></div>` : ""}
+          </div>`).join("")}
+      </div>
+    </section>` : "";
+
+  // Build plan
+  const buildPlanHtml = (() => {
+    const bp = mvp.build_plan;
+    if (!bp) return "";
+    const parts: string[] = [];
+    if (bp.total_timeline) parts.push(`<div class="timeline-badge">📅 Timeline: ${esc(bp.total_timeline)}</div>`);
+    if (bp.phases?.length) {
+      parts.push(`<div class="phases">${bp.phases.map((p, i) => `
+        <div class="phase">
+          <div class="phase-num">${esc(p.phase ?? i + 1)}</div>
+          <div class="phase-body">
+            <h4>${esc(p.name ?? `Phase ${p.phase ?? i + 1}`)}</h4>
+            ${p.tasks?.length ? strList(p.tasks) : ""}
+            ${p.milestone ? `<div class="milestone">🏁 ${esc(p.milestone)}</div>` : ""}
+          </div>
+        </div>`).join("")}</div>`);
+    }
+    if (bp.no_code_tools_needed?.length) {
+      parts.push(`<div class="tools-section"><div class="sublabel">No-code tools</div><div class="tags">${bp.no_code_tools_needed.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div></div>`);
+    }
+    return parts.length ? `<section><h2>Build Plan</h2>${parts.join("")}</section>` : "";
+  })();
+
+  // Experiments
+  const experimentsHtml = mvp.validation_experiments?.length ? `
+    <section>
+      <h2>Validation Experiments</h2>
+      <div class="grid2">
+        ${mvp.validation_experiments.map((e, i) => `
+          <div class="card">
+            <div class="card-header">
+              <span class="card-id">${esc(e.id ?? `E${i + 1}`)}</span>
+              <div style="display:flex;gap:6px;">
+                ${e.timeline ? `<span class="badge-cyan">📅 ${esc(e.timeline)}</span>` : ""}
+                ${typeof e.cost_usd === "number" ? `<span class="badge-green">$${e.cost_usd}</span>` : ""}
+              </div>
+            </div>
+            ${e.hypothesis ? `<p class="card-title">${esc(e.hypothesis)}</p>` : ""}
+            ${e.method ? `<div class="sublabel">Method</div><p class="subtext">${esc(e.method)}</p>` : ""}
+            ${e.success_metric ? `<div class="sublabel">Success metric</div><p class="subtext">${esc(e.success_metric)}</p>` : ""}
+          </div>`).join("")}
+      </div>
+    </section>` : "";
+
+  // Launch criteria
+  const launchHtml = (() => {
+    const lc = mvp.launch_criteria;
+    if (!lc) return "";
+    const parts: string[] = [];
+    if (lc.must_be_true?.length) parts.push(`<div class="criteria-box green"><div class="crit-title green">✓ Must be true</div>${strList(lc.must_be_true)}</div>`);
+    if (lc.success_metrics?.length) parts.push(`<div class="criteria-box amber"><div class="crit-title amber">⬤ Success metrics</div>${strList(lc.success_metrics)}</div>`);
+    if (lc.kill_criteria?.length) parts.push(`<div class="criteria-box red"><div class="crit-title red">✕ Kill criteria</div>${strList(lc.kill_criteria)}</div>`);
+    return parts.length ? `<section><h2>Launch Criteria</h2><div class="grid3">${parts.join("")}</div></section>` : "";
+  })();
+
+  // Testing
+  const testingHtml = (() => {
+    const parts: string[] = [];
+    if (mvp.testing_plan?.length) {
+      parts.push(`<table class="testing-table">
+        <thead><tr><th>Area</th><th>Method</th><th>Pass Criteria</th></tr></thead>
+        <tbody>${mvp.testing_plan.map((t) => `<tr><td><strong>${esc(t.area ?? "—")}</strong></td><td>${esc(t.method ?? "—")}</td><td>${esc(t.pass_criteria ?? "—")}</td></tr>`).join("")}</tbody>
+      </table>`);
+    }
+    if (mvp.qa_checklist?.length) {
+      parts.push(`<div class="sublabel" style="margin-top:12px;">QA Checklist</div>${strList(mvp.qa_checklist)}`);
+    }
+    return parts.length ? `<section><h2>Testing &amp; QA</h2>${parts.join("")}</section>` : "";
+  })();
+
+  // First 100 users
+  const firstUsersHtml = mvp.first_100_users_plan
+    ? `<section><h2>First 100 Users Plan</h2><p>${esc(mvp.first_100_users_plan)}</p></section>` : "";
+
+  // Sources
+  const sourcesHtml = (() => {
+    const srcs = (mvp.sources_list ?? []).filter((s) => s.url);
+    if (!srcs.length && !mvp.source_mode && mvp.sources_used == null) return "";
+    return `<section><h2>Sources</h2>
+      ${mvp.source_mode ? `<span class="tag">${esc(mvp.source_mode.replace(/_/g, " "))}</span>` : ""}
+      ${mvp.sources_used != null ? `<span class="tag amber">${mvp.sources_used} source${mvp.sources_used !== 1 ? "s" : ""} used</span>` : ""}
+      ${srcs.length ? `<ol style="margin-top:10px;">${srcs.map((s) => `<li><a href="${esc(s.url)}">${esc(s.title ?? s.url)}</a></li>`).join("")}</ol>` : ""}
+    </section>`;
+  })();
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>${esc(idea.title ?? "Idea")} — MVP Plan</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
+  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
+  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
+  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
+  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
+  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
+  section { break-inside: avoid; }
+
+  /* Goal card */
+  .goal-card { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 14px 16px; margin-bottom: 4px; }
+  .goal-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #92400e; margin-bottom: 4px; }
+  .goal-text { font-size: 11pt; font-weight: 600; color: #111; margin-bottom: 6px; }
+  .summary-text { font-size: 10pt; color: #555; border-top: 1px solid #fde68a; padding-top: 8px; margin-top: 8px; }
+
+  /* Grid layouts */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  /* Cards */
+  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .card-id { font-size: 8pt; font-weight: 700; color: #9ca3af; letter-spacing: .1em; }
+  .card-title { font-size: 10pt; font-weight: 600; color: #111; margin-bottom: 6px; }
+  .card-title-inline { font-size: 10pt; font-weight: 600; color: #111; }
+  .sublabel { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; margin: 6px 0 2px; }
+  .subtext { font-size: 9.5pt; color: #555; }
+  .kill-signal { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 6px 10px; margin-top: 6px; }
+  .kill-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #dc2626; letter-spacing: .06em; }
+  .kill-signal p { font-size: 9pt; color: #7f1d1d; margin-top: 2px; }
+
+  /* Scope */
+  .scope-in { background: #f0fdf4; border-color: #bbf7d0; }
+  .scope-out { background: #f9fafb; border-color: #e5e7eb; }
+  .scope-title { font-size: 10pt; font-weight: 600; margin-bottom: 6px; }
+  .scope-title.green { color: #15803d; }
+  .scope-title.gray { color: #6b7280; }
+
+  /* User flows */
+  .flow-badge { background: #f3e8ff; color: #7e22ce; font-size: 8.5pt; font-weight: 700; padding: 2px 7px; border-radius: 6px; }
+  .steps { padding-left: 18px; font-size: 9.5pt; color: #333; }
+  .steps li { margin-bottom: 2px; }
+  .metric-box { background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 6px; padding: 6px 10px; margin-top: 8px; }
+  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #7e22ce; letter-spacing: .06em; }
+
+  /* Build plan */
+  .timeline-badge { display: inline-block; background: #fffbeb; border: 1px solid #fde68a; border-radius: 999px; padding: 3px 12px; font-size: 9pt; font-weight: 600; color: #92400e; margin-bottom: 10px; }
+  .phases { display: flex; flex-direction: column; gap: 10px; }
+  .phase { display: flex; gap: 10px; align-items: flex-start; }
+  .phase-num { min-width: 26px; height: 26px; background: #f59e0b; color: #fff; border-radius: 999px; font-size: 9pt; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .phase-body { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; background: #fafafa; flex: 1; }
+  .milestone { display: inline-block; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 2px 10px; font-size: 9pt; color: #15803d; margin-top: 6px; }
+  .tools-section { margin-top: 12px; border-top: 1px solid #e5e7eb; padding-top: 10px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .tag { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 999px; padding: 2px 10px; font-size: 9pt; }
+  .tag.amber { background: #fffbeb; border-color: #fde68a; color: #92400e; font-weight: 600; }
+
+  /* Badges */
+  .badge-cyan { background: #ecfeff; color: #0e7490; font-size: 8pt; font-weight: 600; padding: 1px 7px; border-radius: 999px; }
+  .badge-green { background: #f0fdf4; color: #15803d; font-size: 8pt; font-weight: 600; padding: 1px 7px; border-radius: 999px; }
+
+  /* Launch criteria */
+  .criteria-box { border-radius: 8px; padding: 10px 12px; border: 1px solid; }
+  .criteria-box.green { background: #f0fdf4; border-color: #bbf7d0; }
+  .criteria-box.amber { background: #fffbeb; border-color: #fde68a; }
+  .criteria-box.red { background: #fef2f2; border-color: #fecaca; }
+  .crit-title { font-size: 10pt; font-weight: 600; margin-bottom: 6px; }
+  .crit-title.green { color: #15803d; }
+  .crit-title.amber { color: #92400e; }
+  .crit-title.red { color: #dc2626; }
+
+  /* Testing */
+  .testing-table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+  .testing-table th { text-align: left; font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; padding: 6px 10px; border-bottom: 2px solid #e5e7eb; }
+  .testing-table td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+
+  /* Lists */
+  ul, ol { padding-left: 18px; margin: 4px 0; }
+  li { margin-bottom: 2px; font-size: 10pt; }
+  a { color: #d97706; text-decoration: underline; word-break: break-all; }
+
+  @page { size: A4; margin: 1.5cm 2cm; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+  <h1>${esc(idea.title ?? "Untitled Idea")} — MVP Plan</h1>
+  ${date ? `<p class="meta-line">${date}</p>` : ""}
+  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
+  ${goalHtml}
+  ${assumptionsHtml}
+  ${scopeHtml}
+  ${flowsHtml}
+  ${buildPlanHtml}
+  ${experimentsHtml}
+  ${launchHtml}
+  ${testingHtml}
+  ${firstUsersHtml}
+  ${sourcesHtml}
+</body>
+</html>`;
+}
+
+function renderPdfValue(value: unknown, depth = 0): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return `<span>${esc(value)}</span>`;
+  if (typeof value === "number" || typeof value === "boolean") return `<span>${String(value)}</span>`;
+  if (Array.isArray(value)) {
+    const items = value.filter((v) => v !== null && v !== undefined);
+    if (items.length === 0) return "";
+    if (items.every((v) => typeof v === "string" || typeof v === "number")) {
+      return `<ul>${items.map((v) => `<li>${esc(v)}</li>`).join("")}</ul>`;
+    }
+    return items.map((v) => renderPdfValue(v, depth + 1)).join("");
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>).filter(
+      ([, v]) => v !== null && v !== undefined && v !== ""
+    );
+    if (entries.length === 0) return "";
+    const tag = depth === 0 ? "h3" : "h4";
+    return entries
+      .map(([k, v]) => {
+        const label = k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+        const rendered = renderPdfValue(v, depth + 1);
+        if (!rendered) return "";
+        return `<div class="field"><${tag}>${label}</${tag}>${rendered}</div>`;
+      })
+      .join("");
+  }
+  return "";
+}
+
+function buildSectionHtml(title: string, data: string | null): string {
+  const parsed = safeParseJson(data);
+  if (!parsed) return "";
+  const body = renderPdfValue(parsed);
+  if (!body) return "";
+  return `<section><h2>${title}</h2>${body}</section>`;
+}
+
+function buildPdfHtml(idea: Idea, sections: ReturnType<typeof useAiPipeline>["sections"]): string {
+  const metaRows = [
+    idea.budget != null ? `<tr><td>Budget</td><td>$${idea.budget.toLocaleString()}</td></tr>` : "",
+    idea.feasibility != null ? `<tr><td>Feasibility</td><td>${idea.feasibility} / 10</td></tr>` : "",
+    idea.status ? `<tr><td>Status</td><td>${esc(idea.status)}</td></tr>` : "",
+  ].filter(Boolean).join("");
+
+  const sectionBlocks = [
+    buildSectionHtml("Strategy", sections.ideaStrategy.data),
+    buildSectionHtml("Customers", sections.customers.data),
+    buildSectionHtml("Competitor Analysis", sections.competition.data),
+    buildSectionHtml("Market Potential", sections.marketPotential.data),
+    buildSectionHtml("Business Model", sections.businessModel.data),
+    buildSectionHtml("MVP Planning", sections.mvpPlanning.data),
+    buildSectionHtml("Risk & Problems", sections.problems.data),
+    buildSectionHtml("Unit Economics", sections.unitEconomics.data),
+  ].filter(Boolean).join("");
+
+  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>${esc(idea.title ?? "Idea")} — Analysis Report</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Georgia, serif; color: #111; background: #fff; padding: 2.5cm 3cm; font-size: 11pt; line-height: 1.6; }
+  h1 { font-size: 22pt; font-weight: 700; margin-bottom: 4px; }
+  .meta-date { color: #666; font-size: 10pt; margin-bottom: 16px; }
+  .description { font-size: 11pt; color: #333; max-width: 680px; margin-bottom: 18px; white-space: pre-wrap; }
+  table.meta { border-collapse: collapse; margin-bottom: 24px; }
+  table.meta td { padding: 4px 16px 4px 0; font-size: 10pt; vertical-align: top; }
+  table.meta td:first-child { font-weight: 600; color: #555; text-transform: uppercase; font-size: 9pt; letter-spacing: .04em; width: 120px; }
+  section { margin-top: 32px; break-inside: avoid; }
+  h2 { font-size: 14pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin-bottom: 14px; color: #1a1a1a; }
+  h3 { font-size: 11pt; font-weight: 600; margin: 12px 0 4px; color: #333; }
+  h4 { font-size: 10pt; font-weight: 600; margin: 8px 0 2px; color: #444; }
+  .field { margin-bottom: 10px; }
+  ul { padding-left: 20px; margin: 4px 0; }
+  li { margin-bottom: 2px; font-size: 10.5pt; }
+  span { display: block; font-size: 10.5pt; }
+  @page { size: A4; margin: 1.5cm 2cm; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+  <h1>${esc(idea.title ?? "Untitled Idea")}</h1>
+  ${date ? `<p class="meta-date">${date}</p>` : ""}
+  ${idea.description ? `<p class="description">${esc(idea.description)}</p>` : ""}
+  ${metaRows ? `<table class="meta"><tbody>${metaRows}</tbody></table>` : ""}
+  ${sectionBlocks || "<p>No AI analysis generated yet.</p>"}
+</body>
+</html>`;
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function IdeaDetailPage({
@@ -564,6 +985,22 @@ export default function IdeaDetailPage({
 
   const [chatPopupOpen, setChatPopupOpen]       = useState(false);
   const [chatPopupSection, setChatPopupSection] = useState<SectionKey | null>(null);
+
+  const handleDownloadPDF = () => {
+    if (!idea) return;
+    const isMvpTab = activeTab === "mvp";
+    const mvpData = isMvpTab ? sections.mvpPlanning.data : null;
+    const html = isMvpTab && mvpData
+      ? buildMvpPdfHtml(idea, mvpData)
+      : buildPdfHtml(idea, sections);
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 400);
+  };
 
   useEffect(() => {
     api
@@ -622,7 +1059,7 @@ export default function IdeaDetailPage({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-8 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Pipeline status */}
             {isRunning && (
               <span className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
@@ -636,14 +1073,14 @@ export default function IdeaDetailPage({
               </span>
             )}
 
-            {/* Icon actions */}
-            <div className="flex items-center gap-1">
-              <ActionIconButton label="Save as PDF" onClick={() => {}}>
+            {/* Save as PDF + Share */}
+            <div className="flex items-center gap-0.5">
+              <SectionIconButton tooltip="Save as PDF" onClick={handleDownloadPDF}>
                 <FileDown size={18} className="text-neutral-400" />
-              </ActionIconButton>
-              <ActionIconButton label="Share" onClick={() => {}}>
+              </SectionIconButton>
+              <SectionIconButton tooltip="Share" onClick={() => {}}>
                 <Share2 size={18} className="text-neutral-400" />
-              </ActionIconButton>
+              </SectionIconButton>
             </div>
 
             {/* Edit with AI / Run */}
@@ -680,58 +1117,65 @@ export default function IdeaDetailPage({
           const activeSectionLoading = activeSectionKey ? sections[activeSectionKey].isLoading : false;
 
           return (
-            <div className="flex items-center gap-2 mb-8">
-              <div className="flex-1 min-w-0 px-2 py-1.5 bg-gray-200 dark:bg-neutral-800 rounded-lg flex items-center gap-1 overflow-x-auto scrollbar-hide">
-                {TABS.map(({ key, label }) => {
-                  const active = activeTab === key;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setActiveTab(key)}
-                      className={cn(
-                        "shrink-0 min-h-10 px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer whitespace-nowrap",
-                        active
-                          ? "bg-white dark:bg-neutral-700 text-foreground shadow-sm border border-neutral-300 dark:border-neutral-600"
-                          : "text-neutral-600 dark:text-neutral-400 hover:bg-white/50 dark:hover:bg-neutral-700/50"
-                      )}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
+            <>
+              <div className="sticky top-0 z-10 mb-6 py-2 bg-neutral-100 dark:bg-neutral-900 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                <div className="px-2 py-1.5 bg-gray-200 dark:bg-neutral-800 rounded-lg flex items-center justify-center gap-2 overflow-x-auto scrollbar-hide">
+                  {TABS.map(({ key, label }) => {
+                    const active = activeTab === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setActiveTab(key)}
+                        className={cn(
+                          "shrink-0 min-h-10 px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer whitespace-nowrap",
+                          active
+                            ? "bg-white dark:bg-neutral-700 text-foreground shadow-sm border border-neutral-300 dark:border-neutral-600"
+                            : "text-neutral-600 dark:text-neutral-400 hover:bg-white/50 dark:hover:bg-neutral-700/50"
+                        )}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Section action icons — only when the active tab has data */}
+              {/* Section header — title + action icons */}
               {activeSectionHasData && activeSectionKey && (
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <SectionIconButton
-                    tooltip="Regenerate"
-                    disabled={activeSectionLoading}
-                    onClick={() => regenerateSection(activeSectionKey)}
-                  >
-                    <RefreshCw size={16} />
-                  </SectionIconButton>
-                  <SectionIconButton
-                    tooltip="Regenerate with custom prompt"
-                    disabled={activeSectionLoading}
-                    onClick={() => {
-                      setCustomPromptSection(activeSectionKey);
-                      setCustomPromptText("");
-                      setCustomPromptOpen(true);
-                    }}
-                  >
-                    <Wand2 size={16} />
-                  </SectionIconButton>
-                  <SectionIconButton
-                    tooltip="Chat with AI"
-                    onClick={() => { setChatPopupSection(activeSectionKey); setChatPopupOpen(true); }}
-                  >
-                    <MessageCircle size={16} />
-                  </SectionIconButton>
+                <div className="flex items-center justify-between px-4 py-2.5 mb-4 bg-card border border-border rounded-xl">
+                  <span className="text-sm font-semibold text-foreground">
+                    {TABS.find(t => t.key === activeTab)?.label}
+                  </span>
+                  <div className="flex items-center gap-0.5">
+                    <SectionIconButton
+                      tooltip="Regenerate"
+                      disabled={activeSectionLoading}
+                      onClick={() => regenerateSection(activeSectionKey)}
+                    >
+                      <RefreshCw size={16} />
+                    </SectionIconButton>
+                    <SectionIconButton
+                      tooltip="Regenerate with custom prompt"
+                      disabled={activeSectionLoading}
+                      onClick={() => {
+                        setCustomPromptSection(activeSectionKey);
+                        setCustomPromptText("");
+                        setCustomPromptOpen(true);
+                      }}
+                    >
+                      <Wand2 size={16} />
+                    </SectionIconButton>
+                    <SectionIconButton
+                      tooltip="Chat with AI"
+                      onClick={() => { setChatPopupSection(activeSectionKey); setChatPopupOpen(true); }}
+                    >
+                      <MessageCircle size={16} />
+                    </SectionIconButton>
+                  </div>
                 </div>
               )}
-            </div>
+            </>
           );
         })()}
 
@@ -807,29 +1251,6 @@ export default function IdeaDetailPage({
           onClose={() => setChatPopupOpen(false)}
         />
       )}
-    </div>
-  );
-}
-
-function ActionIconButton({
-  label,
-  onClick,
-  children,
-}: {
-  label: string;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col items-center">
-      <button
-        type="button"
-        onClick={onClick}
-        className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
-      >
-        {children}
-      </button>
-      <span className="text-[8px] font-medium text-neutral-400 leading-6">{label}</span>
     </div>
   );
 }
