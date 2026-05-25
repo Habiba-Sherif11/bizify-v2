@@ -757,7 +757,7 @@ function buildMvpPdfHtml(idea: Idea, raw: string | null): string {
     return `<section><h2>Sources</h2>
       ${mvp.source_mode ? `<span class="tag">${esc(mvp.source_mode.replace(/_/g, " "))}</span>` : ""}
       ${mvp.sources_used != null ? `<span class="tag amber">${mvp.sources_used} source${mvp.sources_used !== 1 ? "s" : ""} used</span>` : ""}
-      ${srcs.length ? `<ol style="margin-top:10px;">${srcs.map((s) => `<li><a href="${esc(s.url)}">${esc(s.title ?? s.url)}</a></li>`).join("")}</ol>` : ""}
+      ${srcs.length ? `<ol style="margin-top:10px;">${srcs.map((s) => `<li><a href="${esc(s.url)}">${esc(s.title ?? s.url)}</a><br /><span style="font-size:8.5pt;color:#6b7280;">${esc(s.url)}</span></li>`).join("")}</ol>` : ""}
     </section>`;
   })();
 
@@ -846,7 +846,7 @@ function buildMvpPdfHtml(idea: Idea, raw: string | null): string {
   /* Lists */
   ul, ol { padding-left: 18px; margin: 4px 0; }
   li { margin-bottom: 2px; font-size: 10pt; }
-  a { color: #d97706; text-decoration: underline; word-break: break-all; }
+  a { color: #0369a1; text-decoration: underline; text-decoration-color: #0369a1; text-decoration-thickness: 1.5px; text-underline-offset: 2px; word-break: break-all; cursor: pointer; }
 
   @page { size: A4; margin: 1.5cm 2cm; }
   @media print { body { padding: 0; } }
