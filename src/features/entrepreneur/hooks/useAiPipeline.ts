@@ -163,6 +163,21 @@ export function useAiPipeline(ideaId?: string) {
     }
   }, [pollUntilDone]);
 
+  const runSection = useCallback(
+    async (key: SectionKey) => {
+      const endpoint = SECTION_ENDPOINTS[key];
+      setSection(key, { isLoading: true, error: null });
+      try {
+        await api.post(endpoint, ideaId ? { idea_id: ideaId } : {}, { timeout: 120_000 });
+        await fetchSection(key);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to generate this section.";
+        setSection(key, { isLoading: false, error: msg });
+      }
+    },
+    [setSection, fetchSection, ideaId]
+  );
+
   // Auto-load existing sections when the page first mounts
   useEffect(() => {
     fetchAll();
@@ -182,6 +197,7 @@ export function useAiPipeline(ideaId?: string) {
     hasRun,
     runError,
     runPipeline,
+    runSection,
     fetchSection,
     fetchAll,
   };
