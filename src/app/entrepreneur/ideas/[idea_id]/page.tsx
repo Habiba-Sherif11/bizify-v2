@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useRef, use } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Home, ChevronRight, FileDown, Share2, Sparkles,
-  Play, Loader2, AlertCircle, RefreshCw, Wand2, MessageCircle, X,
+  Play, Loader2, AlertCircle, RefreshCw, Wand2, MessageCircle, X, Send,
 } from "lucide-react";
 import { api } from "@/features/auth/lib/api";
 import { cn } from "@/lib/utils";
@@ -258,6 +257,207 @@ function PipelineCallToAction({ onRun, isRunning }: { onRun: () => void; isRunni
   );
 }
 
+// ─── Section chat popup ───────────────────────────────────────────────────────
+
+const SECTION_CHAT_SLUG: Partial<Record<SectionKey, string>> = {
+  customers:       "customers",
+  competition:     "competition",
+  marketPotential: "market-potential",
+  ideaStrategy:    "idea-strategy",
+  businessModel:   "business-model",
+  functionsList:   "functions-list",
+  mvpPlanning:     "mvp-planning",
+  unitEconomics:   "unit-economics",
+  goToMarket:      "go-to-market",
+  problems:        "problems",
+};
+
+const SECTION_LABEL: Partial<Record<SectionKey, string>> = {
+  customers:       "Customers",
+  competition:     "Competition",
+  marketPotential: "Market",
+  ideaStrategy:    "Strategy",
+  businessModel:   "Business Model",
+  functionsList:   "Functions",
+  mvpPlanning:     "MVP",
+  unitEconomics:   "Financial",
+  goToMarket:      "Go-to-Market",
+  problems:        "Risk",
+};
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+function SectionChatPopup({
+  sectionKey,
+  onClose,
+}: {
+  sectionKey: SectionKey;
+  onClose: () => void;
+}) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const slug = SECTION_CHAT_SLUG[sectionKey];
+  const label = SECTION_LABEL[sectionKey] ?? sectionKey;
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const sendMessage = async () => {
+    const text = inputValue.trim();
+    if (!text || isStreaming || !slug) return;
+
+    const history = messages;
+    setInputValue("");
+    setMessages((prev) => [...prev, { role: "user", content: text }]);
+    setIsStreaming(true);
+    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
+    try {
+      const response = await fetch(`/api/ai/${slug}/chat/stream`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: text,
+          history: history.map((m) => ({ role: m.role, content: m.content })),
+        }),
+        signal: ctrl.signal,
+      });
+
+      if (!response.ok || !response.body) throw new Error("Stream failed");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantText = "";
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr || jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            if (parsed.type === "token" && parsed.content) {
+              assistantText += parsed.content;
+              setMessages((prev) => {
+                const copy = [...prev];
+                copy[copy.length - 1] = { role: "assistant", content: assistantText };
+                return copy;
+              });
+            }
+          } catch { /* ignore malformed chunks */ }
+        }
+      }
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+      setMessages((prev) => {
+        const copy = [...prev];
+        copy[copy.length - 1] = { role: "assistant", content: "Sorry, something went wrong. Please try again." };
+        return copy;
+      });
+    } finally {
+      setIsStreaming(false);
+      abortRef.current = null;
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col w-[360px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-5rem)] bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-t-2xl">
+        <div className="flex items-center gap-2">
+          <MessageCircle size={15} className="text-white" />
+          <span className="text-sm font-semibold text-white">{label} — AI Chat</span>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1 rounded-lg hover:bg-white/20 transition-colors cursor-pointer"
+        >
+          <X size={15} className="text-white" />
+        </button>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3">
+        {messages.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center mt-4">
+            Ask anything about the {label} analysis.
+          </p>
+        )}
+        {messages.map((msg, i) => (
+          <div
+            key={i}
+            className={cn(
+              "max-w-[85%] px-3 py-2 rounded-xl text-sm leading-relaxed whitespace-pre-wrap",
+              msg.role === "user"
+                ? "self-end bg-amber-500 text-white rounded-br-sm"
+                : "self-start bg-neutral-100 dark:bg-neutral-800 text-foreground rounded-bl-sm"
+            )}
+          >
+            {msg.content}
+            {msg.role === "assistant" && msg.content === "" && isStreaming && (
+              <span className="inline-block w-1.5 h-3.5 bg-neutral-400 dark:bg-neutral-500 rounded-sm animate-pulse ml-0.5" />
+            )}
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="border-t border-neutral-200 dark:border-neutral-700 px-3 py-2.5 flex items-end gap-2">
+        <textarea
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask about this section…"
+          rows={1}
+          disabled={isStreaming}
+          className="flex-1 resize-none text-sm bg-neutral-100 dark:bg-neutral-800 border-0 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 text-foreground placeholder:text-muted-foreground max-h-28 overflow-y-auto"
+          style={{ lineHeight: "1.4" }}
+        />
+        <button
+          type="button"
+          onClick={sendMessage}
+          disabled={isStreaming || !inputValue.trim()}
+          className={cn(
+            "p-2.5 rounded-xl bg-amber-500 text-white flex-shrink-0 transition-opacity cursor-pointer",
+            (isStreaming || !inputValue.trim()) && "opacity-40 cursor-not-allowed"
+          )}
+        >
+          {isStreaming
+            ? <Loader2 size={15} className="animate-spin" />
+            : <Send size={15} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function IdeaDetailPage({
@@ -271,12 +471,14 @@ export default function IdeaDetailPage({
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
 
-  const router = useRouter();
   const { sections, isRunning, hasRun, runError, runPipeline, runSection, regenerateSection, regenerateSectionCustom } = useAiPipeline(idea_id);
 
   const [customPromptOpen, setCustomPromptOpen]       = useState(false);
   const [customPromptSection, setCustomPromptSection] = useState<SectionKey | null>(null);
   const [customPromptText, setCustomPromptText]       = useState("");
+
+  const [chatPopupOpen, setChatPopupOpen]       = useState(false);
+  const [chatPopupSection, setChatPopupSection] = useState<SectionKey | null>(null);
 
   useEffect(() => {
     api
@@ -438,7 +640,7 @@ export default function IdeaDetailPage({
                   </SectionIconButton>
                   <SectionIconButton
                     tooltip="Chat with AI"
-                    onClick={() => router.push(`/entrepreneur/ai-chat?idea_id=${idea_id}&section=${activeSectionKey}`)}
+                    onClick={() => { setChatPopupSection(activeSectionKey); setChatPopupOpen(true); }}
                   >
                     <MessageCircle size={16} />
                   </SectionIconButton>
@@ -510,6 +712,15 @@ export default function IdeaDetailPage({
           isRunning={isRunning}
         />
       </main>
+
+      {/* Section chat popup */}
+      {chatPopupOpen && chatPopupSection && (
+        <SectionChatPopup
+          key={chatPopupSection}
+          sectionKey={chatPopupSection}
+          onClose={() => setChatPopupOpen(false)}
+        />
+      )}
     </div>
   );
 }
