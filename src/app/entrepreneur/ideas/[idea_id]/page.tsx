@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef, use } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Home, ChevronRight, FileDown, Share2, Sparkles,
   Play, Loader2, AlertCircle, RefreshCw, Wand2, MessageCircle, X, Send,
+  CheckCircle2, PlusCircle, RotateCcw,
 } from "lucide-react";
 import { api } from "@/features/auth/lib/api";
 import { cn } from "@/lib/utils";
@@ -264,6 +266,304 @@ function PipelineCallToAction({ onRun, isRunning }: { onRun: () => void; isRunni
         {isRunning ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />}
         {isRunning ? "Running…" : "Run Pipeline"}
       </button>
+    </div>
+  );
+}
+
+// ─── Edit Idea Chat Modal ─────────────────────────────────────────────────────
+
+interface EditChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+interface IdeaIntake {
+  idea_summary: string;
+  industry?: string;
+  target_users?: string[];
+  problem_assumption?: string;
+  solution_assumption?: string;
+  business_model?: string;
+  region?: string;
+}
+
+function IdeaEditChatModal({
+  idea,
+  ideaId,
+  onClose,
+  onSectionsReset,
+}: {
+  idea: Idea;
+  ideaId: string;
+  onClose: () => void;
+  onSectionsReset: () => void;
+}) {
+  const router = useRouter();
+  const [messages, setMessages] = useState<EditChatMessage[]>([]);
+  const [history, setHistory]   = useState<Array<{ role: string; content: string }>>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [isSending, setIsSending]   = useState(false);
+  const [readyIntake, setReadyIntake] = useState<IdeaIntake | null>(null);
+  const [approveStep, setApproveStep] = useState<"chat" | "approved" | "done">("chat");
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError]     = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Send the opening message automatically on mount
+  useEffect(() => {
+    const opening = `I want to refine my idea "${idea.title ?? "my idea"}". Here's what I have so far: ${idea.description ?? "no description yet"}. Please help me improve and structure it.`;
+    sendMessage(opening, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const sendMessage = async (text: string, currentHistory: typeof history) => {
+    if (!text.trim() || isSending) return;
+    const userMsg: EditChatMessage = { role: "user", content: text };
+    setMessages((prev) => [...prev, userMsg, { role: "assistant", content: "" }]);
+    setIsSending(true);
+    setInputValue("");
+
+    try {
+      const res = await api.post("/ai/idea-intake", {
+        message: text,
+        history: currentHistory,
+      });
+
+      const data = res.data as {
+        status: string;
+        reply?: string;
+        history?: Array<{ role: string; content: string }>;
+        intake?: IdeaIntake;
+      };
+
+      const reply = data.reply ?? "";
+
+      setMessages((prev) => {
+        const copy = [...prev];
+        copy[copy.length - 1] = { role: "assistant", content: reply };
+        return copy;
+      });
+
+      if (data.status === "ready" && data.intake) {
+        setReadyIntake(data.intake);
+        setApproveStep("approved");
+        // history from the agent when ready — may not be in the response, build it manually
+        setHistory([
+          ...currentHistory,
+          { role: "user", content: text },
+          { role: "assistant", content: reply },
+        ]);
+      } else {
+        // Continue chatting — use the history the agent sends back
+        const newHistory = data.history ?? [
+          ...currentHistory,
+          { role: "user", content: text },
+          { role: "assistant", content: reply },
+        ];
+        setHistory(newHistory);
+      }
+    } catch {
+      setMessages((prev) => {
+        const copy = [...prev];
+        copy[copy.length - 1] = { role: "assistant", content: "Sorry, something went wrong. Please try again." };
+        return copy;
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleSend = () => sendMessage(inputValue, history);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleUpdateIdea = async () => {
+    if (!readyIntake) return;
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      // 1. Update idea description with the new intake summary
+      await api.patch(`/ideas/${ideaId}`, {
+        description: readyIntake.idea_summary,
+      });
+      // 2. Clear all AI analysis for this idea so it can be re-run fresh
+      await api.delete(`/ai/ideas/${ideaId}/analysis`);
+      // 3. Reset section state in the parent and close
+      onSectionsReset();
+      setApproveStep("done");
+      setTimeout(() => onClose(), 800);
+    } catch {
+      setActionError("Failed to update the idea. Please try again.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCreateNew = async () => {
+    if (!readyIntake) return;
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      const title = `${idea.title ?? "Idea"} (Refined)`;
+      const res = await api.post("/ideas/", {
+        title,
+        description: readyIntake.idea_summary,
+      });
+      const newId: string = res.data.id;
+      onClose();
+      router.push(`/entrepreneur/ideas/${newId}`);
+    } catch {
+      setActionError("Failed to create new idea. Please try again.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="w-full max-w-2xl h-[90vh] max-h-[700px] bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-neutral-200 dark:border-neutral-700">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-200 dark:border-neutral-700 bg-gradient-to-r from-amber-500 to-yellow-500">
+          <div className="flex items-center gap-2.5">
+            <Sparkles size={16} className="text-white" />
+            <span className="text-sm font-semibold text-white">Edit Idea with AI</span>
+            {approveStep === "approved" && (
+              <span className="bg-white/20 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                Idea Ready ✓
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-white/20 transition-colors cursor-pointer"
+          >
+            <X size={15} className="text-white" />
+          </button>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+          {messages.map((msg, i) => (
+            <div
+              key={i}
+              className={cn(
+                "max-w-[88%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap",
+                msg.role === "user"
+                  ? "self-end bg-amber-500 text-white rounded-br-sm"
+                  : "self-start bg-neutral-100 dark:bg-neutral-800 text-foreground rounded-bl-sm"
+              )}
+            >
+              {msg.content}
+              {msg.role === "assistant" && msg.content === "" && isSending && (
+                <span className="inline-flex gap-1 items-center">
+                  <span className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                  <span className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                  <span className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                </span>
+              )}
+            </div>
+          ))}
+
+          {/* Approval card — shown when agent is done */}
+          {approveStep === "approved" && readyIntake && (
+            <div className="self-stretch mt-2 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl p-4 flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-amber-600" />
+                <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">Idea structured — what would you like to do?</span>
+              </div>
+              <div className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed border-l-2 border-amber-300 pl-3">
+                {readyIntake.idea_summary}
+              </div>
+              {actionError && (
+                <p className="text-xs text-red-500">{actionError}</p>
+              )}
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={handleUpdateIdea}
+                  disabled={actionLoading}
+                  className={cn(
+                    "flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-opacity cursor-pointer",
+                    "bg-gradient-to-r from-amber-500 to-yellow-500 shadow-[0_2px_12px_rgba(255,183,3,0.3)]",
+                    actionLoading && "opacity-60 cursor-not-allowed"
+                  )}
+                >
+                  {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+                  Update this idea (clear old analysis)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateNew}
+                  disabled={actionLoading}
+                  className={cn(
+                    "flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-opacity cursor-pointer",
+                    "bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 text-foreground",
+                    actionLoading && "opacity-60 cursor-not-allowed"
+                  )}
+                >
+                  {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <PlusCircle size={14} />}
+                  Save as new idea (keep original + its analysis)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setApproveStep("chat"); setReadyIntake(null); }}
+                  disabled={actionLoading}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-left pl-1"
+                >
+                  ← Keep chatting to refine further
+                </button>
+              </div>
+            </div>
+          )}
+
+          {approveStep === "done" && (
+            <div className="self-center mt-4 flex items-center gap-2 text-green-600 dark:text-green-400 text-sm font-medium">
+              <CheckCircle2 size={16} />
+              Idea updated! Closing…
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input — hidden after approval */}
+        {approveStep === "chat" && (
+          <div className="border-t border-neutral-200 dark:border-neutral-700 px-4 py-3 flex items-end gap-2">
+            <textarea
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Describe your idea or answer the agent's questions…"
+              rows={2}
+              disabled={isSending}
+              className="flex-1 resize-none text-sm bg-neutral-100 dark:bg-neutral-800 border-0 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 text-foreground placeholder:text-muted-foreground max-h-32 overflow-y-auto"
+            />
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={isSending || !inputValue.trim()}
+              className={cn(
+                "p-2.5 rounded-xl bg-amber-500 text-white flex-shrink-0 transition-opacity cursor-pointer",
+                (isSending || !inputValue.trim()) && "opacity-40 cursor-not-allowed"
+              )}
+            >
+              {isSending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -988,7 +1288,7 @@ export default function IdeaDetailPage({
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
 
-  const { sections, isRunning, hasRun, runError, runPipeline, runSection, regenerateSection, regenerateSectionCustom } = useAiPipeline(idea_id);
+  const { sections, isRunning, hasRun, runError, runPipeline, runSection, regenerateSection, regenerateSectionCustom, fetchAll } = useAiPipeline(idea_id);
 
   const [customPromptOpen, setCustomPromptOpen]       = useState(false);
   const [customPromptSection, setCustomPromptSection] = useState<SectionKey | null>(null);
@@ -996,6 +1296,8 @@ export default function IdeaDetailPage({
 
   const [chatPopupOpen, setChatPopupOpen]       = useState(false);
   const [chatPopupSection, setChatPopupSection] = useState<SectionKey | null>(null);
+
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   const handleDownloadPDF = () => {
     if (!idea) return;
@@ -1094,10 +1396,10 @@ export default function IdeaDetailPage({
               </SectionIconButton>
             </div>
 
-            {/* Edit with AI / Run */}
+            {/* Edit with AI */}
             <button
               type="button"
-              onClick={runPipeline}
+              onClick={() => setEditModalOpen(true)}
               disabled={isRunning}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white cursor-pointer transition-opacity",
@@ -1105,10 +1407,8 @@ export default function IdeaDetailPage({
                 isRunning && "opacity-60 cursor-not-allowed"
               )}
             >
-              {isRunning
-                ? <Loader2 size={14} className="animate-spin" />
-                : <Sparkles size={14} />}
-              {hasRun ? "Re-run AI" : "Edit with AI"}
+              <Sparkles size={14} />
+              Edit with AI
             </button>
           </div>
         </div>
@@ -1259,6 +1559,16 @@ export default function IdeaDetailPage({
           sectionKey={chatPopupSection}
           ideaId={idea_id}
           onClose={() => setChatPopupOpen(false)}
+        />
+      )}
+
+      {/* Edit Idea with AI modal */}
+      {editModalOpen && idea && (
+        <IdeaEditChatModal
+          idea={idea}
+          ideaId={idea_id}
+          onClose={() => setEditModalOpen(false)}
+          onSectionsReset={() => { fetchAll(); }}
         />
       )}
     </div>

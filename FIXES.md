@@ -4,6 +4,29 @@ All changes made to bizify-v2 (Next.js) by the AI assistant. Newest entries firs
 
 ---
 
+## 2026-05-25 — "Edit with AI" Chat Modal + Tab Order Fix
+
+### File: `src/app/entrepreneur/ideas/[idea_id]/page.tsx`
+
+**"Edit with AI" modal:**
+- Button now opens `IdeaEditChatModal` instead of directly running the pipeline
+- Chat uses `POST /api/v1/ai/idea-intake` (ThreeIdeaIntakeAgent), multi-turn with history
+- Opening message auto-sent with current idea title + description as context
+- When agent returns `status: "ready"`, a decision card shows:
+  - **Update this idea** — PATCH description + DELETE analysis → reload sections
+  - **Save as new idea** — POST new idea + redirect to it
+  - **Keep chatting** — dismiss card, continue refining
+- `useRouter` from `next/navigation` used for redirect
+
+**Tab order fix (11 tabs):**
+Added missing tabs (Problems, Strategy, Functions, Go-to-Market) in the correct sequence:
+Overview → Problems → Customers → Competitor Analysis → Market → Strategy → Business Model → Functions → MVP → Financial → Go-to-Market
+
+"Risk" tab renamed to "Problems". `IdeaStrategySection` removed from Overview (now has its own tab).
+Imports added: `FunctionsListSection`, `GoToMarketSection`, `useRouter`, `CheckCircle2`, `PlusCircle`, `RotateCcw`.
+
+---
+
 ## 2026-05-25 — Google Login: Origin-Derived Redirect URLs
 
 ### Files changed:
