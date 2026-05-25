@@ -163,8 +163,16 @@ export function useSignup() {
 
         if (data.company_name) formData.append("company_name", data.company_name);
         if (data.description) formData.append("description", data.description);
-        if (data.services) formData.append("services_json", data.services);
-        if (data.experience) formData.append("experience_json", data.experience);
+        // Backend expects services_json/experience_json to be JSON. Split the
+        // free-text textarea on newlines or commas and ship an array.
+        if (data.services) {
+          const items = data.services.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+          if (items.length > 0) formData.append("services_json", JSON.stringify(items));
+        }
+        if (data.experience) {
+          const items = data.experience.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+          if (items.length > 0) formData.append("experience_json", JSON.stringify(items));
+        }
 
         if (data.files) {
           data.files.forEach((file) => formData.append("files", file));

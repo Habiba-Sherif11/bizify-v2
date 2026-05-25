@@ -4,6 +4,31 @@ All changes made to bizify-v2 (Next.js) by the AI assistant. Newest entries firs
 
 ---
 
+## 2026-05-25 — Signup Flow: OTP Token + Partner JSON Fields
+
+### Files changed:
+- `../bizify backend/Bizify-Backend/app/services/auth_service.py` *(backend)*
+- `src/features/auth/hooks/useSignup.ts`
+
+### Problem 1 — Entrepreneur signup bounced to /login after OTP verification
+
+After successful OTP entry the wizard advanced to step 3 (Questionnaire), but every subsequent call (`/profile/questionnaire`, `/profile/skills`, `/profile/complete`, `/ai/run`) returned 401, and the axios response interceptor force-logged the user out mid-signup.
+
+**Root cause:** mismatch between frontend and backend after OTP verification.
+- `src/app/api/auth/verify-otp/route.ts` reads `access_token` from the backend response and sets the `auth_token` httpOnly cookie.
+- Backend `AuthService.verify_otp` returned **only** `{"message": "Account verified successfully"}` — no token — so the cookie was never set.
+- Without the cookie, all later Next.js proxy routes that gate on `request.cookies.get("auth_token")` returned 401.
+
+**Fix (backend):** `AuthService.verify_otp` now looks up the user after a successful OTP check and returns `{ message, access_token, token_type }` via `AuthService.create_token_response(user)`. Frontend already handles the token; no change required there.
+
+### Problem 2 — Partner signup failed when "Services" or "Experience" had any text
+
+Backend `_parse_partner_json_field` in `app/api/v1/users.py` runs `json.loads()` on `services_json` / `experience_json` and 400s with "must be valid JSON" if the value isn't JSON. The frontend was forwarding the raw textarea string. Result: partners could only register if they left both fields blank.
+
+**Fix (frontend):** `useSignup.handleStep1` now splits the textareas on newlines/commas, trims items, and ships a `JSON.stringify(array)` to the backend. Empty inputs are still omitted.
+
+---
+
 ## 2026-05-25 — Section Chat Popup: Persistence + Context Fix
 
 ### Files changed:
