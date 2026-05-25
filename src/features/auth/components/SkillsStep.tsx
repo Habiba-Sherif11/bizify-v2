@@ -61,8 +61,6 @@ export function SkillsStep({
 }: Props) {
   const [categories, setCategories] = useState<NormalizedCategory[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [categorySkills, setCategorySkills] = useState<string[]>([]);
-  const [loadingCategorySkills, setLoadingCategorySkills] = useState(false);
   const [searchResults, setSearchResults] = useState<string[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingSearch, setLoadingSearch] = useState(false);
@@ -160,30 +158,11 @@ export function SkillsStep({
     setSelected((prev) => prev.filter((s) => s.name !== name));
 
   const handleCategoryClick = (cat: NormalizedCategory) => {
-    if (selectedCategory === cat.name) {
-      setSelectedCategory(null);
-      setCategorySkills([]);
-      return;
-    }
-    setSelectedCategory(cat.name);
-    setCategorySkills([]);
-    if (cat.subcategories.length === 0) {
-      setLoadingCategorySkills(true);
-      api
-        .get(`/profile/skills/search?category=${encodeURIComponent(cat.name)}`)
-        .then((res) => {
-          const results = Array.isArray(res.data) ? (res.data as string[]) : [];
-          setCategorySkills(results);
-        })
-        .catch(() => setCategorySkills([]))
-        .finally(() => setLoadingCategorySkills(false));
-    }
+    setSelectedCategory((current) => (current === cat.name ? null : cat.name));
   };
 
   const handleSubcategoryClick = (subcat: string) => {
-    setQuery(subcat);
-    setDropdownOpen(true);
-    searchSkills(subcat);
+    addSkill(subcat);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -352,7 +331,7 @@ export function SkillsStep({
             return (
               <div className="pl-2 border-l-2 border-cyan-200 dark:border-cyan-700 mt-2 space-y-1.5">
                 <p className="text-xs text-gray-400 dark:text-gray-500">
-                  {cat.name} — pick a subcategory
+                  {cat.name} — click to add
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {cat.subcategories.map((sub) => (
@@ -376,48 +355,6 @@ export function SkillsStep({
             );
           })()}
 
-          {/* Skills for selected category — persistent chip grid */}
-          {selectedCategory && (
-            <div className="pl-2 border-l-2 border-cyan-200 dark:border-cyan-700 mt-1 space-y-1.5">
-              {loadingCategorySkills ? (
-                <div className="flex items-center gap-2 text-xs text-gray-400">
-                  <Loader2 size={12} className="animate-spin" />
-                  Loading skills…
-                </div>
-              ) : categorySkills.length > 0 ? (
-                <>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
-                    Click to add
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
-                    {categorySkills.map((name) => {
-                      const taken = allTakenNames.has(name.toLowerCase());
-                      return (
-                        <button
-                          key={name}
-                          type="button"
-                          disabled={taken}
-                          onClick={() => addSkill(name)}
-                          className={cn(
-                            "px-2.5 py-1 rounded-full text-xs border transition-all",
-                            taken
-                              ? "opacity-40 cursor-not-allowed bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 text-gray-400"
-                              : "bg-white dark:bg-neutral-700 border-gray-200 dark:border-neutral-600 text-gray-600 dark:text-gray-300 hover:border-cyan-300 dark:hover:border-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 hover:text-cyan-700 dark:hover:text-cyan-400"
-                          )}
-                        >
-                          {taken ? name : `+ ${name}`}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              ) : (
-                <p className="text-xs text-gray-400 dark:text-gray-500">
-                  No predefined skills found — use the search bar above to add any skill.
-                </p>
-              )}
-            </div>
-          )}
         </div>
       )}
 

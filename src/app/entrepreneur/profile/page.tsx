@@ -262,9 +262,15 @@ export default function ProfilePage() {
 
   const handleAddSkills = async (entries: SkillEntry[]) => {
     try {
-      for (const entry of entries) {
-        await api.post("/profile/skills", entry);
-      }
+      const merged = [
+        ...skills.map((s) => ({
+          id: getSkillId(s),
+          name: getSkillLabel(s),
+          rating: typeof s.rating === "number" ? s.rating : 3,
+        })),
+        ...entries.map((e) => ({ name: e.skill_name })),
+      ];
+      await api.post("/profile/skills/json", merged);
       await api.post("/profile/complete");
       toast.success("Skills saved");
       setShowSkillsForm(false);

@@ -236,9 +236,8 @@ export function useSignup() {
 
   const handleSkills = async (skills: { skill_name: string }[]) => {
     try {
-      for (const skill of skills) {
-        await api.post("/profile/skills", skill);
-      }
+      const payload = skills.map((s) => ({ name: s.skill_name }));
+      await api.post("/profile/skills/json", payload);
       await api.post("/profile/complete");
       // Trigger AI pipeline asynchronously — user doesn't need to wait for it to start
       api.post("/ai/run", {}).catch(() => {});

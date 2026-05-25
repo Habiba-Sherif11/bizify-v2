@@ -4,6 +4,45 @@ All changes made to bizify-v2 (Next.js) by the AI assistant. Newest entries firs
 
 ---
 
+## 2026-05-25 — Skills: Single-Fetch Categories + Bulk Save
+
+### Files changed:
+- `../bizify backend/Bizify-Backend/app/api/v1/profile.py` *(backend)*
+- `src/features/auth/components/SkillsStep.tsx`
+- `src/features/auth/hooks/useSignup.ts`
+- `src/app/entrepreneur/profile/page.tsx`
+
+### Problem
+
+The skills picker (used in signup step 4 and the profile edit page) made one HTTP request per category to load its skills, another request per keystroke to search, and one POST per individual skill on submit. With 8 selected skills the client made ~10+ round trips for a flow that should be 2. The backend also accepted duplicate skill names blindly, allowing the same name to appear twice with different UUIDs after any race or retry.
+
+### Fixes
+
+**Backend — `app/api/v1/profile.py`**
+- `GET /profile/skill-categories` now returns the full nested shape `[{ name, subcategories: [skill, ...] }, ...]` instead of just category names. The complete `CATEGORY_SKILLS` map ships in one response, so the frontend never needs a follow-up call to enumerate skills under a category.
+- `POST /profile/skills` deduplicates case-insensitively: re-adding an existing skill returns the existing record instead of inserting a second row.
+- `POST /profile/skills/json` deduplicates the incoming array case-insensitively, normalises each entry to `{id, name, rating}`, preserves existing IDs/ratings when supplied, and defaults `rating` to 3 only when missing. This makes the endpoint safe to use as the single source of truth for bulk writes.
+
+**Frontend — `SkillsStep.tsx`**
+- Removed the per-category `GET /profile/skills/search?category=…` call: subcategories are now the skills themselves, fetched once with the categories.
+- Removed the dead `categorySkills` / `loadingCategorySkills` state and the duplicate skill grid that used to render the per-category fetch result.
+- Clicking a subcategory chip now adds the skill directly (`addSkill(sub)`) instead of stuffing the name into the search box and triggering another search request.
+
+**Frontend — `useSignup.handleSkills` and `profile.handleAddSkills`**
+- Both flows now make a single `POST /profile/skills/json` with the full array instead of looping over N individual `POST /profile/skills` calls.
+- Profile edit merges existing skills (preserving `id` and `rating`) with newly added entries before sending, so the bulk endpoint can replace atomically without losing the rating data.
+
+### Result
+- Signup skill step: from `1 + N + N` requests (categories + per-category fetches + per-skill POSTs) down to `1 + 1` (categories + bulk POST).
+- Profile edit: same pattern. Network-dependent latency is now constant, not linear in the number of skills.
+- Duplicates are prevented server-side, so stale tabs and retries no longer pollute `skills_json`.
+
+### Still pending (not in this change)
+- Hardcoded `rating: 3` on creation — no AI job updates it, and the UI advertises "rated 1–5 by the AI". Either implement the AI rating step or remove the copy.
+- No `PATCH /skills/{id}` endpoint and no UI for editing a skill's name or rating — currently the only edit path is delete-then-readd.
+
+---
+
 ## 2026-05-25 — Signup Flow: OTP Token + Partner JSON Fields
 
 ### Files changed:
