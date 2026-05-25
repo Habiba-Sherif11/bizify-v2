@@ -292,18 +292,57 @@ interface ChatMessage {
 
 function SectionChatPopup({
   sectionKey,
+  ideaId,
   onClose,
 }: {
   sectionKey: SectionKey;
+  ideaId: string;
   onClose: () => void;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [loadingSession, setLoadingSession] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const slug = SECTION_CHAT_SLUG[sectionKey];
   const label = SECTION_LABEL[sectionKey] ?? sectionKey;
+
+  // Create or load the latest session for this section on mount
+  useEffect(() => {
+    let cancelled = false;
+    async function initSession() {
+      setLoadingSession(true);
+      try {
+        // Create a new session for this section popup (each popup open = fresh session
+        // but we could also fetch the latest — for now, always create fresh)
+        const res = await api.post("/chat/sessions", {
+          section_slug: slug,
+          idea_id: ideaId || undefined,
+          title: `${label} Chat`,
+        });
+        if (cancelled) return;
+        const sid: string = res.data.id;
+        setSessionId(sid);
+        // Load last 10 messages (for sessions that already had history if reused)
+        const msgsRes = await api.get(`/chat/sessions/${sid}/messages?limit=10`);
+        if (cancelled) return;
+        const loaded: ChatMessage[] = (msgsRes.data as Array<{ role: string; content: string }>).map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        }));
+        setMessages(loaded);
+      } catch {
+        // Non-fatal: popup works without persistence
+      } finally {
+        if (!cancelled) setLoadingSession(false);
+      }
+    }
+    initSession();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -321,6 +360,7 @@ function SectionChatPopup({
 
     const ctrl = new AbortController();
     abortRef.current = ctrl;
+    let assistantText = "";
 
     try {
       const response = await fetch(`/api/ai/${slug}/chat/stream`, {
@@ -338,7 +378,6 @@ function SectionChatPopup({
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let assistantText = "";
       let buffer = "";
 
       while (true) {
@@ -364,6 +403,16 @@ function SectionChatPopup({
             }
           } catch { /* ignore malformed chunks */ }
         }
+      }
+
+      // Save both messages to DB session
+      if (sessionId && assistantText) {
+        api.post(`/chat/sessions/${sessionId}/messages`, {
+          messages: [
+            { role: "user", content: text },
+            { role: "assistant", content: assistantText },
+          ],
+        }).catch(() => {});
       }
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
@@ -393,18 +442,35 @@ function SectionChatPopup({
           <MessageCircle size={15} className="text-white" />
           <span className="text-sm font-semibold text-white">{label} — AI Chat</span>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-1 rounded-lg hover:bg-white/20 transition-colors cursor-pointer"
-        >
-          <X size={15} className="text-white" />
-        </button>
+        <div className="flex items-center gap-1">
+          {sessionId && (
+            <a
+              href={`/entrepreneur/ai-chat?session_id=${sessionId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-white/80 hover:text-white underline underline-offset-2 transition-colors px-1"
+            >
+              View full chat
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-lg hover:bg-white/20 transition-colors cursor-pointer"
+          >
+            <X size={15} className="text-white" />
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3">
-        {messages.length === 0 && (
+        {loadingSession && (
+          <div className="flex items-center justify-center mt-4">
+            <Loader2 size={16} className="animate-spin text-amber-400" />
+          </div>
+        )}
+        {!loadingSession && messages.length === 0 && (
           <p className="text-xs text-muted-foreground text-center mt-4">
             Ask anything about the {label} analysis.
           </p>
@@ -436,17 +502,17 @@ function SectionChatPopup({
           onKeyDown={handleKeyDown}
           placeholder="Ask about this section…"
           rows={1}
-          disabled={isStreaming}
+          disabled={isStreaming || loadingSession}
           className="flex-1 resize-none text-sm bg-neutral-100 dark:bg-neutral-800 border-0 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 text-foreground placeholder:text-muted-foreground max-h-28 overflow-y-auto"
           style={{ lineHeight: "1.4" }}
         />
         <button
           type="button"
           onClick={sendMessage}
-          disabled={isStreaming || !inputValue.trim()}
+          disabled={isStreaming || !inputValue.trim() || loadingSession}
           className={cn(
             "p-2.5 rounded-xl bg-amber-500 text-white flex-shrink-0 transition-opacity cursor-pointer",
-            (isStreaming || !inputValue.trim()) && "opacity-40 cursor-not-allowed"
+            (isStreaming || !inputValue.trim() || loadingSession) && "opacity-40 cursor-not-allowed"
           )}
         >
           {isStreaming
@@ -718,6 +784,7 @@ export default function IdeaDetailPage({
         <SectionChatPopup
           key={chatPopupSection}
           sectionKey={chatPopupSection}
+          ideaId={idea_id}
           onClose={() => setChatPopupOpen(false)}
         />
       )}

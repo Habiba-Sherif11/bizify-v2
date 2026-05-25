@@ -3,14 +3,45 @@
 import { useState, useRef, useEffect, Suspense } from "react";
 import {
   Home, ChevronRight, Send, Plus,
-  MessageSquare, Trash2,
+  MessageSquare, Trash2, Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { api } from "@/features/auth/lib/api";
-import type { HistoryEntry } from "@/features/entrepreneur/hooks/useGeneralChat";
-import { FLOATING_CONV_ID } from "@/features/entrepreneur/hooks/useGeneralChat";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Message {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  time: string;
+}
+
+interface Session {
+  id: string;
+  section_slug: string | null;
+  title: string;
+  preview: string;
+  created_at: string;
+  messages: Message[];
+  history: { role: "user" | "assistant"; content: string }[];
+  messagesLoaded: boolean;
+}
+
+const SECTION_LABEL: Record<string, string> = {
+  customers:        "Customers",
+  competition:      "Competition",
+  "market-potential": "Market",
+  "idea-strategy":  "Strategy",
+  "business-model": "Business Model",
+  "functions-list": "Functions",
+  "mvp-planning":   "MVP",
+  "unit-economics": "Financial",
+  "go-to-market":   "Go-to-Market",
+  problems:         "Risk",
+};
 
 const CREATE_IDEA_PATTERN = /create.*idea|add.*idea|save.*idea|new.*idea|make.*idea/i;
 
@@ -22,47 +53,34 @@ function extractIdeaTitle(text: string): string {
   return text.slice(0, 60);
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-  time: string;
-}
-
-interface Conversation {
-  id: string;
-  title: string;
-  preview: string;
-  date: string;
-  messages: Message[];
-  history: HistoryEntry[];
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function ts() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-// ─── Initial data ─────────────────────────────────────────────────────────────
-
-// No hardcoded conversations — all sessions come from localStorage
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  if (d.toDateString() === today.toDateString()) return "Today";
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function ConversationItem({
-  conv,
+  session,
   active,
   onSelect,
   onDelete,
 }: {
-  conv: Conversation;
+  session: Session;
   active: boolean;
   onSelect: () => void;
   onDelete: () => void;
 }) {
+  const sectionLabel = session.section_slug ? SECTION_LABEL[session.section_slug] : null;
   return (
     <div
       onClick={onSelect}
@@ -78,10 +96,17 @@ function ConversationItem({
         className={cn("mt-0.5 shrink-0", active ? "text-amber-500" : "text-gray-400 dark:text-gray-500")}
       />
       <div className="flex-1 min-w-0">
-        <p className={cn("text-xs font-medium truncate", active ? "text-amber-700 dark:text-amber-300" : "text-gray-700 dark:text-gray-200")}>
-          {conv.id === FLOATING_CONV_ID ? "💬 Quick Chat" : conv.title}
-        </p>
-        <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate mt-0.5">{conv.preview}</p>
+        <div className="flex items-center gap-1.5">
+          <p className={cn("text-xs font-medium truncate", active ? "text-amber-700 dark:text-amber-300" : "text-gray-700 dark:text-gray-200")}>
+            {session.title}
+          </p>
+          {sectionLabel && (
+            <span className="shrink-0 text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-medium">
+              {sectionLabel}
+            </span>
+          )}
+        </div>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate mt-0.5">{session.preview || "Start a new conversation…"}</p>
       </div>
       <button
         type="button"
@@ -124,85 +149,96 @@ function MessageBubble({ msg }: { msg: Message }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = "bizify_ai_conversations";
-const ACTIVE_KEY  = "bizify_ai_active_id";
-
-function loadConversations(): Conversation[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Conversation[];
-      if (parsed.length > 0) return parsed;
-    }
-  } catch {}
-  return [];
-}
-
-function loadActiveId(conversations: Conversation[]): string {
-  try {
-    const saved = localStorage.getItem(ACTIVE_KEY);
-    if (saved && conversations.some((c) => c.id === saved)) return saved;
-  } catch {}
-  return conversations[0]?.id ?? "";
-}
-
 function AiChatContent() {
   const searchParams = useSearchParams();
-  const [conversations, setConversations] = useState<Conversation[]>(() => loadConversations());
-  const [activeId, setActiveId] = useState<string>(() => loadActiveId(loadConversations()));
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [activeId, setActiveId] = useState<string>("");
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
+  const [loadingSessions, setLoadingSessions] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const autoSentRef = useRef(false);
 
-  const active = conversations.find((c) => c.id === activeId) ?? conversations[0];
+  const active = sessions.find((s) => s.id === activeId) ?? sessions[0];
 
-  // Auto-create a first conversation when the list is empty
+  // Load all sessions from DB on mount
   useEffect(() => {
-    if (conversations.length === 0) {
-      const id = `c${Date.now()}`;
-      setConversations([{
-        id,
-        title: "New conversation",
-        preview: "Start a new conversation…",
-        date: "Today",
-        history: [],
-        messages: [{ id: "0", role: "assistant", text: "Hi! I'm Bizify AI. What would you like to work on today?", time: ts() }],
-      }]);
-      setActiveId(id);
-    }
+    api.get("/chat/sessions")
+      .then(({ data }) => {
+        const loaded: Session[] = (data as Array<{ id: string; section_slug: string | null; title: string; preview: string; created_at: string }>).map((s) => ({
+          ...s,
+          messages: [],
+          history: [],
+          messagesLoaded: false,
+        }));
+
+        // If no sessions, create a default general one
+        if (loaded.length === 0) {
+          return api.post("/chat/sessions", { title: "New conversation" }).then(({ data: newSession }) => {
+            const s: Session = { ...newSession, messages: [
+              { id: "0", role: "assistant", text: "Hi! I'm Bizify AI. What would you like to work on today?", time: ts() }
+            ], history: [], messagesLoaded: true };
+            setSessions([s]);
+            setActiveId(s.id);
+          });
+        }
+
+        setSessions(loaded);
+
+        // Determine which session to open
+        const paramId = searchParams.get("session_id");
+        const target = paramId ? loaded.find((s) => s.id === paramId) : null;
+        setActiveId(target?.id ?? loaded[0]?.id ?? "");
+      })
+      .catch(() => { setSessions([]); })
+      .finally(() => setLoadingSessions(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-read conversations from localStorage when the floating chat updates them
+  // Load messages when active session changes
   useEffect(() => {
-    const handler = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        try {
-          const updated = JSON.parse(e.newValue) as Conversation[];
-          setConversations(updated);
-        } catch {}
-      }
-    };
-    window.addEventListener("storage", handler);
-    return () => window.removeEventListener("storage", handler);
-  }, []);
+    if (!activeId) return;
+    const session = sessions.find((s) => s.id === activeId);
+    if (!session || session.messagesLoaded) return;
 
-  useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations)); } catch {}
-  }, [conversations]);
+    api.get(`/chat/sessions/${activeId}/messages`)
+      .then(({ data }) => {
+        const msgs: Message[] = (data as Array<{ id: string; role: string; content: string; created_at: string }>).map((m) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          text: m.content,
+          time: new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        }));
+        const history = msgs.map((m) => ({ role: m.role, content: m.text }));
 
-  useEffect(() => {
-    try { localStorage.setItem(ACTIVE_KEY, activeId); } catch {}
+        setSessions((prev) => prev.map((s) => s.id === activeId
+          ? {
+              ...s,
+              messages: msgs.length === 0
+                ? [{ id: "0", role: "assistant", text: "Hi! I'm Bizify AI. What would you like to work on today?", time: ts() }]
+                : msgs,
+              history,
+              messagesLoaded: true,
+            }
+          : s
+        ));
+      })
+      .catch(() => {
+        setSessions((prev) => prev.map((s) => s.id === activeId
+          ? { ...s, messagesLoaded: true, messages: [{ id: "0", role: "assistant", text: "Hi! I'm Bizify AI. What would you like to work on today?", time: ts() }] }
+          : s
+        ));
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [active?.messages, thinking]);
 
-  const updateConversation = (id: string, patch: Partial<Conversation>) =>
-    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+  const updateSession = (id: string, patch: Partial<Session>) =>
+    setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
 
   const handleSend = async () => {
     if (!active) return;
@@ -210,15 +246,80 @@ function AiChatContent() {
     if (!text || thinking) return;
 
     const userMsg: Message = { id: Date.now().toString(), role: "user", text, time: ts() };
-    const baseMessages = [...active.messages, userMsg];
-    updateConversation(activeId, { messages: baseMessages, preview: text.slice(0, 40) });
+    const baseMessages = [...(active.messages ?? []), userMsg];
+    updateSession(activeId, { messages: baseMessages, preview: text.slice(0, 80) });
     setInput("");
     setThinking(true);
 
     const newTitle = active.title === "New conversation" ? text.slice(0, 30) : active.title;
 
     try {
-      // Create idea intent — POST only title + description (no extra fields)
+      // Section-specific sessions use the section streaming chat API
+      if (active.section_slug) {
+        let assistantText = "";
+
+        const response = await fetch(`/api/ai/${active.section_slug}/chat/stream`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, history: active.history }),
+        });
+
+        const placeholderMsg: Message = { id: (Date.now() + 1).toString(), role: "assistant", text: "", time: ts() };
+        updateSession(activeId, { messages: [...baseMessages, placeholderMsg] });
+
+        if (response.ok && response.body) {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? "";
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              const jsonStr = line.slice(6).trim();
+              if (!jsonStr || jsonStr === "[DONE]") continue;
+              try {
+                const parsed = JSON.parse(jsonStr);
+                if (parsed.type === "token" && parsed.content) {
+                  assistantText += parsed.content;
+                  setSessions((prev) => prev.map((s) => {
+                    if (s.id !== activeId) return s;
+                    const msgs = [...s.messages];
+                    msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], text: assistantText };
+                    return { ...s, messages: msgs };
+                  }));
+                }
+              } catch { /* ignore */ }
+            }
+          }
+        }
+
+        const updatedHistory = [
+          ...active.history,
+          { role: "user" as const, content: text },
+          { role: "assistant" as const, content: assistantText },
+        ];
+        updateSession(activeId, { history: updatedHistory, title: newTitle });
+
+        // Save to DB
+        if (assistantText) {
+          api.post(`/chat/sessions/${activeId}/messages`, {
+            messages: [
+              { role: "user", content: text },
+              { role: "assistant", content: assistantText },
+            ],
+          }).catch(() => {});
+        }
+
+        setThinking(false);
+        return;
+      }
+
+      // General chat flow
       if (CREATE_IDEA_PATTERN.test(text)) {
         const title = extractIdeaTitle(text);
         await api.post("/ideas", { title, description: text });
@@ -228,43 +329,39 @@ function AiChatContent() {
           text: `Done! I've created a new idea titled "${title}". You can find and manage it in your Ideas section.`,
           time: ts(),
         };
-        updateConversation(activeId, { messages: [...baseMessages, assistantMsg], title: newTitle });
+        updateSession(activeId, { messages: [...baseMessages, assistantMsg], title: newTitle });
+        // Save to DB
+        api.post(`/chat/sessions/${activeId}/messages`, {
+          messages: [
+            { role: "user", content: text },
+            { role: "assistant", content: assistantMsg.text },
+          ],
+        }).catch(() => {});
         return;
       }
 
-      // All other messages — route through general-chat which handles intent server-side.
-      // Pass the full history so the server can detect pending confirmations (<!--PENDING:...-->).
       const { data } = await api.post("/ai/general-chat", { message: text, history: active.history });
       const replyText: string = data.reply ?? "No response received";
-      const assistantMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        text: replyText,
-        time: ts(),
-      };
-      // Always preserve the full reply in history (including invisible <!--PENDING:--> markers)
-      const updatedHistory: HistoryEntry[] = [
+      const assistantMsg: Message = { id: (Date.now() + 1).toString(), role: "assistant", text: replyText, time: ts() };
+      const updatedHistory = [
         ...active.history,
         { role: "user" as const, content: text },
         { role: "assistant" as const, content: replyText },
       ];
-      updateConversation(activeId, {
+      updateSession(activeId, {
         messages: [...baseMessages, assistantMsg],
         history: updatedHistory,
         title: newTitle,
       });
 
-      // Auto-save to My Ideas when the AI generates an idea
-      if (replyText.includes("💡")) {
-        const ideaMatch = replyText.match(/💡\s*IDEA\s*[:\-]?\s*(.+)/i);
-        if (ideaMatch) {
-          fetch("/api/ideas", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: ideaMatch[1].trim(), description: replyText }),
-          }).catch(() => {});
-        }
-      }
+      // Save to DB
+      api.post(`/chat/sessions/${activeId}/messages`, {
+        messages: [
+          { role: "user", content: text },
+          { role: "assistant", content: replyText },
+        ],
+      }).catch(() => {});
+
     } catch {
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -272,36 +369,50 @@ function AiChatContent() {
         text: "Sorry, I'm having trouble connecting right now. Please try again.",
         time: ts(),
       };
-      updateConversation(activeId, { messages: [...baseMessages, errorMsg] });
+      updateSession(activeId, { messages: [...baseMessages, errorMsg] });
     } finally {
       setThinking(false);
     }
   };
 
-  const handleNewChat = () => {
-    const id = `c${Date.now()}`;
-    const newConv: Conversation = {
-      id,
-      title: "New conversation",
-      preview: "Start a new conversation…",
-      date: "Today",
-      history: [],
-      messages: [
-        { id: "0", role: "assistant", text: "Hi! I'm Bizify AI. What would you like to work on today?", time: ts() },
-      ],
-    };
-    setConversations((prev) => [newConv, ...prev]);
-    setActiveId(id);
+  const handleNewChat = async () => {
+    try {
+      const { data } = await api.post("/chat/sessions", { title: "New conversation" });
+      const newSession: Session = {
+        ...data,
+        messages: [{ id: "0", role: "assistant", text: "Hi! I'm Bizify AI. What would you like to work on today?", time: ts() }],
+        history: [],
+        messagesLoaded: true,
+      };
+      setSessions((prev) => [newSession, ...prev]);
+      setActiveId(newSession.id);
+    } catch {
+      // Fallback: local-only session
+      const id = `c${Date.now()}`;
+      const newSession: Session = {
+        id,
+        section_slug: null,
+        title: "New conversation",
+        preview: "",
+        created_at: new Date().toISOString(),
+        messages: [{ id: "0", role: "assistant", text: "Hi! I'm Bizify AI. What would you like to work on today?", time: ts() }],
+        history: [],
+        messagesLoaded: true,
+      };
+      setSessions((prev) => [newSession, ...prev]);
+      setActiveId(id);
+    }
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
-  const handleDelete = (id: string) => {
-    const remaining = conversations.filter((c) => c.id !== id);
-    setConversations(remaining);
+  const handleDelete = async (id: string) => {
+    try { await api.delete(`/chat/sessions/${id}`); } catch { /* best-effort */ }
+    const remaining = sessions.filter((s) => s.id !== id);
+    setSessions(remaining);
     if (activeId === id) setActiveId(remaining[0]?.id ?? "");
   };
 
-  // Pre-fill input with the query from the dashboard search bar (?q=...)
+  // Pre-fill input with ?q= query param
   useEffect(() => {
     const q = searchParams.get("q");
     if (!q || autoSentRef.current) return;
@@ -311,11 +422,16 @@ function AiChatContent() {
   }, [searchParams]);
 
   const grouped = Object.entries(
-    conversations.reduce<Record<string, Conversation[]>>((acc, c) => {
-      (acc[c.date] ??= []).push(c);
+    sessions.reduce<Record<string, Session[]>>((acc, s) => {
+      const dateKey = formatDate(s.created_at);
+      (acc[dateKey] ??= []).push(s);
       return acc;
     }, {})
   );
+
+  const chatLabel = active?.section_slug
+    ? `${SECTION_LABEL[active.section_slug] ?? active.section_slug} AI`
+    : "Bizify AI";
 
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 flex flex-col transition-colors">
@@ -347,24 +463,30 @@ function AiChatContent() {
           </button>
 
           <div className="flex-1 overflow-y-auto space-y-4 pr-0.5">
-            {grouped.map(([date, convs]) => (
-              <div key={date}>
-                <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide px-3 mb-1">
-                  {date}
-                </p>
-                <div className="space-y-0.5">
-                  {convs.map((conv) => (
-                    <ConversationItem
-                      key={conv.id}
-                      conv={conv}
-                      active={conv.id === activeId}
-                      onSelect={() => setActiveId(conv.id)}
-                      onDelete={() => handleDelete(conv.id)}
-                    />
-                  ))}
-                </div>
+            {loadingSessions ? (
+              <div className="flex items-center justify-center pt-8">
+                <Loader2 size={16} className="animate-spin text-amber-400" />
               </div>
-            ))}
+            ) : (
+              grouped.map(([date, convs]) => (
+                <div key={date}>
+                  <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide px-3 mb-1">
+                    {date}
+                  </p>
+                  <div className="space-y-0.5">
+                    {convs.map((session) => (
+                      <ConversationItem
+                        key={session.id}
+                        session={session}
+                        active={session.id === activeId}
+                        onSelect={() => setActiveId(session.id)}
+                        onDelete={() => handleDelete(session.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </aside>
 
@@ -380,17 +502,27 @@ function AiChatContent() {
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-900 dark:text-white leading-none">
-                {active?.title ?? "Bizify AI"}
+                {active?.title ?? chatLabel}
               </p>
-              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">AI Co-founder · Always online</p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                {active?.section_slug
+                  ? `${SECTION_LABEL[active.section_slug] ?? active.section_slug} specialist · Always online`
+                  : "AI Co-founder · Always online"}
+              </p>
             </div>
           </div>
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
-            {active?.messages.map((m) => (
-              <MessageBubble key={m.id} msg={m} />
-            ))}
+            {(!active || !active.messagesLoaded) ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 size={20} className="animate-spin text-amber-400" />
+              </div>
+            ) : (
+              active.messages.map((m) => (
+                <MessageBubble key={m.id} msg={m} />
+              ))
+            )}
 
             {thinking && (
               <div className="flex gap-2.5">
@@ -402,10 +534,7 @@ function AiChatContent() {
                 </div>
                 <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-sm flex items-center gap-1">
                   {[0, 1, 2].map((i) => (
-                    <span
-                      key={i}
-                      className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-500 typing-dot"
-                    />
+                    <span key={i} className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-500 typing-dot" />
                   ))}
                 </div>
               </div>
@@ -424,7 +553,9 @@ function AiChatContent() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
                 }}
-                placeholder="Ask anything — validate an idea, research a market, draft a pitch…"
+                placeholder={active?.section_slug
+                  ? `Ask about ${SECTION_LABEL[active.section_slug] ?? "this section"}…`
+                  : "Ask anything — validate an idea, research a market, draft a pitch…"}
                 className="flex-1 text-sm bg-transparent outline-none resize-none text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 max-h-32 min-w-0"
                 style={{ scrollbarWidth: "none" }}
               />
