@@ -4,6 +4,30 @@ All changes made to bizify-v2 (Next.js) by the AI assistant. Newest entries firs
 
 ---
 
+## 2026-05-25 — Google Login: Origin-Derived Redirect URLs
+
+### Files changed:
+- `src/app/api/auth/google/route.ts`
+- `src/app/api/auth/google/callback/route.ts`
+
+### Problem
+Both Google OAuth Next.js routes built their internal redirect URLs from `process.env.NEXT_PUBLIC_BASE_URL`. The local `.env.local` only had `NEXT_PUBLIC_APP_URL` (different name), so the routes always fell back to the hardcoded `"http://localhost:3000"`. On Vercel this meant the user could complete Google consent successfully, then get redirected to `http://localhost:3000/entrepreneur` from a production browser — landing nowhere.
+
+### Fix
+Both routes now derive the base URL from `request.nextUrl.origin` — i.e. whatever origin the incoming request came in on. No env var needed; works correctly on localhost, every Vercel preview URL, and the production domain without any coordination.
+
+Also added explicit handling for `?error=access_denied` in the callback (Google sends this when the user cancels at the consent screen) so it routes to the same friendly `/login?error=google_no_code` toast instead of dropping into the generic `/login?error=google_failed`.
+
+### What still needs to happen outside the codebase
+- The companion backend fix (`auth.py:_google_redirect_uri()`) must be deployed.
+- The callback URL must be registered in Google Cloud Console for **both** localhost and the Vercel domain (Google rejects unregistered redirect URIs):
+  - `http://localhost:3000/api/auth/google/callback`
+  - `https://<your-vercel-domain>/api/auth/google/callback`
+- Backend env on Render: `FRONTEND_URL=https://<your-vercel-domain>` (no trailing slash).
+- Frontend env on Vercel: `BACKEND_URL=https://bizify-backend.onrender.com` (already in your `.env.local`).
+
+---
+
 ## 2026-05-25 — Skills: Single-Fetch Categories + Bulk Save
 
 ### Files changed:

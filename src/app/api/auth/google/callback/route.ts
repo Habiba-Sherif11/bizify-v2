@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
-const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-
 const PARTNER_ROLES = new Set(["manufacturer", "mentor", "supplier"]);
 
 function resolveRedirect(role: string, approvalStatus?: string): string {
@@ -15,10 +13,19 @@ function resolveRedirect(role: string, approvalStatus?: string): string {
 }
 
 export async function GET(request: NextRequest) {
+  // Derive the base URL from the request itself — works on localhost,
+  // Vercel preview deployments, and production without any env coupling.
+  const origin = request.nextUrl.origin;
   const code = request.nextUrl.searchParams.get("code");
+  const oauthError = request.nextUrl.searchParams.get("error");
+
+  // Google sends ?error=access_denied if the user cancels at the consent screen.
+  if (oauthError) {
+    return NextResponse.redirect(new URL("/login?error=google_no_code", origin));
+  }
 
   if (!code) {
-    return NextResponse.redirect(new URL("/login?error=google_no_code", BASE));
+    return NextResponse.redirect(new URL("/login?error=google_no_code", origin));
   }
 
   try {
@@ -32,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     if (!access_token || typeof access_token !== "string") {
       console.error("[Google Callback] No access_token in response:", data);
-      return NextResponse.redirect(new URL("/login?error=google_failed", BASE));
+      return NextResponse.redirect(new URL("/login?error=google_failed", origin));
     }
 
     // Determine where to send the user based on their role and approval status
@@ -54,7 +61,7 @@ export async function GET(request: NextRequest) {
       // Role fetch failed — fall back to /dashboard
     }
 
-    const response = NextResponse.redirect(new URL(redirectPath, BASE));
+    const response = NextResponse.redirect(new URL(redirectPath, origin));
     response.cookies.set("auth_token", access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -67,6 +74,6 @@ export async function GET(request: NextRequest) {
   } catch (err: unknown) {
     const e = err as { response?: { status?: number; data?: unknown } };
     console.error("[Google Callback] Backend error:", e.response?.status, e.response?.data);
-    return NextResponse.redirect(new URL("/login?error=google_failed", BASE));
+    return NextResponse.redirect(new URL("/login?error=google_failed", origin));
   }
 }
