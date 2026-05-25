@@ -309,23 +309,37 @@ function SectionChatPopup({
   const slug = SECTION_CHAT_SLUG[sectionKey];
   const label = SECTION_LABEL[sectionKey] ?? sectionKey;
 
-  // Create or load the latest session for this section on mount
+  // Find the latest existing session for this section+idea, or create one
   useEffect(() => {
     let cancelled = false;
     async function initSession() {
       setLoadingSession(true);
       try {
-        // Create a new session for this section popup (each popup open = fresh session
-        // but we could also fetch the latest — for now, always create fresh)
-        const res = await api.post("/chat/sessions", {
-          section_slug: slug,
-          idea_id: ideaId || undefined,
-          title: `${label} Chat`,
-        });
+        // Look for an existing session for this section + idea
+        const params = new URLSearchParams();
+        if (slug) params.set("section_slug", slug);
+        if (ideaId) params.set("idea_id", ideaId);
+        const existing = await api.get(`/chat/sessions?${params.toString()}`);
+        const sessions: Array<{ id: string }> = existing.data;
+
+        let sid: string;
+        if (sessions.length > 0) {
+          // Reuse the most recent session
+          sid = sessions[0].id;
+        } else {
+          // Create a new session
+          const res = await api.post("/chat/sessions", {
+            section_slug: slug,
+            idea_id: ideaId || undefined,
+            title: `${label} Chat`,
+          });
+          sid = res.data.id;
+        }
+
         if (cancelled) return;
-        const sid: string = res.data.id;
         setSessionId(sid);
-        // Load last 10 messages (for sessions that already had history if reused)
+
+        // Load last 10 messages
         const msgsRes = await api.get(`/chat/sessions/${sid}/messages?limit=10`);
         if (cancelled) return;
         const loaded: ChatMessage[] = (msgsRes.data as Array<{ role: string; content: string }>).map((m) => ({
@@ -370,6 +384,7 @@ function SectionChatPopup({
         body: JSON.stringify({
           message: text,
           history: history.map((m) => ({ role: m.role, content: m.content })),
+          idea_id: ideaId || undefined,
         }),
         signal: ctrl.signal,
       });
@@ -407,12 +422,16 @@ function SectionChatPopup({
 
       // Save both messages to DB session
       if (sessionId && assistantText) {
-        api.post(`/chat/sessions/${sessionId}/messages`, {
-          messages: [
-            { role: "user", content: text },
-            { role: "assistant", content: assistantText },
-          ],
-        }).catch(() => {});
+        try {
+          await api.post(`/chat/sessions/${sessionId}/messages`, {
+            messages: [
+              { role: "user", content: text },
+              { role: "assistant", content: assistantText },
+            ],
+          });
+        } catch {
+          // Non-fatal: messages displayed locally even if save fails
+        }
       }
     } catch (err) {
       if ((err as Error).name === "AbortError") return;

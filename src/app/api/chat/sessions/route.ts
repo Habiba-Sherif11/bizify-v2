@@ -5,9 +5,10 @@ import { handleBackendError } from "@/lib/backend-error";
 
 export async function GET(req: NextRequest) {
   const headers = getBearerHeaders(req);
+  const search = req.nextUrl.search; // forward ?section_slug=...&idea_id=...
   try {
     const { data } = await axios.get(
-      `${process.env.BACKEND_URL}/api/v1/chat/sessions`,
+      `${process.env.BACKEND_URL}/api/v1/chat/sessions${search}`,
       { headers, timeout: 15_000 }
     );
     return NextResponse.json(data);
