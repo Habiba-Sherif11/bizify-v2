@@ -16,7 +16,7 @@ interface SharedIdea {
 async function fetchSharedIdea(token: string): Promise<SharedIdea | null> {
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL ?? "https://bizify-v2.vercel.app"}/api/share/${token}`,
+      `${process.env.BACKEND_URL}/api/v1/share/${token}`,
       { cache: "no-store" },
     );
     if (!res.ok) return null;
