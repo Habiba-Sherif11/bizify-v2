@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Home, ChevronRight, Search, Lightbulb,
   Plus, LayoutList, Heart, Archive, Share2, GitCompare, Loader2,
@@ -165,6 +166,7 @@ function ShareModal({ items, onClose }: { items: ShareItem[]; onClose: () => voi
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function IdeasPage() {
+  const router = useRouter();
   const {
     ideas, archivedIdeas, isLoading, isArchiveLoading,
     fetchIdeas, fetchArchivedIdeas, createIdea, archiveIdea, unarchiveIdea,
@@ -442,9 +444,7 @@ export default function IdeasPage() {
                 disabled={!canCompare}
                 className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-sm font-medium bg-cyan-500 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-cyan-400 transition-colors cursor-pointer"
                 onClick={() => {
-                  // TODO: pass selectedIds to compare endpoint
-                  // Backend: POST /ideas/compare { idea_ids: string[] }
-                  alert(`Compare: ${[...selectedIds].join(", ")}`);
+                  router.push(`/entrepreneur/ideas/compare?ids=${[...selectedIds].join(",")}`);
                 }}
               >
                 <GitFork size={14} />
