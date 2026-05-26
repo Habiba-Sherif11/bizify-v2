@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, use } from "react";
+import { useState, useEffect, useRef, use, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -26,6 +26,7 @@ import { UnitEconomicsSection }   from "@/features/entrepreneur/components/analy
 import { GoToMarketSection }      from "@/features/entrepreneur/components/analysis/GoToMarketSection";
 import { ProblemsSection }        from "@/features/entrepreneur/components/analysis/ProblemsSection";
 import type { SkillsGap }         from "@/features/entrepreneur/types/idea";
+import { ShareModal, type ShareItem } from "@/features/entrepreneur/components/ShareModal";
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
@@ -1340,6 +1341,23 @@ export default function IdeaDetailPage({
 
   const [editModalOpen, setEditModalOpen] = useState(false);
 
+  const [shareItems, setShareItems] = useState<ShareItem[] | null>(null);
+  const [isSharing, setIsSharing]   = useState(false);
+
+  const handleShare = useCallback(async () => {
+    setIsSharing(true);
+    try {
+      const { data } = await api.post<{ items: ShareItem[] }>("/ideas/share", {
+        idea_ids: [idea_id],
+      });
+      setShareItems(data.items);
+    } catch {
+      alert("Failed to create share link. Please try again.");
+    } finally {
+      setIsSharing(false);
+    }
+  }, [idea_id]);
+
   const [rediscoverLoading, setRediscoverLoading] = useState(false);
   const [rediscoverError, setRediscoverError]     = useState<string | null>(null);
 
@@ -1448,8 +1466,8 @@ export default function IdeaDetailPage({
               <SectionIconButton tooltip="Save as PDF" onClick={handleDownloadPDF}>
                 <FileDown size={18} className="text-neutral-400" />
               </SectionIconButton>
-              <SectionIconButton tooltip="Share" onClick={() => {}}>
-                <Share2 size={18} className="text-neutral-400" />
+              <SectionIconButton tooltip="Share" onClick={handleShare} disabled={isSharing}>
+                {isSharing ? <Loader2 size={18} className="animate-spin text-neutral-400" /> : <Share2 size={18} className="text-neutral-400" />}
               </SectionIconButton>
             </div>
 
@@ -1644,6 +1662,10 @@ export default function IdeaDetailPage({
           onClose={() => setEditModalOpen(false)}
           onSectionsReset={() => { fetchAll(); }}
         />
+      )}
+
+      {shareItems && (
+        <ShareModal items={shareItems} onClose={() => setShareItems(null)} />
       )}
     </div>
   );
