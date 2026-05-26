@@ -5,12 +5,13 @@ import { handleBackendError } from "@/lib/backend-error";
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { idea_id: string } }
+  { params }: { params: Promise<{ idea_id: string }> }
 ) {
+  const { idea_id } = await params;
   const headers = getBearerHeaders(req);
   try {
     await axios.delete(
-      `${process.env.BACKEND_URL}/api/v1/ai/ideas/${params.idea_id}/analysis`,
+      `${process.env.BACKEND_URL}/api/v1/ai/ideas/${idea_id}/analysis`,
       { headers, timeout: 30_000 }
     );
     return new NextResponse(null, { status: 204 });
