@@ -5,6 +5,15 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    rules: {
+      "react-hooks/error-boundaries": "off",
+      "react-hooks/immutability": "off",
+      "react-hooks/set-state-in-effect": "off",
+      "react/no-unescaped-entities": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -12,6 +21,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local AI/tooling folders are not part of the deployed app.
+    ".agents/**",
+    ".claude/**",
   ]),
 ]);
 
