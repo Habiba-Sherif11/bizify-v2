@@ -8,7 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { SectionState } from "@/features/entrepreneur/hooks/useAiPipeline";
 
-// ─── Types (defensive — accept partial / unknown shapes) ──────────────────────
+// Types
 
 interface Assumption {
   id?: string;
@@ -30,6 +30,20 @@ interface Phase {
   name?: string;
   tasks?: string[];
   milestone?: string;
+}
+
+interface Milestone {
+  title?: string;
+  phase_number?: number | string;
+  phase_name?: string;
+  week_start?: number | string;
+  week_end?: number | string;
+  duration_weeks?: number | string;
+  description?: string;
+  roles_needed?: string[];
+  required_resources?: string[];
+  tags?: string[];
+  is_critical_path?: boolean;
 }
 
 interface Experiment {
@@ -71,13 +85,14 @@ interface MvpData {
   testing_plan?: TestingPlanItem[];
   qa_checklist?: string[];
   first_100_users_plan?: string;
+  milestones?: Milestone[];
   summary?: string;
   source_mode?: string;
   sources_used?: number;
   sources_list?: Source[];
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Helpers
 
 function riskTone(level?: string): string {
   const l = (level ?? "").toLowerCase();
@@ -86,7 +101,7 @@ function riskTone(level?: string): string {
   return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-900/40";
 }
 
-// ─── Section primitives ───────────────────────────────────────────────────────
+// Section primitives
 
 function SectionBlock({
   icon, title, accent, children,
@@ -115,7 +130,7 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ─── Sub-sections ─────────────────────────────────────────────────────────────
+// Sub-sections
 
 function GoalCard({ goal, summary }: { goal?: string; summary?: string }) {
   if (!goal && !summary) return null;
@@ -489,15 +504,15 @@ function TestingPlanBlock({ items, qaChecklist }: { items?: TestingPlanItem[]; q
             <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 px-4 py-3 rounded-xl border border-border bg-background/50">
               <div className="sm:col-span-3 flex flex-col gap-0.5">
                 <Label>Area</Label>
-                <p className="text-sm font-medium text-foreground">{it.area ?? "—"}</p>
+                <p className="text-sm font-medium text-foreground">{it.area ?? "-"}</p>
               </div>
               <div className="sm:col-span-4 flex flex-col gap-0.5">
                 <Label>Method</Label>
-                <p className="text-sm text-muted-foreground">{it.method ?? "—"}</p>
+                <p className="text-sm text-muted-foreground">{it.method ?? "-"}</p>
               </div>
               <div className="sm:col-span-5 flex flex-col gap-0.5">
                 <Label>Pass criteria</Label>
-                <p className="text-sm text-foreground">{it.pass_criteria ?? "—"}</p>
+                <p className="text-sm text-foreground">{it.pass_criteria ?? "-"}</p>
               </div>
             </div>
           ))}
@@ -534,6 +549,83 @@ function FirstUsersBlock({ plan }: { plan?: string }) {
   );
 }
 
+function MilestonesBlock({ items }: { items?: Milestone[] }) {
+  if (!items?.length) return null;
+  return (
+    <SectionBlock
+      icon={<Flag size={16} />}
+      title="Milestones"
+      accent="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {items.map((m, i) => (
+          <article key={`${m.title ?? "milestone"}-${i}`} className="rounded-xl border border-border bg-background/50 p-4 flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-semibold border border-emerald-200/60 dark:border-emerald-900/40">
+                    Week {m.week_start ?? "?"}-{m.week_end ?? "?"}
+                  </span>
+                  {m.is_critical_path && (
+                    <span className="px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-[10px] font-semibold border border-red-200/60 dark:border-red-900/40">
+                      Critical path
+                    </span>
+                  )}
+                </div>
+                <h4 className="text-sm font-semibold text-foreground leading-snug">{m.title ?? `Milestone ${i + 1}`}</h4>
+              </div>
+              <span className="shrink-0 w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center justify-center">
+                {m.phase_number ?? i + 1}
+              </span>
+            </div>
+
+            {(m.phase_name || m.duration_weeks) && (
+              <div className="flex flex-wrap gap-1.5">
+                {m.phase_name && <span className="px-2 py-1 rounded-md bg-neutral-100 dark:bg-neutral-800 text-xs text-foreground border border-border">{m.phase_name}</span>}
+                {m.duration_weeks && <span className="px-2 py-1 rounded-md bg-neutral-100 dark:bg-neutral-800 text-xs text-foreground border border-border">{m.duration_weeks} weeks</span>}
+              </div>
+            )}
+
+            {m.description && <p className="text-sm text-muted-foreground leading-relaxed">{m.description}</p>}
+
+            {!!m.roles_needed?.length && (
+              <div className="flex flex-col gap-1.5">
+                <Label>Roles needed</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {m.roles_needed.map((role, j) => (
+                    <span key={j} className="px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-[11px] font-medium border border-blue-200/60 dark:border-blue-900/40">{role}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!!m.required_resources?.length && (
+              <div className="flex flex-col gap-1.5">
+                <Label>Resources</Label>
+                <ul className="flex flex-col gap-1">
+                  {m.required_resources.map((resource, j) => (
+                    <li key={j} className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+                      <ChevronRight size={13} className="mt-0.5 text-emerald-500 shrink-0" />
+                      <span>{resource}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {!!m.tags?.length && (
+              <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border">
+                {m.tags.map((tag, j) => (
+                  <span key={j} className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">{tag}</span>
+                ))}
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </SectionBlock>
+  );
+}
 function SourcesBlock({ mode, used, list }: { mode?: string; used?: number; list?: Source[] }) {
   if (!list?.length && !mode && used == null) return null;
   const sources = (list ?? []).filter((s) => s.url);
@@ -587,7 +679,7 @@ function SourcesBlock({ mode, used, list }: { mode?: string; used?: number; list
   );
 }
 
-// ─── Skeleton / error / empty ─────────────────────────────────────────────────
+// Skeleton / error / empty
 
 function MvpSkeleton() {
   return (
@@ -611,7 +703,7 @@ function MvpEmpty() {
   );
 }
 
-// ─── Header ───────────────────────────────────────────────────────────────────
+// Header
 
 function MvpHeader() {
   return (
@@ -624,7 +716,7 @@ function MvpHeader() {
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// Main component
 
 export function MvpPlanningSection({ data, isLoading, error }: SectionState) {
   if (isLoading) {
@@ -662,7 +754,7 @@ export function MvpPlanningSection({ data, isLoading, error }: SectionState) {
     const p = JSON.parse(data) as unknown;
     if (p && typeof p === "object") parsed = p as MvpData;
   } catch {
-    // fall through — render raw text as a paragraph
+    // fall through - render raw text as a paragraph
   }
 
   if (!parsed) {
@@ -688,6 +780,7 @@ export function MvpPlanningSection({ data, isLoading, error }: SectionState) {
       <LaunchCriteriaBlock criteria={parsed.launch_criteria} />
       <TestingPlanBlock items={parsed.testing_plan} qaChecklist={parsed.qa_checklist} />
       <FirstUsersBlock plan={parsed.first_100_users_plan} />
+      <MilestonesBlock items={parsed.milestones} />
       <SourcesBlock mode={parsed.source_mode} used={parsed.sources_used} list={parsed.sources_list} />
     </div>
   );

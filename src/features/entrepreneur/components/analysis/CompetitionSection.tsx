@@ -56,6 +56,7 @@ interface CompetitionData {
   porters_five_forces?: PortersFiveForces;
   vrio_analysis?: VrioItem[];
   differentiation_opportunities?: string[];
+  your_opening?: string;
   sources_list?: { url: string; title: string }[];
 }
 
@@ -110,7 +111,6 @@ function ForceLevelBar({ level }: { level: string }) {
   const normalized = level.toLowerCase();
   const isHigh   = normalized.includes("high");
   const isLow    = normalized.includes("low");
-  const isMed    = !isHigh && !isLow;
   const width    = isHigh ? "w-full" : isLow ? "w-1/4" : "w-1/2";
   const color    = isHigh ? "bg-red-500" : isLow ? "bg-green-500" : "bg-amber-500";
   return (
@@ -131,7 +131,7 @@ function PortersSection({ forces }: { forces: PortersFiveForces }) {
 
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-base font-semibold text-slate-900 dark:text-white">Porter's Five Forces</h3>
+      <h3 className="text-base font-semibold text-slate-900 dark:text-white">Porter&apos;s Five Forces</h3>
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         {FORCE_KEYS.map((key, i) => {
           const force = forces[key];
@@ -304,6 +304,7 @@ export function CompetitionSection({ data, isLoading, error }: SectionState) {
     direct_competitors = [],
     indirect_alternatives = [],
     positioning_gaps = [],
+    your_opening,
     porters_five_forces,
     differentiation_opportunities = [],
   } = structured;
@@ -317,6 +318,17 @@ export function CompetitionSection({ data, isLoading, error }: SectionState) {
         <section className="rounded-xl border border-border bg-card p-5">
           <p className="text-sm font-medium text-muted-foreground mb-1">Competitive Landscape Summary</p>
           <p className="text-sm text-foreground leading-relaxed">{summary}</p>
+        </section>
+      )}
+
+      {/* Your Opening */}
+      {your_opening && (
+        <section className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/10 p-5 flex items-start gap-3">
+          <Target size={16} className="text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Your Opening</p>
+            <p className="text-sm text-foreground leading-relaxed">{your_opening}</p>
+          </div>
         </section>
       )}
 
@@ -350,7 +362,7 @@ export function CompetitionSection({ data, isLoading, error }: SectionState) {
         </section>
       )}
 
-      {/* Porter's Five Forces */}
+      {/* Porter&apos;s Five Forces */}
       {porters_five_forces && Object.keys(porters_five_forces).length > 0 && (
         <PortersSection forces={porters_five_forces} />
       )}

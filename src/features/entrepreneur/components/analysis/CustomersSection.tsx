@@ -33,6 +33,13 @@ interface JourneyStage {
   description: string;
 }
 
+interface CustomerJourneyMapItem {
+  stage?: string;
+  specific_touchpoint?: string;
+  founder_action?: string;
+  drop_off_risk?: string;
+}
+
 interface KeyInsight {
   insight: string;
   explanation: string;
@@ -45,6 +52,7 @@ interface CustomersData {
   primary_segment?: { id?: string; reason?: string };
   acquisition_channels?: string[];
   early_adopter_profile?: string;
+  customer_journey_map?: CustomerJourneyMapItem[];
   summary?: string;
   sources_list?: { url: string; title: string }[];
   // Legacy / alternate fields
@@ -100,6 +108,7 @@ function parseCustomersData(raw: string): CustomersData | null {
         parsed.personas ||
         parsed.painPoints ||
         parsed.journeyStages ||
+        parsed.customer_journey_map ||
         parsed.keyInsights ||
         parsed.acquisition_channels ||
         parsed.summary;
@@ -111,6 +120,22 @@ function parseCustomersData(raw: string): CustomersData | null {
   return null;
 }
 
+function mapCustomerJourney(items?: CustomerJourneyMapItem[]): JourneyStage[] | null {
+  if (!items?.length) return null;
+  return items.map((item, index) => {
+    const details = [
+      item.specific_touchpoint,
+      item.founder_action ? `Action: ${item.founder_action}` : null,
+      item.drop_off_risk ? `Risk: ${item.drop_off_risk}` : null,
+    ].filter(Boolean);
+
+    return {
+      step: index + 1,
+      name: item.stage || `Stage ${index + 1}`,
+      description: details.join(" | ") || "No journey detail provided.",
+    };
+  });
+}
 function getInitials(name: string) {
   return name
     .split(" ")
@@ -389,7 +414,8 @@ export function CustomersSection({ data, isLoading, error }: SectionState) {
     summary,
   } = structured;
 
-  const stages = journeyStages && journeyStages.length > 0 ? journeyStages : DEFAULT_JOURNEY_STAGES;
+  const aiJourneyStages = mapCustomerJourney(customer_journey_map);
+  const stages = aiJourneyStages ?? (journeyStages && journeyStages.length > 0 ? journeyStages : DEFAULT_JOURNEY_STAGES);
 
   // Use customer_segments (real backend data) if available, otherwise fall back to personas
   const showSegments = customer_segments.length > 0;
