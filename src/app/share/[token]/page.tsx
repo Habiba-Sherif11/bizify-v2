@@ -1,6 +1,18 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Lightbulb, DollarSign, Zap, Tag } from "lucide-react";
+import SVGComponent from "@/components/sections/logo";
+
+import { ProblemsSection }        from "@/features/entrepreneur/components/analysis/ProblemsSection";
+import { CustomersSection }       from "@/features/entrepreneur/components/analysis/CustomersSection";
+import { CompetitionSection }     from "@/features/entrepreneur/components/analysis/CompetitionSection";
+import { MarketPotentialSection } from "@/features/entrepreneur/components/analysis/MarketPotentialSection";
+import { IdeaStrategySection }    from "@/features/entrepreneur/components/analysis/IdeaStrategySection";
+import { BusinessModelSection }   from "@/features/entrepreneur/components/analysis/BusinessModelSection";
+import { FunctionsListSection }   from "@/features/entrepreneur/components/analysis/FunctionsListSection";
+import { MvpPlanningSection }     from "@/features/entrepreneur/components/analysis/MvpPlanningSection";
+import { UnitEconomicsSection }   from "@/features/entrepreneur/components/analysis/UnitEconomicsSection";
+import { GoToMarketSection }      from "@/features/entrepreneur/components/analysis/GoToMarketSection";
 
 interface SharedIdea {
   id: string;
@@ -11,6 +23,17 @@ interface SharedIdea {
   skills: unknown;
   feasibility: number | null;
   created_at: string;
+  // AI analysis sections
+  problems?: unknown;
+  customers?: unknown;
+  competition?: unknown;
+  market_potential?: unknown;
+  idea_strategy?: unknown;
+  business_model?: unknown;
+  functions_list?: unknown;
+  mvp_planning?: unknown;
+  unit_economics?: unknown;
+  go_to_market?: unknown;
 }
 
 async function fetchSharedIdea(token: string): Promise<SharedIdea | null> {
@@ -40,6 +63,12 @@ function flattenSkills(skills: unknown): string[] {
   return [];
 }
 
+function toSectionData(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return value;
+  return JSON.stringify(value);
+}
+
 export default async function SharedIdeaPage({
   params,
 }: {
@@ -57,16 +86,35 @@ export default async function SharedIdeaPage({
     year: "numeric",
   });
 
+  const sections = {
+    problems:      toSectionData(idea.problems),
+    customers:     toSectionData(idea.customers),
+    competition:   toSectionData(idea.competition),
+    market:        toSectionData(idea.market_potential),
+    strategy:      toSectionData(idea.idea_strategy),
+    businessModel: toSectionData(idea.business_model),
+    functions:     toSectionData(idea.functions_list),
+    mvp:           toSectionData(idea.mvp_planning),
+    financial:     toSectionData(idea.unit_economics),
+    goToMarket:    toSectionData(idea.go_to_market),
+  };
+
+  const hasAnalysis = Object.values(sections).some(Boolean);
+
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900">
       {/* Top bar */}
       <header className="border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <span className="font-bold text-neutral-900 dark:text-white text-lg tracking-tight">
-            Bizify
-          </span>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <SVGComponent className="h-6 w-auto" />
+            <span className="font-bold text-neutral-900 dark:text-white text-lg tracking-tight"
+              style={{ fontFamily: "var(--font-cormorant-sc)" }}>
+              Bizify
+            </span>
+          </Link>
           <Link
-            href="/auth/login"
+            href="/login"
             className="text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:underline"
           >
             Sign in to Bizify →
@@ -74,7 +122,7 @@ export default async function SharedIdeaPage({
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10 space-y-6">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-6">
         {/* Header card */}
         <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-6">
           <div className="flex items-start gap-4">
@@ -159,13 +207,86 @@ export default async function SharedIdeaPage({
           </div>
         )}
 
+        {/* AI Analysis Sections */}
+        {hasAnalysis && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700" />
+              <span className="text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+                AI Analysis
+              </span>
+              <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700" />
+            </div>
+
+            {sections.problems && (
+              <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-6">
+                <ProblemsSection data={sections.problems} isLoading={false} error={null} />
+              </div>
+            )}
+
+            {sections.customers && (
+              <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-6">
+                <CustomersSection data={sections.customers} isLoading={false} error={null} />
+              </div>
+            )}
+
+            {sections.competition && (
+              <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-6">
+                <CompetitionSection data={sections.competition} isLoading={false} error={null} />
+              </div>
+            )}
+
+            {sections.market && (
+              <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-6">
+                <MarketPotentialSection data={sections.market} isLoading={false} error={null} />
+              </div>
+            )}
+
+            {sections.strategy && (
+              <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-6">
+                <IdeaStrategySection data={sections.strategy} isLoading={false} error={null} />
+              </div>
+            )}
+
+            {sections.businessModel && (
+              <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-6">
+                <BusinessModelSection data={sections.businessModel} isLoading={false} error={null} />
+              </div>
+            )}
+
+            {sections.functions && (
+              <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-6">
+                <FunctionsListSection data={sections.functions} isLoading={false} error={null} />
+              </div>
+            )}
+
+            {sections.mvp && (
+              <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-6">
+                <MvpPlanningSection data={sections.mvp} isLoading={false} error={null} />
+              </div>
+            )}
+
+            {sections.financial && (
+              <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-6">
+                <UnitEconomicsSection data={sections.financial} isLoading={false} error={null} />
+              </div>
+            )}
+
+            {sections.goToMarket && (
+              <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-6">
+                <GoToMarketSection data={sections.goToMarket} isLoading={false} error={null} />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* CTA */}
-        <div className="text-center py-4">
+        <div className="text-center py-6">
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-3">
             Want to build your own business ideas with AI analysis?
           </p>
           <Link
-            href="/auth/register"
+            href="/"
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium text-white bg-cyan-500 hover:bg-cyan-400 transition-colors"
           >
             Get started with Bizify

@@ -1,5 +1,6 @@
 "use client";
 
+import { Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type PartnerType = "Supplier" | "Manufacturer" | "Mentor";
@@ -12,8 +13,7 @@ export interface PartnerCardProps {
   tags: string[];
   avatarColor: string;
   specialty?: string;
-  onConnect?: () => void;
-  connecting?: boolean;
+  phone?: string;
 }
 
 const TYPE_COLORS: Record<PartnerType, string> = {
@@ -29,8 +29,7 @@ export function PartnerCard({
   description,
   tags,
   avatarColor,
-  onConnect,
-  connecting,
+  phone,
 }: PartnerCardProps) {
   const initials = name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
@@ -78,15 +77,21 @@ export function PartnerCard({
         </div>
       )}
 
-      {/* Connect button */}
-      <button
-        type="button"
-        onClick={onConnect}
-        disabled={connecting}
-        className="w-full py-2 rounded-lg border border-cyan-500 dark:border-cyan-600 text-cyan-600 dark:text-cyan-400 text-sm font-medium cursor-pointer hover:bg-cyan-50 dark:hover:bg-cyan-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {connecting ? "Sending…" : "Connect"}
-      </button>
+      {/* Phone */}
+      {phone ? (
+        <a
+          href={`tel:${phone}`}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 text-sm text-gray-600 dark:text-gray-300 hover:border-cyan-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
+        >
+          <Phone size={13} className="shrink-0 text-cyan-500" />
+          <span className="truncate">{phone}</span>
+        </a>
+      ) : (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 text-sm text-gray-400 dark:text-gray-500">
+          <Phone size={13} className="shrink-0" />
+          <span>No phone provided</span>
+        </div>
+      )}
     </div>
   );
 }

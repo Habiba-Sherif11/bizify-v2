@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, ChevronDown, LogOut, User, Settings, Moon, Sun, Menu, X } from "lucide-react";
+import { Bell, ChevronDown, LogOut, User, Settings, Moon, Sun, Menu, X, BookOpen } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -187,6 +187,11 @@ export function DashboardHeader() {
     router.push("/entrepreneur/settings");
   };
 
+  const handleConceptsGuideClick = () => {
+    setShowMenu(false);
+    router.push("/entrepreneur/concepts-guide");
+  };
+
   return (
     <>
       <header className="sticky top-0 z-40 bg-[#FAFAFA]/90 dark:bg-neutral-900/90 backdrop-blur-md border-b border-[#E9E9E9] dark:border-neutral-800/80 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between header-enter">
@@ -263,6 +268,15 @@ export function DashboardHeader() {
               >
                 <Settings size={14} aria-hidden="true" />
                 Settings
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleConceptsGuideClick}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+              >
+                <BookOpen size={14} aria-hidden="true" />
+                Concepts Guide
               </button>
               <div role="separator" className="my-1 h-px bg-gray-100 dark:bg-neutral-700" />
               <button

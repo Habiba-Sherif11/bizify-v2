@@ -10,7 +10,6 @@ import {
   type PartnerType,
 } from "@/features/marketplace/components/PartnerCard";
 import { api } from "@/features/auth/lib/api";
-import { useAuth } from "@/features/auth/context/AuthContext";
 
 // ─── API types ────────────────────────────────────────────────────────────────
 
@@ -18,6 +17,7 @@ interface MarketplacePartner {
   id: string;
   partner_type: "MENTOR" | "SUPPLIER" | "MANUFACTURER";
   company_name: string;
+  phone_number: string | null;
   description: string;
   services_json: unknown;
   experience_json: unknown;
@@ -64,6 +64,7 @@ function toCardProps(p: MarketplacePartner): PartnerCardProps {
     description: p.description,
     tags: parseTags(p.services_json),
     avatarColor: AVATAR_COLORS[type],
+    phone: p.phone_number ?? undefined,
   };
 }
 
@@ -81,12 +82,10 @@ const BACKEND_TYPE: Record<PartnerType, string> = {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MarketplacePage() {
-  const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterTab>("All");
   const [search, setSearch] = useState("");
   const [partners, setPartners] = useState<PartnerCardProps[]>([]);
   const [loading, setLoading] = useState(true);
-  const [connecting, setConnecting] = useState<string | null>(null);
 
   const fetchPartners = useCallback(async () => {
     setLoading(true);
@@ -110,30 +109,6 @@ export default function MarketplacePage() {
     const timer = setTimeout(fetchPartners, search ? 400 : 0);
     return () => clearTimeout(timer);
   }, [fetchPartners, search]);
-
-  async function handleConnect(partnerId: string) {
-    if (!user?.business_id) {
-      toast.error("No business profile found. Please complete your profile first.");
-      return;
-    }
-    setConnecting(partnerId);
-    try {
-      await api.post(`/marketplace/partners/${partnerId}/requests`, {
-        business_id: user.business_id,
-      });
-      toast.success("Collaboration request sent!");
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { detail?: string; error?: string } } })
-          ?.response?.data?.detail ||
-        (err as { response?: { data?: { error?: string } } })
-          ?.response?.data?.error ||
-        "Failed to send request.";
-      toast.error(msg);
-    } finally {
-      setConnecting(null);
-    }
-  }
 
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 transition-colors">
@@ -205,8 +180,6 @@ export default function MarketplacePage() {
               <PartnerCard
                 key={p.id}
                 {...p}
-                connecting={connecting === p.id}
-                onConnect={() => handleConnect(p.id)}
               />
             ))}
           </div>

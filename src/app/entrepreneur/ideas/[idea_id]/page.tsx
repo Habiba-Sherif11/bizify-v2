@@ -27,6 +27,7 @@ import { GoToMarketSection }      from "@/features/entrepreneur/components/analy
 import { ProblemsSection }        from "@/features/entrepreneur/components/analysis/ProblemsSection";
 import type { SkillsGap }         from "@/features/entrepreneur/types/idea";
 import { ShareModal, type ShareItem } from "@/features/entrepreneur/components/ShareModal";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
@@ -1767,21 +1768,23 @@ function SectionIconButton({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative group">
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={disabled}
-        className={cn(
-          "p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer text-neutral-500 dark:text-neutral-400",
-          disabled && "opacity-40 cursor-not-allowed"
-        )}
-      >
-        {children}
-      </button>
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-neutral-800 dark:bg-neutral-100 text-white dark:text-neutral-900 text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
-        {tooltip}
-      </div>
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={onClick}
+            disabled={disabled}
+            className={cn(
+              "p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer text-neutral-500 dark:text-neutral-400",
+              disabled && "opacity-40 cursor-not-allowed"
+            )}
+          >
+            {children}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{tooltip}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { api } from "@/features/auth/lib/api";
 import { ShareModal, type ShareItem } from "@/features/entrepreneur/components/ShareModal";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Link from "next/link";
 import { IdeaCard, type IdeaCardProps } from "@/features/entrepreneur/components/IdeaCard";
 import { Select, type SelectOption } from "@/components/ui/select";
@@ -223,26 +224,29 @@ export default function IdeasPage() {
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-10">
             {/* Tabs */}
-            <div className="flex items-center gap-1">
-              {TABS.map(({ id, label, Icon }) => {
-                const active = activeTab === id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => handleTabClick(id)}
-                    className="flex flex-col items-center gap-0 p-2 rounded-lg cursor-pointer transition-colors"
-                  >
-                    <div className={`w-6 h-6 flex items-center justify-center ${active ? "text-cyan-600 dark:text-cyan-400" : "text-neutral-400 dark:text-neutral-500"}`}>
-                      <Icon size={20} />
-                    </div>
-                    <span className={`text-[8px] font-medium leading-6 ${active ? "text-cyan-600 dark:text-cyan-400" : "text-neutral-400 dark:text-neutral-500"}`}>
-                      {label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            <TooltipProvider>
+              <div className="flex items-center gap-1">
+                {TABS.map(({ id, label, Icon }) => {
+                  const active = activeTab === id;
+                  return (
+                    <Tooltip key={id}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => handleTabClick(id)}
+                          className="flex items-center justify-center p-2 rounded-lg cursor-pointer transition-colors"
+                        >
+                          <div className={`w-6 h-6 flex items-center justify-center ${active ? "text-cyan-600 dark:text-cyan-400" : "text-neutral-400 dark:text-neutral-500"}`}>
+                            <Icon size={20} />
+                          </div>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>{label}</TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            </TooltipProvider>
 
             {/* Create button */}
             <button

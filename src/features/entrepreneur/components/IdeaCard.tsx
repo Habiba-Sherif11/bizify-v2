@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Check, X, Clock, MoreHorizontal, Pencil, Archive, ExternalLink, Heart } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export type IdeaStatus = string;
 
@@ -106,33 +107,45 @@ export function IdeaCard({
               {isSelected && <Check size={11} className="text-white" strokeWidth={3} />}
             </div>
           ) : (
-            <>
+            <TooltipProvider>
               {/* Heart / favourite */}
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(); }}
-                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
-              >
-                <Heart
-                  size={14}
-                  className={cn(
-                    "transition-colors",
-                    isFavorited
-                      ? "fill-red-500 text-red-500"
-                      : "text-neutral-400 dark:text-neutral-500"
-                  )}
-                />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(); }}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
+                  >
+                    <Heart
+                      size={14}
+                      className={cn(
+                        "transition-colors",
+                        isFavorited
+                          ? "fill-red-500 text-red-500"
+                          : "text-neutral-400 dark:text-neutral-500"
+                      )}
+                    />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isFavorited ? "Remove from favourites" : "Add to favourites"}
+                </TooltipContent>
+              </Tooltip>
 
               {/* 3-dots menu */}
               <div className="relative" ref={menuRef}>
-                <button
-                  type="button"
-                  onClick={() => setMenuOpen((v) => !v)}
-                  className="w-7 h-7 flex items-center justify-center text-neutral-400 dark:text-neutral-500 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
-                >
-                  <MoreHorizontal size={16} />
-                </button>
+                <Tooltip open={!menuOpen ? undefined : false}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setMenuOpen((v) => !v)}
+                      className="w-7 h-7 flex items-center justify-center text-neutral-400 dark:text-neutral-500 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
+                    >
+                      <MoreHorizontal size={16} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>More options</TooltipContent>
+                </Tooltip>
 
                 {menuOpen && (
                   <div className="absolute right-0 top-8 z-20 w-44 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-lg py-1 animate-in fade-in slide-in-from-top-1 duration-150">
@@ -172,7 +185,7 @@ export function IdeaCard({
                   </div>
                 )}
               </div>
-            </>
+            </TooltipProvider>
           )}
         </div>
       </div>
