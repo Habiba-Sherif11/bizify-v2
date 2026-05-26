@@ -1340,6 +1340,22 @@ export default function IdeaDetailPage({
 
   const [editModalOpen, setEditModalOpen] = useState(false);
 
+  const [rediscoverLoading, setRediscoverLoading] = useState(false);
+  const [rediscoverError, setRediscoverError]     = useState<string | null>(null);
+
+  const handleRediscoverProblems = async () => {
+    setRediscoverLoading(true);
+    setRediscoverError(null);
+    try {
+      await api.post("/ai/rerun/problems", {}, { timeout: 120_000 });
+      await fetchAll();
+    } catch {
+      setRediscoverError("Failed to re-discover problems. Please try again.");
+    } finally {
+      setRediscoverLoading(false);
+    }
+  };
+
   const handleDownloadPDF = () => {
     if (!idea) return;
     const isMvpTab = activeTab === "mvp";
@@ -1526,6 +1542,23 @@ export default function IdeaDetailPage({
                     </SectionIconButton>
                   </div>
                 </div>
+              )}
+
+              {/* Problems tab: Re-discover button */}
+              {activeTab === "problems" && sections.problems.data && (
+                <div className="flex items-center justify-between px-4 py-2.5 mb-4 bg-card border border-border rounded-xl">
+                  <span className="text-sm font-semibold text-foreground">Problems</span>
+                  <SectionIconButton
+                    tooltip="Re-discover problems for this idea"
+                    disabled={rediscoverLoading}
+                    onClick={handleRediscoverProblems}
+                  >
+                    {rediscoverLoading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                  </SectionIconButton>
+                </div>
+              )}
+              {rediscoverError && activeTab === "problems" && (
+                <p className="mb-2 text-xs text-red-500">{rediscoverError}</p>
               )}
             </>
           );
