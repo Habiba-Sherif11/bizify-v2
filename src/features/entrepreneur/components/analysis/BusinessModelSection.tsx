@@ -103,17 +103,6 @@ const CANVAS_BLOCKS: { key: keyof CanvasBlock; label: string; color: string }[] 
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function SectionHeader() {
-  return (
-    <div className="flex items-center gap-2.5">
-      <div className="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
-        <Briefcase size={16} />
-      </div>
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Business Model</h2>
-    </div>
-  );
-}
-
 function CanvasBlockCard({ blockKey, label, color, canvas }: {
   blockKey: keyof CanvasBlock;
   label: string;
@@ -273,7 +262,6 @@ export function BusinessModelSection({ data, isLoading, error }: SectionState) {
   if (!structured) {
     return (
       <div className="flex flex-col gap-4">
-        <SectionHeader />
         <div className="rounded-xl border border-border bg-card p-5">
           <pre className="text-sm text-foreground leading-relaxed whitespace-pre-wrap font-sans">{data}</pre>
         </div>
@@ -295,8 +283,6 @@ export function BusinessModelSection({ data, isLoading, error }: SectionState) {
 
   return (
     <div className="flex flex-col gap-10">
-      <SectionHeader />
-
       {/* Business Model Type */}
       {business_model_type && (
         <section className="flex items-center gap-4 rounded-xl border border-border bg-card p-5">

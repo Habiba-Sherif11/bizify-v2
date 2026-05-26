@@ -76,17 +76,6 @@ function pestelFactorText(factor: PestelFactor | string | undefined): { descript
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function SectionHeader() {
-  return (
-    <div className="flex items-center gap-2.5">
-      <div className="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
-        <BarChart2 size={16} />
-      </div>
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Market Potential</h2>
-    </div>
-  );
-}
-
 function MarketFunnel({ tam, sam, som }: { tam?: MarketSize; sam?: MarketSize; som?: MarketSize }) {
   const tiers = [
     { label: "TAM", sublabel: "Total Addressable Market", size: tam, color: "border-blue-500 bg-blue-50 dark:bg-blue-900/10", textColor: "text-blue-700 dark:text-blue-300", widthClass: "w-full" },
@@ -270,7 +259,6 @@ export function MarketPotentialSection({ data, isLoading, error }: SectionState)
   if (!structured) {
     return (
       <div className="flex flex-col gap-4">
-        <SectionHeader />
         <div className="rounded-xl border border-border bg-card p-5">
           <pre className="text-sm text-foreground leading-relaxed whitespace-pre-wrap font-sans">{data}</pre>
         </div>
@@ -292,8 +280,6 @@ export function MarketPotentialSection({ data, isLoading, error }: SectionState)
 
   return (
     <div className="flex flex-col gap-10">
-      <SectionHeader />
-
       {/* Summary */}
       {summary && (
         <section className="rounded-xl border border-border bg-card p-5">

@@ -147,24 +147,13 @@ function getInitials(name: string) {
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
-function SectionHeader() {
-  return (
-    <div className="flex items-center gap-2.5">
-      <div className="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
-        <Users size={16} />
-      </div>
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Target Customers</h2>
-    </div>
-  );
-}
-
 function PersonaCard({ persona, index }: { persona: Persona; index: number }) {
   const tagColor = PERSONA_TAG_COLORS[index % PERSONA_TAG_COLORS.length];
   const avatarBg = ["bg-amber-100", "bg-cyan-100", "bg-yellow-100", "bg-purple-100"][index % 4];
   const avatarText = ["text-amber-700", "text-cyan-700", "text-yellow-700", "text-purple-700"][index % 4];
 
   return (
-    <div className="flex-1 min-w-50 p-6 bg-card rounded-lg shadow-sm border border-border flex flex-col gap-4">
+    <div className="flex-1 min-w-0 sm:min-w-50 p-6 bg-card rounded-lg shadow-sm border border-border flex flex-col gap-4">
       <div className="flex items-center gap-4">
         <div className={cn("w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-semibold", avatarBg, avatarText)}>
           {getInitials(persona.name)}
@@ -205,7 +194,7 @@ function SegmentCard({ segment, index }: { segment: CustomerSegment; index: numb
   const avatarText = ["text-amber-700", "text-cyan-700", "text-yellow-700", "text-purple-700"][index % 4];
 
   return (
-    <div className="flex-1 min-w-50 p-6 bg-card rounded-lg shadow-sm border border-border flex flex-col gap-4">
+    <div className="flex-1 min-w-0 sm:min-w-50 p-6 bg-card rounded-lg shadow-sm border border-border flex flex-col gap-4">
       <div className="flex items-center gap-4">
         <div className={cn("w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-semibold", avatarBg, avatarText)}>
           {getInitials(segment.name)}
@@ -306,6 +295,8 @@ function JourneyMap({ stages }: { stages: JourneyStage[] }) {
 function InsightsTable({ insights }: { insights: KeyInsight[] }) {
   return (
     <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
+      <div className="overflow-x-auto">
+        <div className="min-w-[520px]">
       {/* Header */}
       <div className="bg-amber-500 grid grid-cols-[160px_1fr_1fr]">
         {["Insight", "Explanation", "Implication"].map((h) => (
@@ -344,6 +335,8 @@ function InsightsTable({ insights }: { insights: KeyInsight[] }) {
           </div>
         </div>
       ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -394,7 +387,6 @@ export function CustomersSection({ data, isLoading, error }: SectionState) {
   if (!structured) {
     return (
       <div className="flex flex-col gap-4">
-        <SectionHeader />
         <div className="rounded-xl border border-border bg-card p-5">
           <pre className="text-sm text-foreground leading-relaxed whitespace-pre-wrap font-sans">{data}</pre>
         </div>
@@ -429,8 +421,6 @@ export function CustomersSection({ data, isLoading, error }: SectionState) {
 
   return (
     <div className="flex flex-col gap-10">
-      <SectionHeader />
-
       {/* Summary */}
       {summary && (
         <section className="rounded-xl border border-border bg-card p-5">

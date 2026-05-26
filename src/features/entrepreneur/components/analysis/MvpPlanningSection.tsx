@@ -711,7 +711,7 @@ function MvpHeader() {
       <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-yellow-400 flex items-center justify-center text-white shadow-[0_4px_12px_rgba(255,183,3,0.3)]">
         <Rocket size={16} />
       </div>
-      <h2 className="text-lg font-semibold text-foreground">MVP Planning</h2>
+      <h2 className="text-xl font-semibold text-foreground">MVP Planning</h2>
     </div>
   );
 }

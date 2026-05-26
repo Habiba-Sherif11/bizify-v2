@@ -58,6 +58,12 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "goToMarket",    label: "Go-to-Market"       },
 ];
 
+const TAB_GROUPS: { label: string; keys: TabKey[] }[] = [
+  { label: "Setup",    keys: ["overview"] },
+  { label: "Insights", keys: ["problems", "customers", "competition", "market", "strategy"] },
+  { label: "Planning", keys: ["businessModel", "functions", "mvp", "financial", "goToMarket"] },
+];
+
 // ─── Tab content ──────────────────────────────────────────────────────────────
 
 // Maps each tab to the SectionKey used for generating it. Null means no standalone endpoint.
@@ -149,14 +155,14 @@ function OverviewSection({
       <div className="bg-card rounded-xl border border-border p-6 flex flex-col gap-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex flex-col gap-1">
-            <h3 className="text-base font-semibold text-foreground">Idea Overview</h3>
+            <h3 className="text-base font-semibold text-foreground">About this idea</h3>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl whitespace-pre-wrap">
               {idea.description}
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2 border-t border-border">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-border">
           <MetaStat label="Budget" value={idea.budget != null ? `$${idea.budget.toLocaleString()}` : "—"} />
           {idea.feasibility != null
             ? <FeasibilityMeter score={idea.feasibility} />
@@ -190,9 +196,9 @@ function OverviewSection({
 
 function MetaStat({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
-      <p className="text-sm font-semibold text-foreground mt-0.5 capitalize">{value}</p>
+    <div className="flex flex-col gap-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800/50 px-3 py-3 border border-border/50">
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">{label}</p>
+      <p className="text-xl font-bold text-foreground capitalize leading-tight">{value}</p>
     </div>
   );
 }
@@ -207,15 +213,17 @@ function FeasibilityMeter({ score }: { score: number }) {
     score >= 8 ? "Highly Feasible" : score >= 6 ? "Moderately Feasible" : score >= 4 ? "Challenging" : "High Risk";
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-xs text-muted-foreground uppercase tracking-wide">Feasibility</p>
-      <div className="flex items-center gap-3">
-        <span className={cn("text-sm font-bold", textColor)}>{score} / 10</span>
-        <div className="flex-1 h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-700">
-          <div className={cn("h-full rounded-full", color)} style={{ width: `${pct}%` }} />
-        </div>
+    <div className="flex flex-col gap-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800/50 px-3 py-3 border border-border/50">
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Feasibility</p>
+      <div className="flex items-end justify-between">
+        <span className={cn("text-xl font-bold leading-tight", textColor)}>
+          {score}<span className="text-sm font-normal text-muted-foreground"> / 10</span>
+        </span>
+        <span className={cn("text-xs font-medium", textColor)}>{label}</span>
       </div>
-      <p className={cn("text-xs font-medium", textColor)}>{label}</p>
+      <div className="h-2 rounded-full bg-neutral-200 dark:bg-neutral-700">
+        <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${pct}%` }} />
+      </div>
     </div>
   );
 }
@@ -283,7 +291,7 @@ function SkillsAnalysis({ skills }: { skills: SkillsGap }) {
             {skillGaps.map((gap) => {
               const action = gapAction(gap);
               return (
-                <div key={gap} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-neutral-50 dark:bg-neutral-800/40 px-3 py-2">
+                <div key={gap} className="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-border bg-neutral-50 dark:bg-neutral-800/40 px-3 py-2">
                   <span className="text-xs font-medium text-foreground">{gap}</span>
                   <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0", action.color)}>
                     {action.label}
@@ -300,28 +308,26 @@ function SkillsAnalysis({ skills }: { skills: SkillsGap }) {
 
 function SectionCallToAction({ onRun, isRunning }: { onRun: () => void; isRunning: boolean }) {
   return (
-    <div className="flex flex-col items-center justify-center h-72 gap-5 rounded-2xl border-2 border-dashed border-border bg-card">
-      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-400 flex items-center justify-center shadow-[0_4px_16px_rgba(255,183,3,0.3)]">
-        <Sparkles size={22} className="text-white" />
+    <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border bg-neutral-50/60 dark:bg-neutral-800/20 px-6 py-10">
+      <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+        <Sparkles size={18} className="text-muted-foreground" />
       </div>
-      <div className="text-center space-y-1.5 px-6">
-        <h3 className="text-base font-semibold text-foreground">No analysis yet</h3>
-        <p className="text-sm text-muted-foreground max-w-xs">
-          Generate AI insights for this section.
-        </p>
+      <div className="text-center flex flex-col gap-1">
+        <p className="text-sm font-medium text-foreground">Not generated yet</p>
+        <p className="text-xs text-muted-foreground">Generate AI insights for this section only.</p>
       </div>
       <button
         type="button"
         onClick={onRun}
         disabled={isRunning}
         className={cn(
-          "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white cursor-pointer transition-opacity",
-          "bg-gradient-to-r from-amber-500 to-yellow-500 shadow-[0_2px_12px_rgba(255,183,3,0.3)]",
+          "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-opacity",
+          "bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-[0_2px_8px_rgba(245,158,11,0.3)]",
           isRunning && "opacity-60 cursor-not-allowed"
         )}
       >
-        {isRunning ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />}
-        {isRunning ? "Generating…" : "Generate Analysis"}
+        {isRunning ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
+        {isRunning ? "Generating…" : "Generate section"}
       </button>
     </div>
   );
@@ -329,14 +335,14 @@ function SectionCallToAction({ onRun, isRunning }: { onRun: () => void; isRunnin
 
 function PipelineCallToAction({ onRun, isRunning }: { onRun: () => void; isRunning: boolean }) {
   return (
-    <div className="flex flex-col items-center justify-center h-72 gap-5 rounded-2xl border-2 border-dashed border-border bg-card">
-      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-400 flex items-center justify-center shadow-[0_4px_16px_rgba(255,183,3,0.3)]">
-        <Sparkles size={22} className="text-white" />
+    <div className="flex flex-col items-center justify-center gap-6 rounded-2xl border border-amber-200/60 dark:border-amber-800/30 bg-gradient-to-b from-amber-50/70 to-transparent dark:from-amber-900/10 dark:to-transparent px-8 py-12">
+      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-400 flex items-center justify-center shadow-[0_8px_24px_rgba(245,158,11,0.35)]">
+        <Sparkles size={24} className="text-white" />
       </div>
-      <div className="text-center space-y-1.5 px-6">
-        <h3 className="text-base font-semibold text-foreground">No analysis yet</h3>
-        <p className="text-sm text-muted-foreground max-w-xs">
-          Run the AI pipeline to generate in-depth insights for this idea.
+      <div className="text-center flex flex-col gap-2 max-w-sm">
+        <h3 className="text-base font-semibold text-foreground">Your analysis is ready to generate</h3>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Run the AI pipeline to unlock in-depth insights — customers, competition, MVP, financials, and more.
         </p>
       </div>
       <button
@@ -344,13 +350,13 @@ function PipelineCallToAction({ onRun, isRunning }: { onRun: () => void; isRunni
         onClick={onRun}
         disabled={isRunning}
         className={cn(
-          "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white cursor-pointer transition-opacity",
-          "bg-gradient-to-r from-amber-500 to-yellow-500 shadow-[0_2px_12px_rgba(255,183,3,0.3)]",
+          "flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-semibold text-white cursor-pointer transition-opacity",
+          "bg-gradient-to-r from-amber-500 to-yellow-500 shadow-[0_4px_16px_rgba(245,158,11,0.4)]",
           isRunning && "opacity-60 cursor-not-allowed"
         )}
       >
-        {isRunning ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />}
-        {isRunning ? "Running…" : "Run Pipeline"}
+        {isRunning ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+        {isRunning ? "Generating full analysis…" : "Run AI Pipeline"}
       </button>
     </div>
   );
@@ -1346,6 +1352,1149 @@ function buildSectionHtml(title: string, data: string | null): string {
   return `<section><h2>${title}</h2>${body}</section>`;
 }
 
+// ─── PDF Builders for Each Section ────────────────────────────────────────────
+
+interface PdfCustomersData {
+  customer_segments?: Array<{ id?: string; name: string; description?: string; pain_intensity?: string; size_estimate?: string; willingness_to_pay?: string; where_to_find?: string[] }>;
+  primary_segment?: { id?: string; reason?: string };
+  acquisition_channels?: string[];
+  early_adopter_profile?: string;
+  customer_journey_map?: Array<{ stage?: string; specific_touchpoint?: string; founder_action?: string; drop_off_risk?: string }>;
+  summary?: string;
+}
+
+function buildCustomersPdfHtml(idea: Idea, raw: string | null): string {
+  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
+  let data: PdfCustomersData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") data = p as PdfCustomersData;
+  } catch { /* render what we have */ }
+
+  const segmentsHtml = data.customer_segments?.length ? `
+    <section>
+      <h2>Customer Segments</h2>
+      <div class="grid2">
+        ${data.customer_segments.map((seg, i) => `
+          <div class="card">
+            <div class="card-id">${esc(seg.id ?? `S${i + 1}`)}</div>
+            <h4>${esc(seg.name)}</h4>
+            ${seg.description ? `<p class="subtext">${esc(seg.description)}</p>` : ""}
+            ${seg.pain_intensity ? `<div class="metric"><span class="metric-label">Pain intensity</span><span>${esc(seg.pain_intensity)}</span></div>` : ""}
+            ${seg.size_estimate ? `<div class="metric"><span class="metric-label">Size estimate</span><span>${esc(seg.size_estimate)}</span></div>` : ""}
+            ${seg.willingness_to_pay ? `<div class="metric"><span class="metric-label">Willingness to pay</span><span>${esc(seg.willingness_to_pay)}</span></div>` : ""}
+            ${seg.where_to_find?.length ? `<div class="metric"><span class="metric-label">Where to find</span>${strList(seg.where_to_find)}</div>` : ""}
+          </div>
+        `).join("")}
+      </div>
+    </section>` : "";
+
+  const journeyHtml = data.customer_journey_map?.length ? `
+    <section>
+      <h2>Customer Journey</h2>
+      <div class="journey-map">
+        ${data.customer_journey_map.map((stage, i) => `
+          <div class="journey-stage">
+            <div class="stage-number">${i + 1}</div>
+            <div class="stage-content">
+              ${stage.stage ? `<div class="stage-title">${esc(stage.stage)}</div>` : ""}
+              ${stage.specific_touchpoint ? `<p class="stage-detail"><strong>Touchpoint:</strong> ${esc(stage.specific_touchpoint)}</p>` : ""}
+              ${stage.founder_action ? `<p class="stage-detail"><strong>Action:</strong> ${esc(stage.founder_action)}</p>` : ""}
+              ${stage.drop_off_risk ? `<p class="stage-detail"><strong>Risk:</strong> ${esc(stage.drop_off_risk)}</p>` : ""}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </section>` : "";
+
+  const channelsHtml = data.acquisition_channels?.length ? `
+    <section>
+      <h2>Acquisition Channels</h2>
+      ${strList(data.acquisition_channels)}
+    </section>` : "";
+
+  const earlyAdopterHtml = data.early_adopter_profile ? `
+    <section>
+      <h2>Early Adopter Profile</h2>
+      <p>${esc(data.early_adopter_profile)}</p>
+    </section>` : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>${esc(idea.title ?? "Idea")} — Customers</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
+  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
+  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
+  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
+  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
+  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
+  section { break-inside: avoid; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
+  .card-id { font-size: 8pt; font-weight: 700; color: #9ca3af; letter-spacing: .1em; margin-bottom: 4px; }
+  .metric { margin: 6px 0; }
+  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; display: block; margin-bottom: 2px; }
+  .subtext { font-size: 9.5pt; color: #555; margin: 4px 0; }
+  .journey-map { display: flex; flex-direction: column; gap: 8px; }
+  .journey-stage { display: flex; gap: 10px; align-items: flex-start; }
+  .stage-number { min-width: 28px; height: 28px; background: #f59e0b; color: #fff; border-radius: 999px; font-size: 9pt; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .stage-content { flex: 1; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 10px; background: #fafafa; }
+  .stage-title { font-weight: 600; font-size: 10pt; margin-bottom: 4px; }
+  .stage-detail { font-size: 9pt; margin: 2px 0; color: #555; }
+  ul, ol { padding-left: 18px; margin: 4px 0; }
+  li { margin-bottom: 2px; font-size: 10pt; }
+  @page { size: A4; margin: 1.5cm 2cm; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+  <h1>${esc(idea.title ?? "Untitled Idea")} — Customers</h1>
+  ${date ? `<p class="meta-line">${date}</p>` : ""}
+  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
+  ${data.summary ? `<section><h2>Summary</h2><p>${esc(data.summary)}</p></section>` : ""}
+  ${segmentsHtml}
+  ${journeyHtml}
+  ${channelsHtml}
+  ${earlyAdopterHtml}
+</body>
+</html>`;
+}
+
+interface PdfCompetitionData {
+  direct_competitors?: Array<{ name: string; strengths?: string[]; weaknesses?: string[]; positioning?: string }>;
+  indirect_alternatives?: string[];
+  porters_five_forces?: Array<{ force: string; threat_level?: string; description?: string }>;
+  positioning_gaps?: string[];
+  competitive_advantage?: string;
+}
+
+function buildCompetitionPdfHtml(idea: Idea, raw: string | null): string {
+  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
+  let data: PdfCompetitionData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") data = p as PdfCompetitionData;
+  } catch { /* render what we have */ }
+
+  const levelColor = (level?: string) => {
+    const l = (level ?? "").toLowerCase();
+    if (l === "high") return "#dc2626";
+    if (l === "medium") return "#f59e0b";
+    return "#15803d";
+  };
+
+  const competitorsHtml = data.direct_competitors?.length ? `
+    <section>
+      <h2>Direct Competitors</h2>
+      <div class="grid2">
+        ${data.direct_competitors.map((comp, i) => `
+          <div class="card">
+            <h4>${esc(comp.name)}</h4>
+            ${comp.positioning ? `<p class="subtext"><em>${esc(comp.positioning)}</em></p>` : ""}
+            ${comp.strengths?.length ? `<div class="metric"><span class="metric-label">Strengths</span>${strList(comp.strengths)}</div>` : ""}
+            ${comp.weaknesses?.length ? `<div class="metric"><span class="metric-label">Weaknesses</span>${strList(comp.weaknesses)}</div>` : ""}
+          </div>
+        `).join("")}
+      </div>
+    </section>` : "";
+
+  const indirectHtml = data.indirect_alternatives?.length ? `
+    <section>
+      <h2>Indirect Alternatives</h2>
+      ${strList(data.indirect_alternatives)}
+    </section>` : "";
+
+  const forcesHtml = data.porters_five_forces?.length ? `
+    <section>
+      <h2>Porter's Five Forces</h2>
+      <div class="forces-grid">
+        ${data.porters_five_forces.map((force) => {
+          const color = levelColor(force.threat_level);
+          return `
+            <div class="force-card" style="border-left: 4px solid ${color};">
+              <h4>${esc(force.force)}</h4>
+              ${force.threat_level ? `<div style="font-size:8pt;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.06em;margin:4px 0;">${esc(force.threat_level)}</div>` : ""}
+              ${force.description ? `<p class="subtext">${esc(force.description)}</p>` : ""}
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </section>` : "";
+
+  const gapsHtml = data.positioning_gaps?.length ? `
+    <section>
+      <h2>Positioning Gaps</h2>
+      ${strList(data.positioning_gaps)}
+    </section>` : "";
+
+  const advHtml = data.competitive_advantage ? `
+    <section>
+      <h2>Competitive Advantage</h2>
+      <p>${esc(data.competitive_advantage)}</p>
+    </section>` : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>${esc(idea.title ?? "Idea")} — Competition</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
+  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
+  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
+  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
+  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
+  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
+  section { break-inside: avoid; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
+  .metric { margin: 6px 0; }
+  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; display: block; margin-bottom: 2px; }
+  .subtext { font-size: 9.5pt; color: #555; margin: 4px 0; }
+  .forces-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .force-card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; background: #fafafa; }
+  ul, ol { padding-left: 18px; margin: 4px 0; }
+  li { margin-bottom: 2px; font-size: 10pt; }
+  @page { size: A4; margin: 1.5cm 2cm; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+  <h1>${esc(idea.title ?? "Untitled Idea")} — Competition</h1>
+  ${date ? `<p class="meta-line">${date}</p>` : ""}
+  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
+  ${competitorsHtml}
+  ${indirectHtml}
+  ${forcesHtml}
+  ${gapsHtml}
+  ${advHtml}
+</body>
+</html>`;
+}
+
+interface PdfMarketData {
+  tam?: string;
+  sam?: string;
+  som?: string;
+  market_size_confidence?: string;
+  growth_rate?: string;
+  timing_assessment?: string;
+  opportunity_score?: string;
+  pestel_analysis?: Array<{ factor: string; impact?: string; description?: string }>;
+  market_trends?: string[];
+}
+
+function buildMarketPdfHtml(idea: Idea, raw: string | null): string {
+  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
+  let data: PdfMarketData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") data = p as PdfMarketData;
+  } catch { /* render what we have */ }
+
+  const marketSizeHtml = (data.tam || data.sam || data.som) ? `
+    <section>
+      <h2>Market Size (TAM/SAM/SOM)</h2>
+      <div class="market-funnel">
+        ${data.tam ? `<div class="funnel-level tam"><div class="level-label">TAM (Total)</div><div class="level-value">${esc(data.tam)}</div></div>` : ""}
+        ${data.sam ? `<div class="funnel-level sam"><div class="level-label">SAM (Serviceable)</div><div class="level-value">${esc(data.sam)}</div></div>` : ""}
+        ${data.som ? `<div class="funnel-level som"><div class="level-label">SOM (Obtainable)</div><div class="level-value">${esc(data.som)}</div></div>` : ""}
+      </div>
+    </section>` : "";
+
+  const opportunityHtml = data.opportunity_score ? `
+    <section>
+      <div class="opportunity-banner">
+        <div class="opportunity-label">Opportunity Score</div>
+        <div class="opportunity-score">${esc(data.opportunity_score)}</div>
+      </div>
+    </section>` : "";
+
+  const timingHtml = data.timing_assessment ? `
+    <section>
+      <h2>Timing Assessment</h2>
+      <p>${esc(data.timing_assessment)}</p>
+    </section>` : "";
+
+  const pestelHtml = data.pestel_analysis?.length ? `
+    <section>
+      <h2>PESTEL Analysis</h2>
+      <div class="grid3">
+        ${data.pestel_analysis.map((item) => `
+          <div class="pestel-card">
+            <h4>${esc(item.factor)}</h4>
+            ${item.impact ? `<div style="font-size:8pt;font-weight:700;color:#f59e0b;text-transform:uppercase;margin:4px 0;">Impact: ${esc(item.impact)}</div>` : ""}
+            ${item.description ? `<p class="subtext">${esc(item.description)}</p>` : ""}
+          </div>
+        `).join("")}
+      </div>
+    </section>` : "";
+
+  const trendsHtml = data.market_trends?.length ? `
+    <section>
+      <h2>Market Trends</h2>
+      ${strList(data.market_trends)}
+    </section>` : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>${esc(idea.title ?? "Idea")} — Market</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
+  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
+  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
+  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
+  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
+  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
+  section { break-inside: avoid; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .market-funnel { display: flex; flex-direction: column; gap: 8px; }
+  .funnel-level { border-radius: 6px; padding: 12px; border: 1px solid #e5e7eb; }
+  .tam { background: #fef3c7; border-color: #fcd34d; }
+  .sam { background: #fef08a; border-color: #fde047; }
+  .som { background: #feef5e; border-color: #facc15; }
+  .level-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #92400e; letter-spacing: .06em; }
+  .level-value { font-size: 11pt; font-weight: 600; color: #111; margin-top: 4px; }
+  .opportunity-banner { background: #f0fdf4; border: 2px solid #bbf7d0; border-radius: 8px; padding: 16px; text-align: center; }
+  .opportunity-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #15803d; letter-spacing: .06em; }
+  .opportunity-score { font-size: 24pt; font-weight: 700; color: #15803d; margin-top: 4px; }
+  .pestel-card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; background: #fafafa; }
+  .subtext { font-size: 9.5pt; color: #555; margin: 4px 0; }
+  ul, ol { padding-left: 18px; margin: 4px 0; }
+  li { margin-bottom: 2px; font-size: 10pt; }
+  @page { size: A4; margin: 1.5cm 2cm; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+  <h1>${esc(idea.title ?? "Untitled Idea")} — Market Potential</h1>
+  ${date ? `<p class="meta-line">${date}</p>` : ""}
+  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
+  ${opportunityHtml}
+  ${marketSizeHtml}
+  ${timingHtml}
+  ${pestelHtml}
+  ${trendsHtml}
+</body>
+</html>`;
+}
+
+interface PdfBusinessModelData {
+  business_model_canvas?: Record<string, string>;
+  revenue_streams?: Array<{ stream: string; description?: string; potential?: string }>;
+  pricing_strategy?: string;
+  cost_structure?: string;
+  summary?: string;
+}
+
+function buildBusinessModelPdfHtml(idea: Idea, raw: string | null): string {
+  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
+  let data: PdfBusinessModelData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") data = p as PdfBusinessModelData;
+  } catch { /* render what we have */ }
+
+  const canvasHtml = data.business_model_canvas ? `
+    <section>
+      <h2>Business Model Canvas</h2>
+      <div class="canvas-grid">
+        ${["key_partners", "key_activities", "key_resources", "value_propositions", "customer_segments", "customer_relationships", "channels", "cost_structure", "revenue_streams"]
+          .map((block, i) => {
+            const colors = ["bg-blue-50", "bg-purple-50", "bg-indigo-50", "bg-red-50", "bg-green-50", "bg-yellow-50", "bg-orange-50", "bg-pink-50", "bg-cyan-50"];
+            const value = data.business_model_canvas?.[block] || "";
+            const label = block.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+            return value ? `
+              <div class="canvas-block ${colors[i % colors.length]}">
+                <div class="canvas-label">${esc(label)}</div>
+                <div class="canvas-content">${esc(value).split("\n").map((line) => `<div>${esc(line)}</div>`).join("")}</div>
+              </div>
+            ` : "";
+          }).join("")}
+      </div>
+    </section>` : "";
+
+  const revenueHtml = data.revenue_streams?.length ? `
+    <section>
+      <h2>Revenue Streams</h2>
+      <div class="grid2">
+        ${data.revenue_streams.map((stream) => `
+          <div class="card">
+            <h4>${esc(stream.stream)}</h4>
+            ${stream.description ? `<p class="subtext">${esc(stream.description)}</p>` : ""}
+            ${stream.potential ? `<div class="metric"><span class="metric-label">Potential</span><span>${esc(stream.potential)}</span></div>` : ""}
+          </div>
+        `).join("")}
+      </div>
+    </section>` : "";
+
+  const pricingHtml = data.pricing_strategy ? `
+    <section>
+      <h2>Pricing Strategy</h2>
+      <p>${esc(data.pricing_strategy)}</p>
+    </section>` : "";
+
+  const costHtml = data.cost_structure ? `
+    <section>
+      <h2>Cost Structure</h2>
+      <p>${esc(data.cost_structure)}</p>
+    </section>` : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>${esc(idea.title ?? "Idea")} — Business Model</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
+  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
+  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
+  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
+  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
+  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
+  section { break-inside: avoid; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
+  .metric { margin: 6px 0; }
+  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; display: block; margin-bottom: 2px; }
+  .subtext { font-size: 9.5pt; color: #555; margin: 4px 0; }
+  .canvas-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .canvas-block { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; }
+  .canvas-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; margin-bottom: 6px; }
+  .canvas-content { font-size: 9pt; color: #333; }
+  .bg-blue-50 { background: #eff6ff; }
+  .bg-purple-50 { background: #f5f3ff; }
+  .bg-indigo-50 { background: #f0f4ff; }
+  .bg-red-50 { background: #fef2f2; }
+  .bg-green-50 { background: #f0fdf4; }
+  .bg-yellow-50 { background: #fefce8; }
+  .bg-orange-50 { background: #fff7ed; }
+  .bg-pink-50 { background: #fdf2f8; }
+  .bg-cyan-50 { background: #ecfdf5; }
+  @page { size: A4; margin: 1.5cm 2cm; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+  <h1>${esc(idea.title ?? "Untitled Idea")} — Business Model</h1>
+  ${date ? `<p class="meta-line">${date}</p>` : ""}
+  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
+  ${data.summary ? `<section><h2>Summary</h2><p>${esc(data.summary)}</p></section>` : ""}
+  ${canvasHtml}
+  ${revenueHtml}
+  ${pricingHtml}
+  ${costHtml}
+</body>
+</html>`;
+}
+
+interface PdfProblemsData {
+  problems?: Array<{ problem: string; severity?: string; impact?: string; affected_users?: string }>;
+  risks?: Array<{ risk: string; probability?: string; impact?: string; mitigation?: string }>;
+  assumptions?: Array<{ assumption: string; criticality?: string; validation?: string }>;
+  summary?: string;
+}
+
+function buildProblemsRiskPdfHtml(idea: Idea, raw: string | null): string {
+  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
+  let data: PdfProblemsData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") data = p as PdfProblemsData;
+  } catch { /* render what we have */ }
+
+  const severityColor = (level?: string) => {
+    const l = (level ?? "").toLowerCase();
+    if (l === "critical" || l === "high") return "#dc2626";
+    if (l === "medium") return "#f59e0b";
+    return "#15803d";
+  };
+
+  const problemsHtml = data.problems?.length ? `
+    <section>
+      <h2>Problems</h2>
+      <div class="grid2">
+        ${data.problems.map((p, i) => `
+          <div class="card">
+            <h4>${esc(p.problem)}</h4>
+            ${p.severity ? `<div style="font-size:8pt;font-weight:700;color:${severityColor(p.severity)};text-transform:uppercase;margin:4px 0;">${esc(p.severity)}</div>` : ""}
+            ${p.impact ? `<div class="metric"><span class="metric-label">Impact</span><span class="subtext">${esc(p.impact)}</span></div>` : ""}
+            ${p.affected_users ? `<div class="metric"><span class="metric-label">Affected</span><span class="subtext">${esc(p.affected_users)}</span></div>` : ""}
+          </div>
+        `).join("")}
+      </div>
+    </section>` : "";
+
+  const risksHtml = data.risks?.length ? `
+    <section>
+      <h2>Key Risks</h2>
+      <div class="grid2">
+        ${data.risks.map((r) => `
+          <div class="card">
+            <h4>${esc(r.risk)}</h4>
+            ${r.probability ? `<div class="metric"><span class="metric-label">Probability</span><span class="subtext">${esc(r.probability)}</span></div>` : ""}
+            ${r.impact ? `<div class="metric"><span class="metric-label">Impact</span><span class="subtext">${esc(r.impact)}</span></div>` : ""}
+            ${r.mitigation ? `<div class="metric"><span class="metric-label">Mitigation</span><span class="subtext">${esc(r.mitigation)}</span></div>` : ""}
+          </div>
+        `).join("")}
+      </div>
+    </section>` : "";
+
+  const assumptionsHtml = data.assumptions?.length ? `
+    <section>
+      <h2>Key Assumptions</h2>
+      <div class="grid2">
+        ${data.assumptions.map((a) => `
+          <div class="card">
+            <h4>${esc(a.assumption)}</h4>
+            ${a.criticality ? `<div class="metric"><span class="metric-label">Criticality</span><span class="subtext">${esc(a.criticality)}</span></div>` : ""}
+            ${a.validation ? `<div class="metric"><span class="metric-label">Validation</span><span class="subtext">${esc(a.validation)}</span></div>` : ""}
+          </div>
+        `).join("")}
+      </div>
+    </section>` : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>${esc(idea.title ?? "Idea")} — Risk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
+  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
+  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
+  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
+  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
+  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
+  section { break-inside: avoid; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
+  .metric { margin: 6px 0; }
+  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; display: block; margin-bottom: 2px; }
+  .subtext { font-size: 9.5pt; color: #555; }
+  @page { size: A4; margin: 1.5cm 2cm; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+  <h1>${esc(idea.title ?? "Untitled Idea")} — Risk & Problems</h1>
+  ${date ? `<p class="meta-line">${date}</p>` : ""}
+  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
+  ${data.summary ? `<section><h2>Summary</h2><p>${esc(data.summary)}</p></section>` : ""}
+  ${problemsHtml}
+  ${risksHtml}
+  ${assumptionsHtml}
+</body>
+</html>`;
+}
+
+interface PdfFinancialData {
+  break_even?: { breakeven_point?: string; timeframe?: string; assumptions?: string };
+  monthly_projections?: Array<{ month?: string | number; customers?: number; revenue?: number; costs?: number; profit?: number }>;
+  ltv_cac_ratio?: string;
+  ltv?: string;
+  cac?: string;
+  payback_period?: string;
+  overall_viability?: string;
+  unit_economics_summary?: string;
+}
+
+function buildFinancialPdfHtml(idea: Idea, raw: string | null): string {
+  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
+  let data: PdfFinancialData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") data = p as PdfFinancialData;
+  } catch { /* render what we have */ }
+
+  const metricsHtml = (data.ltv || data.cac || data.ltv_cac_ratio || data.payback_period) ? `
+    <section>
+      <h2>Unit Economics Metrics</h2>
+      <div class="metrics-grid">
+        ${data.ltv ? `<div class="metric-box"><div class="metric-label">LTV</div><div class="metric-value">${esc(data.ltv)}</div></div>` : ""}
+        ${data.cac ? `<div class="metric-box"><div class="metric-label">CAC</div><div class="metric-value">${esc(data.cac)}</div></div>` : ""}
+        ${data.ltv_cac_ratio ? `<div class="metric-box"><div class="metric-label">LTV:CAC Ratio</div><div class="metric-value">${esc(data.ltv_cac_ratio)}</div></div>` : ""}
+        ${data.payback_period ? `<div class="metric-box"><div class="metric-label">Payback Period</div><div class="metric-value">${esc(data.payback_period)}</div></div>` : ""}
+      </div>
+    </section>` : "";
+
+  const beHtml = data.break_even ? `
+    <section>
+      <h2>Break-Even Analysis</h2>
+      <div class="card">
+        ${data.break_even.breakeven_point ? `<div class="metric"><span class="metric-label">Break-Even Point</span><span>${esc(data.break_even.breakeven_point)}</span></div>` : ""}
+        ${data.break_even.timeframe ? `<div class="metric"><span class="metric-label">Timeframe</span><span>${esc(data.break_even.timeframe)}</span></div>` : ""}
+        ${data.break_even.assumptions ? `<div class="metric"><span class="metric-label">Assumptions</span><p class="subtext">${esc(data.break_even.assumptions)}</p></div>` : ""}
+      </div>
+    </section>` : "";
+
+  const projectionsHtml = data.monthly_projections?.length ? `
+    <section>
+      <h2>Monthly Projections</h2>
+      <table class="projections-table">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>Customers</th>
+            <th>Revenue</th>
+            <th>Costs</th>
+            <th>Profit</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.monthly_projections.slice(0, 12).map((p) => `
+            <tr>
+              <td>${esc(String(p.month ?? "—"))}</td>
+              <td>${p.customers ?? "—"}</td>
+              <td>$${p.revenue ?? "—"}</td>
+              <td>$${p.costs ?? "—"}</td>
+              <td style="color:${(p.profit ?? 0) >= 0 ? "#15803d" : "#dc2626"};font-weight:600;">$${p.profit ?? "—"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </section>` : "";
+
+  const viabilityHtml = data.overall_viability ? `
+    <section>
+      <h2>Overall Viability Assessment</h2>
+      <p>${esc(data.overall_viability)}</p>
+    </section>` : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>${esc(idea.title ?? "Idea")} — Financial</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
+  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
+  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
+  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
+  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
+  section { break-inside: avoid; }
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+  .metric-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 10px; text-align: center; }
+  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #92400e; letter-spacing: .06em; margin-bottom: 4px; }
+  .metric-value { font-size: 13pt; font-weight: 700; color: #1a1a1a; }
+  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
+  .metric { margin: 8px 0; }
+  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; display: block; margin-bottom: 2px; }
+  .subtext { font-size: 9.5pt; color: #555; }
+  .projections-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+  .projections-table th { text-align: left; font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; padding: 6px 8px; border-bottom: 2px solid #e5e7eb; background: #f9fafb; }
+  .projections-table td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; }
+  @page { size: A4; margin: 1.5cm 2cm; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+  <h1>${esc(idea.title ?? "Untitled Idea")} — Unit Economics & Financial</h1>
+  ${date ? `<p class="meta-line">${date}</p>` : ""}
+  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
+  ${data.unit_economics_summary ? `<section><h2>Summary</h2><p>${esc(data.unit_economics_summary)}</p></section>` : ""}
+  ${metricsHtml}
+  ${beHtml}
+  ${projectionsHtml}
+  ${viabilityHtml}
+</body>
+</html>`;
+}
+
+interface PdfStrategyData {
+  executive_summary?: string;
+  vision?: string;
+  mission?: string;
+  core_values?: string[];
+  goals?: Array<{ goal: string; timeline?: string; kpis?: string }>;
+  success_metrics?: string[];
+  strategic_focus?: string;
+}
+
+function buildStrategyPdfHtml(idea: Idea, raw: string | null): string {
+  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
+  let data: PdfStrategyData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") data = p as PdfStrategyData;
+  } catch { /* render what we have */ }
+
+  const goalsHtml = data.goals?.length ? `
+    <section>
+      <h2>Strategic Goals</h2>
+      <div class="goals-list">
+        ${data.goals.map((g, i) => `
+          <div class="goal-item">
+            <div class="goal-number">${i + 1}</div>
+            <div class="goal-content">
+              <h4>${esc(g.goal)}</h4>
+              ${g.timeline ? `<div class="metric"><span class="metric-label">Timeline</span><span class="subtext">${esc(g.timeline)}</span></div>` : ""}
+              ${g.kpis ? `<div class="metric"><span class="metric-label">KPIs</span><span class="subtext">${esc(g.kpis)}</span></div>` : ""}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </section>` : "";
+
+  const coreValuesHtml = data.core_values?.length ? `
+    <section>
+      <h2>Core Values</h2>
+      <div class="values-list">
+        ${data.core_values.map((v) => `<div class="value-item">• ${esc(v)}</div>`).join("")}
+      </div>
+    </section>` : "";
+
+  const metricsHtml = data.success_metrics?.length ? `
+    <section>
+      <h2>Success Metrics</h2>
+      ${strList(data.success_metrics)}
+    </section>` : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>${esc(idea.title ?? "Idea")} — Strategy</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
+  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
+  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
+  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
+  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
+  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
+  section { break-inside: avoid; }
+  .goals-list { display: flex; flex-direction: column; gap: 10px; }
+  .goal-item { display: flex; gap: 12px; align-items: flex-start; }
+  .goal-number { min-width: 26px; height: 26px; background: #f59e0b; color: #fff; border-radius: 999px; font-size: 9pt; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .goal-content { flex: 1; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; background: #fafafa; }
+  .metric { margin: 6px 0; }
+  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; display: block; margin-bottom: 2px; }
+  .subtext { font-size: 9.5pt; color: #555; }
+  .values-list { display: flex; flex-direction: column; gap: 6px; }
+  .value-item { font-size: 10pt; color: #333; }
+  ul, ol { padding-left: 18px; margin: 4px 0; }
+  li { margin-bottom: 2px; font-size: 10pt; }
+  @page { size: A4; margin: 1.5cm 2cm; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+  <h1>${esc(idea.title ?? "Untitled Idea")} — Strategy</h1>
+  ${date ? `<p class="meta-line">${date}</p>` : ""}
+  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
+  ${data.executive_summary ? `<section><h2>Executive Summary</h2><p>${esc(data.executive_summary)}</p></section>` : ""}
+  ${data.vision ? `<section><h2>Vision</h2><p>${esc(data.vision)}</p></section>` : ""}
+  ${data.mission ? `<section><h2>Mission</h2><p>${esc(data.mission)}</p></section>` : ""}
+  ${coreValuesHtml}
+  ${goalsHtml}
+  ${metricsHtml}
+  ${data.strategic_focus ? `<section><h2>Strategic Focus</h2><p>${esc(data.strategic_focus)}</p></section>` : ""}
+</body>
+</html>`;
+}
+
+function buildFullAnalysisPdfHtml(idea: Idea, sections: ReturnType<typeof useAiPipeline>["sections"]): string {
+  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
+
+  const strategyHtml = sections.ideaStrategy.data ? buildStrategySection(sections.ideaStrategy.data) : "";
+  const customersHtml = sections.customers.data ? buildCustomersSection(sections.customers.data) : "";
+  const competitionHtml = sections.competition.data ? buildCompetitionSection(sections.competition.data) : "";
+  const marketHtml = sections.marketPotential.data ? buildMarketSection(sections.marketPotential.data) : "";
+  const businessModelHtml = sections.businessModel.data ? buildBusinessModelSection(sections.businessModel.data) : "";
+  const mvpHtml = sections.mvpPlanning.data ? buildMvpSection(sections.mvpPlanning.data) : "";
+  const problemsHtml = sections.problems.data ? buildProblemsSection(sections.problems.data) : "";
+  const financialHtml = sections.unitEconomics.data ? buildFinancialSection(sections.unitEconomics.data) : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>${esc(idea.title ?? "Idea")} — Complete Analysis</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
+  h1 { font-size: 24pt; font-weight: 700; margin-bottom: 4px; }
+  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
+  .desc { color: #333; font-size: 10pt; margin-bottom: 28px; max-width: 700px; white-space: pre-wrap; }
+  .meta-table { margin-bottom: 28px; }
+  .meta-table tr td { padding: 4px 16px 4px 0; font-size: 10pt; }
+  .meta-table td:first-child { font-weight: 600; color: #666; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .05em; width: 100px; }
+  h2 { font-size: 13pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 6px; margin: 28px 0 14px; color: #1a1a1a; page-break-after: avoid; }
+  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
+  section { break-inside: avoid; margin-bottom: 4px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
+  .card-id { font-size: 8pt; font-weight: 700; color: #9ca3af; letter-spacing: .1em; margin-bottom: 4px; }
+  .metric { margin: 8px 0; }
+  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; display: block; margin-bottom: 2px; }
+  .subtext { font-size: 9.5pt; color: #555; margin: 4px 0; }
+  .tag { display: inline-block; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 999px; padding: 2px 10px; font-size: 9pt; margin-right: 6px; margin-bottom: 4px; }
+  .tag.amber { background: #fffbeb; border-color: #fde68a; color: #92400e; font-weight: 600; }
+  ul, ol { padding-left: 18px; margin: 6px 0; }
+  li { margin-bottom: 3px; font-size: 10pt; }
+  a { color: #d97706; text-decoration: underline; word-break: break-all; }
+  .table-wrapper { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 8px 0; }
+  th { text-align: left; font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; padding: 6px 10px; border-bottom: 2px solid #e5e7eb; background: #f9fafb; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+  .phase { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+  .phase-num { min-width: 28px; height: 28px; background: #f59e0b; color: #fff; border-radius: 999px; font-size: 9pt; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .phase-body { flex: 1; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; background: #fafafa; }
+  @page { size: A4; margin: 1.5cm 2cm; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+  <h1>${esc(idea.title ?? "Untitled Idea")} — Complete Analysis</h1>
+  ${date ? `<p class="meta-line">${date}</p>` : ""}
+  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
+  ${idea.budget || idea.feasibility || idea.status ? `
+    <table class="meta-table">
+      <tbody>
+        ${idea.budget != null ? `<tr><td>Budget</td><td>$${idea.budget.toLocaleString()}</td></tr>` : ""}
+        ${idea.feasibility != null ? `<tr><td>Feasibility</td><td>${idea.feasibility} / 10</td></tr>` : ""}
+        ${idea.status ? `<tr><td>Status</td><td>${esc(idea.status)}</td></tr>` : ""}
+      </tbody>
+    </table>
+  ` : ""}
+  ${strategyHtml}
+  ${customersHtml}
+  ${competitionHtml}
+  ${marketHtml}
+  ${businessModelHtml}
+  ${mvpHtml}
+  ${problemsHtml}
+  ${financialHtml}
+</body>
+</html>`;
+}
+
+// ─── PDF Section Renderers ────────────────────────────────────────────────────
+
+function buildStrategySection(raw: string | null): string {
+  let data: PdfStrategyData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") data = p as PdfStrategyData;
+  } catch { /* render what we have */ }
+
+  if (!data.executive_summary && !data.vision && !data.goals?.length) return "";
+
+  const goalsHtml = data.goals?.length ? `
+    ${data.goals.map((g, i) => `
+      <div class="phase">
+        <div class="phase-num">${i + 1}</div>
+        <div class="phase-body">
+          <h4>${esc(g.goal)}</h4>
+          ${g.timeline ? `<div class="metric"><span class="metric-label">Timeline</span><span class="subtext">${esc(g.timeline)}</span></div>` : ""}
+          ${g.kpis ? `<div class="metric"><span class="metric-label">KPIs</span><span class="subtext">${esc(g.kpis)}</span></div>` : ""}
+        </div>
+      </div>
+    `).join("")}
+  ` : "";
+
+  return `
+    <section>
+      <h2>Strategy</h2>
+      ${data.executive_summary ? `<p>${esc(data.executive_summary)}</p>` : ""}
+      ${data.vision ? `<div style="margin-top:12px;"><strong>Vision:</strong> ${esc(data.vision)}</div>` : ""}
+      ${data.mission ? `<div style="margin-top:8px;"><strong>Mission:</strong> ${esc(data.mission)}</div>` : ""}
+      ${goalsHtml}
+    </section>
+  `;
+}
+
+function buildCustomersSection(raw: string | null): string {
+  let data: PdfCustomersData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") data = p as PdfCustomersData;
+  } catch { /* render what we have */ }
+
+  if (!data.customer_segments?.length && !data.acquisition_channels?.length) return "";
+
+  return `
+    <section>
+      <h2>Customers</h2>
+      ${data.customer_segments?.length ? `
+        <div class="grid2">
+          ${data.customer_segments.map((seg, i) => `
+            <div class="card">
+              <div class="card-id">${esc(seg.id ?? `S${i + 1}`)}</div>
+              <h4>${esc(seg.name)}</h4>
+              ${seg.description ? `<p class="subtext">${esc(seg.description)}</p>` : ""}
+              ${seg.pain_intensity ? `<div class="metric"><span class="metric-label">Pain</span><span class="subtext">${esc(seg.pain_intensity)}</span></div>` : ""}
+              ${seg.size_estimate ? `<div class="metric"><span class="metric-label">Size</span><span class="subtext">${esc(seg.size_estimate)}</span></div>` : ""}
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
+      ${data.acquisition_channels?.length ? `
+        <div style="margin-top:12px;">
+          <h4 style="margin-top:0;">Acquisition Channels</h4>
+          <ul>${data.acquisition_channels.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
+        </div>
+      ` : ""}
+    </section>
+  `;
+}
+
+function buildCompetitionSection(raw: string | null): string {
+  let data: PdfCompetitionData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") data = p as PdfCompetitionData;
+  } catch { /* render what we have */ }
+
+  if (!data.direct_competitors?.length && !data.porters_five_forces?.length) return "";
+
+  return `
+    <section>
+      <h2>Competition</h2>
+      ${data.direct_competitors?.length ? `
+        <div class="grid2">
+          ${data.direct_competitors.map((comp) => `
+            <div class="card">
+              <h4>${esc(comp.name)}</h4>
+              ${comp.positioning ? `<p class="subtext"><em>${esc(comp.positioning)}</em></p>` : ""}
+              ${comp.strengths?.length ? `<div class="metric"><span class="metric-label">Strengths</span><ul style="margin:2px 0;">${comp.strengths.map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div>` : ""}
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
+      ${data.porters_five_forces?.length ? `
+        <div style="margin-top:12px;">
+          <h4>Porter's Five Forces</h4>
+          <div class="grid3">
+            ${data.porters_five_forces.map((f) => `
+              <div class="card">
+                <h4 style="font-size:9pt;">${esc(f.force)}</h4>
+                ${f.threat_level ? `<div style="font-size:8pt;font-weight:700;color:#f59e0b;margin:4px 0;">${esc(f.threat_level)}</div>` : ""}
+                ${f.description ? `<p class="subtext" style="font-size:8.5pt;">${esc(f.description)}</p>` : ""}
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      ` : ""}
+    </section>
+  `;
+}
+
+function buildMarketSection(raw: string | null): string {
+  let data: PdfMarketData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") data = p as PdfMarketData;
+  } catch { /* render what we have */ }
+
+  if (!data.tam && !data.opportunity_score && !data.pestel_analysis?.length) return "";
+
+  return `
+    <section>
+      <h2>Market Potential</h2>
+      ${(data.tam || data.sam || data.som) ? `
+        <div>
+          ${data.tam ? `<div><strong>TAM:</strong> ${esc(data.tam)}</div>` : ""}
+          ${data.sam ? `<div><strong>SAM:</strong> ${esc(data.sam)}</div>` : ""}
+          ${data.som ? `<div><strong>SOM:</strong> ${esc(data.som)}</div>` : ""}
+        </div>
+      ` : ""}
+      ${data.opportunity_score ? `<div style="margin-top:8px;"><strong>Opportunity Score:</strong> ${esc(data.opportunity_score)}</div>` : ""}
+      ${data.pestel_analysis?.length ? `
+        <div style="margin-top:12px;">
+          <h4>PESTEL Analysis</h4>
+          <div class="grid3">
+            ${data.pestel_analysis.map((item) => `
+              <div class="card">
+                <h4 style="font-size:9pt;">${esc(item.factor)}</h4>
+                ${item.impact ? `<div style="font-size:8.5pt;color:#f59e0b;font-weight:600;">${esc(item.impact)}</div>` : ""}
+                ${item.description ? `<p class="subtext" style="font-size:8.5pt;">${esc(item.description)}</p>` : ""}
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      ` : ""}
+    </section>
+  `;
+}
+
+function buildBusinessModelSection(raw: string | null): string {
+  let data: PdfBusinessModelData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") data = p as PdfBusinessModelData;
+  } catch { /* render what we have */ }
+
+  if (!data.business_model_canvas && !data.revenue_streams?.length) return "";
+
+  return `
+    <section>
+      <h2>Business Model</h2>
+      ${data.revenue_streams?.length ? `
+        <div class="grid2">
+          ${data.revenue_streams.map((stream) => `
+            <div class="card">
+              <h4>${esc(stream.stream)}</h4>
+              ${stream.description ? `<p class="subtext">${esc(stream.description)}</p>` : ""}
+              ${stream.potential ? `<div class="metric"><span class="metric-label">Potential</span><span class="subtext">${esc(stream.potential)}</span></div>` : ""}
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
+      ${data.pricing_strategy ? `<div style="margin-top:12px;"><strong>Pricing:</strong> ${esc(data.pricing_strategy)}</div>` : ""}
+    </section>
+  `;
+}
+
+function buildMvpSection(raw: string | null): string {
+  let data: PdfMvpData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") data = p as PdfMvpData;
+  } catch { /* render what we have */ }
+
+  if (!data.mvp_goal && !data.riskiest_assumptions?.length && !data.core_user_flows?.length) return "";
+
+  const assumptionsHtml = data.riskiest_assumptions?.length ? `
+    <div style="margin-top:12px;">
+      <h4>Riskiest Assumptions</h4>
+      <div class="grid2">
+        ${data.riskiest_assumptions.map((a, i) => `
+          <div class="card">
+            <div class="card-id">${esc(a.id ?? `A${i + 1}`)}</div>
+            <p style="font-size:9.5pt;font-weight:500;">${esc(a.assumption)}</p>
+            ${a.risk_level ? `<div style="font-size:8pt;font-weight:700;color:#92400e;text-transform:uppercase;margin:6px 0;">${esc(a.risk_level)} risk</div>` : ""}
+            ${a.validation_method ? `<div class="metric"><span class="metric-label">Validation</span><span class="subtext">${esc(a.validation_method)}</span></div>` : ""}
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  ` : "";
+
+  return `
+    <section>
+      <h2>MVP Planning</h2>
+      ${data.mvp_goal ? `<p><strong>${esc(data.mvp_goal)}</strong></p>` : ""}
+      ${data.scope?.included?.length ? `
+        <div style="margin-top:12px;">
+          <h4>Scope (Included)</h4>
+          <ul>${data.scope.included.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>
+        </div>
+      ` : ""}
+      ${data.core_user_flows?.length ? `
+        <div style="margin-top:12px;">
+          <h4>User Flows</h4>
+          <div class="grid2">
+            ${data.core_user_flows.map((f, i) => `
+              <div class="card">
+                <div style="font-size:8.5pt;font-weight:700;background:#f3e8ff;color:#7e22ce;padding:4px 8px;border-radius:4px;width:fit-content;margin-bottom:6px;">${esc(f.id ?? `UF${i + 1}`)}</div>
+                <h4 style="font-size:9pt;">${esc(f.name)}</h4>
+                ${f.steps?.length ? `<ol style="font-size:8.5pt;">${f.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>` : ""}
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      ` : ""}
+      ${assumptionsHtml}
+    </section>
+  `;
+}
+
+function buildProblemsSection(raw: string | null): string {
+  let data: PdfProblemsData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") data = p as PdfProblemsData;
+  } catch { /* render what we have */ }
+
+  if (!data.problems?.length && !data.risks?.length) return "";
+
+  return `
+    <section>
+      <h2>Risk & Problems</h2>
+      ${data.problems?.length ? `
+        <div class="grid2">
+          ${data.problems.map((p, i) => `
+            <div class="card">
+              <h4 style="font-size:9pt;">${esc(p.problem)}</h4>
+              ${p.severity ? `<div style="font-size:8pt;font-weight:700;color:#dc2626;text-transform:uppercase;margin:4px 0;">${esc(p.severity)}</div>` : ""}
+              ${p.impact ? `<div class="metric"><span class="metric-label">Impact</span><span class="subtext" style="font-size:8.5pt;">${esc(p.impact)}</span></div>` : ""}
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
+      ${data.risks?.length ? `
+        <div style="margin-top:12px;">
+          <h4>Key Risks</h4>
+          <div class="grid2">
+            ${data.risks.map((r) => `
+              <div class="card">
+                <h4 style="font-size:9pt;">${esc(r.risk)}</h4>
+                ${r.probability ? `<div class="metric"><span class="metric-label">Probability</span><span class="subtext" style="font-size:8.5pt;">${esc(r.probability)}</span></div>` : ""}
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      ` : ""}
+    </section>
+  `;
+}
+
+function buildFinancialSection(raw: string | null): string {
+  let data: PdfFinancialData = {};
+  try {
+    const p = JSON.parse(raw ?? "");
+    if (p && typeof p === "object") data = p as PdfFinancialData;
+  } catch { /* render what we have */ }
+
+  if (!data.ltv && !data.cac && !data.monthly_projections?.length) return "";
+
+  return `
+    <section>
+      <h2>Unit Economics & Financial</h2>
+      ${(data.ltv || data.cac || data.ltv_cac_ratio) ? `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+          ${data.ltv ? `<div class="card" style="text-align:center;"><div class="metric-label">LTV</div><div style="font-size:13pt;font-weight:700;color:#1a1a1a;">${esc(data.ltv)}</div></div>` : ""}
+          ${data.cac ? `<div class="card" style="text-align:center;"><div class="metric-label">CAC</div><div style="font-size:13pt;font-weight:700;color:#1a1a1a;">${esc(data.cac)}</div></div>` : ""}
+          ${data.ltv_cac_ratio ? `<div class="card" style="text-align:center;"><div class="metric-label">LTV:CAC</div><div style="font-size:13pt;font-weight:700;color:#1a1a1a;">${esc(data.ltv_cac_ratio)}</div></div>` : ""}
+          ${data.payback_period ? `<div class="card" style="text-align:center;"><div class="metric-label">Payback</div><div style="font-size:13pt;font-weight:700;color:#1a1a1a;">${esc(data.payback_period)}</div></div>` : ""}
+        </div>
+      ` : ""}
+      ${data.monthly_projections?.length ? `
+        <div style="margin-top:12px;overflow-x:auto;">
+          <table>
+            <thead><tr><th>Month</th><th>Customers</th><th>Revenue</th><th>Costs</th><th>Profit</th></tr></thead>
+            <tbody>
+              ${data.monthly_projections.slice(0, 12).map((p) => `
+                <tr>
+                  <td>${esc(String(p.month ?? ""))}</td>
+                  <td>${p.customers ?? "—"}</td>
+                  <td>$${p.revenue ?? "—"}</td>
+                  <td>$${p.costs ?? "—"}</td>
+                  <td style="color:${(p.profit ?? 0) >= 0 ? "#15803d" : "#dc2626"};font-weight:600;">$${p.profit ?? "—"}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      ` : ""}
+    </section>
+  `;
+}
+
 function buildPdfHtml(idea: Idea, sections: ReturnType<typeof useAiPipeline>["sections"]): string {
   const metaRows = [
     idea.budget != null ? `<tr><td>Budget</td><td>$${idea.budget.toLocaleString()}</td></tr>` : "",
@@ -1414,6 +2563,20 @@ export default function IdeaDetailPage({
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [lastActiveInGroup, setLastActiveInGroup] = useState<Record<string, TabKey>>({
+    Setup: "overview",
+    Insights: "problems",
+    Planning: "businessModel",
+  });
+  const activeGroup = TAB_GROUPS.find(g => g.keys.includes(activeTab)) ?? TAB_GROUPS[0];
+  const handleTabChange = useCallback((key: TabKey) => {
+    const grp = TAB_GROUPS.find(g => g.keys.includes(key));
+    if (grp) setLastActiveInGroup(prev => ({ ...prev, [grp.label]: key }));
+    setActiveTab(key);
+  }, []);
+  const handleGroupClick = useCallback((grp: typeof TAB_GROUPS[0]) => {
+    handleTabChange(lastActiveInGroup[grp.label] ?? grp.keys[0]);
+  }, [lastActiveInGroup, handleTabChange]);
 
   const { sections, isRunning, hasRun, runError, runPipeline, runSection, regenerateSection, regenerateSectionCustom, fetchAll } = useAiPipeline(idea_id);
 
@@ -1461,11 +2624,7 @@ export default function IdeaDetailPage({
 
   const handleDownloadPDF = () => {
     if (!idea) return;
-    const isMvpTab = activeTab === "mvp";
-    const mvpData = isMvpTab ? sections.mvpPlanning.data : null;
-    const html = isMvpTab && mvpData
-      ? buildMvpPdfHtml(idea, mvpData)
-      : buildPdfHtml(idea, sections);
+    const html = buildFullAnalysisPdfHtml(idea, sections);
     const win = window.open("", "_blank");
     if (!win) return;
     win.document.open();
@@ -1527,12 +2686,12 @@ export default function IdeaDetailPage({
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
           {/* Title + date */}
           <div className="flex flex-col gap-2">
-            <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">{idea.title ?? "Untitled idea"}</h1>
-            <p className="text-base text-muted-foreground">{formatIdeaDate(idea.created_at)}</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{idea.title ?? "Untitled idea"}</h1>
+            <p className="text-sm text-muted-foreground">{formatIdeaDate(idea.created_at)}</p>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
             {/* Pipeline status */}
             {isRunning && (
               <span className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
@@ -1589,30 +2748,48 @@ export default function IdeaDetailPage({
 
           return (
             <>
+              {/* ── Tab bar (single horizontal scrollable row) ──────────────── */}
               <div className="sticky top-0 z-10 mb-6 py-2 bg-neutral-100 dark:bg-neutral-900 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-                <div className="px-2 py-1.5 bg-gray-200 dark:bg-neutral-800 rounded-lg flex items-center justify-center gap-2 overflow-x-auto scrollbar-hide">
+                <div className={cn(
+                  "px-2 py-1.5 bg-gray-200 dark:bg-neutral-800 rounded-lg flex items-center gap-2 overflow-x-auto",
+                  "[&::-webkit-scrollbar]:h-1.5",
+                  "[&::-webkit-scrollbar-track]:bg-transparent",
+                  "[&::-webkit-scrollbar-thumb]:rounded-full",
+                  "[&::-webkit-scrollbar-thumb]:bg-amber-400/70",
+                  "[&::-webkit-scrollbar-thumb:hover]:bg-amber-500",
+                )}>
                   {TABS.map(({ key, label }) => {
-                    const active = activeTab === key;
+                    const isActive = activeTab === key;
+                    const stateKey = key !== "overview"
+                      ? TAB_STATE_KEY[key as Exclude<TabKey, "overview">]
+                      : null;
+                    const hasData   = stateKey ? !!sections[stateKey].data    : false;
+                    const isLoading = stateKey ? sections[stateKey].isLoading : false;
                     return (
                       <button
                         key={key}
                         type="button"
                         onClick={() => setActiveTab(key)}
                         className={cn(
-                          "shrink-0 min-h-10 px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer whitespace-nowrap",
-                          active
+                          "shrink-0 min-h-10 px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5",
+                          isActive
                             ? "bg-white dark:bg-neutral-700 text-foreground shadow-sm border border-neutral-300 dark:border-neutral-600"
                             : "text-neutral-600 dark:text-neutral-400 hover:bg-white/50 dark:hover:bg-neutral-700/50"
                         )}
                       >
                         {label}
+                        {isLoading ? (
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                        ) : hasData ? (
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        ) : null}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Section header — title + action icons */}
+              {/* ── Section header card — title + action icons ───────────────── */}
               {activeSectionHasData && activeSectionKey && activeTab !== "overview" && TAB_SECTION_KEY[activeTab as Exclude<TabKey, "overview">] !== null && (
                 <div className="flex items-center justify-between px-4 py-2.5 mb-4 bg-card border border-border rounded-xl">
                   <span className="text-sm font-semibold text-foreground">

@@ -87,17 +87,6 @@ function forceLabel(key: string): string {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function SectionHeader() {
-  return (
-    <div className="flex items-center gap-2.5">
-      <div className="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
-        <Swords size={16} />
-      </div>
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Competition</h2>
-    </div>
-  );
-}
-
 function ForceLevelBadge({ level }: { level: string }) {
   const normalized = level.toLowerCase();
   if (normalized.includes("high"))
@@ -291,7 +280,6 @@ export function CompetitionSection({ data, isLoading, error }: SectionState) {
   if (!structured) {
     return (
       <div className="flex flex-col gap-4">
-        <SectionHeader />
         <div className="rounded-xl border border-border bg-card p-5">
           <pre className="text-sm text-foreground leading-relaxed whitespace-pre-wrap font-sans">{data}</pre>
         </div>
@@ -311,8 +299,6 @@ export function CompetitionSection({ data, isLoading, error }: SectionState) {
 
   return (
     <div className="flex flex-col gap-10">
-      <SectionHeader />
-
       {/* Summary / Conclusion */}
       {summary && (
         <section className="rounded-xl border border-border bg-card p-5">

@@ -3,6 +3,10 @@
 import { Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function toTitleCase(str: string): string {
+  return str.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export interface AiAnalysisSectionProps {
   title: string;
   icon: React.ReactNode;
@@ -23,10 +27,10 @@ export function AiAnalysisSection({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
+        <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 dark:text-amber-400">
           {icon}
         </div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>
+        <h2 className="text-xl font-semibold text-foreground">{title}</h2>
       </div>
 
       <div className={cn(
@@ -246,11 +250,11 @@ function JsonValue({ value, depth = 0 }: { value: unknown; depth?: number }) {
     if (entries.length === 0) return null;
 
     return (
-      <div className={cn("flex flex-col gap-4", depth > 0 && "gap-3")}>
+      <div className={cn("flex flex-col gap-5", depth > 0 && "gap-3")}>
         {entries.map(([key, val]) => (
           <div key={key} className="flex flex-col gap-1">
-            <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-              {key.replace(/_/g, " ")}
+            <p className="text-xs font-medium text-muted-foreground/80">
+              {toTitleCase(key.replace(/_/g, " "))}
             </p>
             <div className={cn("text-sm", depth > 0 && "pl-1")}>
               <JsonValue value={val} depth={depth + 1} />
