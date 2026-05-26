@@ -210,14 +210,14 @@ export function useAiPipeline(ideaId?: string) {
       if (!slug) return;
       setSection(key, { isLoading: true, error: null });
       try {
-        await api.post(`/ai/${slug}/regenerate`, {}, { timeout: 120_000 });
+        await api.post(`/ai/${slug}/regenerate`, ideaId ? { idea_id: ideaId } : {}, { timeout: 120_000 });
         await fetchSection(key);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Failed to regenerate this section.";
         setSection(key, { isLoading: false, error: msg });
       }
     },
-    [setSection, fetchSection]
+    [setSection, fetchSection, ideaId]
   );
 
   const regenerateSectionCustom = useCallback(
@@ -226,14 +226,14 @@ export function useAiPipeline(ideaId?: string) {
       if (!slug) return;
       setSection(key, { isLoading: true, error: null });
       try {
-        await api.post(`/ai/${slug}/regenerate-custom`, { custom_prompt: customPrompt }, { timeout: 120_000 });
+        await api.post(`/ai/${slug}/regenerate-custom`, { custom_prompt: customPrompt, ...(ideaId ? { idea_id: ideaId } : {}) }, { timeout: 120_000 });
         await fetchSection(key);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Failed to regenerate this section.";
         setSection(key, { isLoading: false, error: msg });
       }
     },
-    [setSection, fetchSection]
+    [setSection, fetchSection, ideaId]
   );
 
   return {

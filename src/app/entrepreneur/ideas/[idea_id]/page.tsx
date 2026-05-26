@@ -285,6 +285,11 @@ interface IdeaIntake {
   solution_assumption?: string;
   business_model?: string;
   region?: string;
+  launch_stack?: string;
+  why_you_can_do_it?: string;
+  first_7_day_test?: string;
+  estimated_startup_cost?: string;
+  risk_level?: string;
 }
 
 function IdeaEditChatModal({
@@ -407,18 +412,34 @@ function IdeaEditChatModal({
     }
   };
 
+  // Format intake fields into the same structured text the pipeline produces
+  const formatIntakeDescription = (intake: IdeaIntake): string => {
+    const lines: string[] = [];
+    if (intake.problem_assumption)   lines.push(`Problem it solves : ${intake.problem_assumption}`);
+    if (intake.target_users?.length) lines.push(`Target customer : ${Array.isArray(intake.target_users) ? intake.target_users.join(", ") : intake.target_users}`);
+    if (intake.solution_assumption)  lines.push(`How it works : ${intake.solution_assumption}`);
+    if (intake.launch_stack)         lines.push(`Launch stack : ${intake.launch_stack}`);
+    if (intake.business_model)       lines.push(`Business model : ${intake.business_model}`);
+    if (intake.why_you_can_do_it)    lines.push(`Why you can do it : ${intake.why_you_can_do_it}`);
+    if (intake.first_7_day_test)     lines.push(`First 7-day test : ${intake.first_7_day_test}`);
+    if (intake.estimated_startup_cost) lines.push(`Startup cost : ${intake.estimated_startup_cost}`);
+    if (intake.risk_level)           lines.push(`Risk level : ${intake.risk_level}`);
+    return lines.length ? lines.join("\n") : intake.idea_summary ?? "";
+  };
+
   const handleUpdateIdea = async () => {
     if (!readyIntake) return;
     setActionLoading(true);
     setActionError(null);
     try {
-      // 1. Update idea description with the new intake summary
-      await api.patch(`/ideas/${ideaId}`, {
-        description: readyIntake.idea_summary,
-      });
-      // 2. Clear all AI analysis for this idea so it can be re-run fresh
+      const description = formatIntakeDescription(readyIntake);
+      // 1. Update idea description with the structured intake
+      await api.patch(`/ideas/${ideaId}`, { description });
+      // 2. Seed the new idea context in BizifyAI
+      await api.post(`/ai/ideas/${ideaId}/seed-context`, { intake: readyIntake }).catch(() => {});
+      // 3. Clear all AI analysis so it can be re-run fresh
       await api.delete(`/ai/ideas/${ideaId}/analysis`);
-      // 3. Reset section state in the parent and close
+      // 4. Reset section state in the parent and close
       onSectionsReset();
       setApproveStep("done");
       setTimeout(() => onClose(), 800);
@@ -435,11 +456,11 @@ function IdeaEditChatModal({
     setActionError(null);
     try {
       const title = `${idea.title ?? "Idea"} (Refined)`;
-      const res = await api.post("/ideas/", {
-        title,
-        description: readyIntake.idea_summary,
-      });
+      const description = formatIntakeDescription(readyIntake);
+      const res = await api.post("/ideas/", { title, description });
       const newId: string = res.data.id;
+      // Seed BizifyAI with the new idea context before navigating
+      await api.post(`/ai/ideas/${newId}/seed-context`, { intake: readyIntake }).catch(() => {});
       onClose();
       router.push(`/entrepreneur/ideas/${newId}`);
     } catch {
@@ -600,7 +621,7 @@ const SECTION_CHAT_SLUG: Partial<Record<SectionKey, string>> = {
   mvpPlanning:     "mvp-planning",
   unitEconomics:   "unit-economics",
   goToMarket:      "go-to-market",
-  problems:        "problems",
+  // problems is NOT listed here — it has no standalone chat/regenerate in BizifyAI
 };
 
 const SECTION_LABEL: Partial<Record<SectionKey, string>> = {
@@ -1473,7 +1494,7 @@ export default function IdeaDetailPage({
               </div>
 
               {/* Section header — title + action icons */}
-              {activeSectionHasData && activeSectionKey && (
+              {activeSectionHasData && activeSectionKey && activeTab !== "overview" && TAB_SECTION_KEY[activeTab as Exclude<TabKey, "overview">] !== null && (
                 <div className="flex items-center justify-between px-4 py-2.5 mb-4 bg-card border border-border rounded-xl">
                   <span className="text-sm font-semibold text-foreground">
                     {TABS.find(t => t.key === activeTab)?.label}

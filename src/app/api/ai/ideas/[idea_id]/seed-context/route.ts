@@ -3,21 +3,23 @@ import axios from "axios";
 import { getBearerHeaders } from "@/lib/backend-auth";
 import { handleBackendError } from "@/lib/backend-error";
 
-export async function DELETE(
+export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ idea_id: string }> }
 ) {
   const { idea_id } = await params;
   const headers = getBearerHeaders(req);
+  let body: unknown;
+  try { body = await req.json(); } catch { body = {}; }
   try {
-    await axios.delete(
-      `${process.env.BACKEND_URL}/api/v1/ai/ideas/${idea_id}/analysis`,
-      { headers, timeout: 30_000 }
+    const { data } = await axios.post(
+      `${process.env.BACKEND_URL}/api/v1/ai/ideas/${idea_id}/seed-context`,
+      body,
+      { headers: { ...headers, "Content-Type": "application/json" }, timeout: 30_000 }
     );
-    return new NextResponse(null, { status: 204 });
+    return NextResponse.json(data);
   } catch (error: unknown) {
-    const { message, status } = handleBackendError(error, "Failed to clear idea analysis");
+    const { message, status } = handleBackendError(error, "Failed to seed idea context");
     return NextResponse.json({ error: message }, { status });
   }
 }
-
