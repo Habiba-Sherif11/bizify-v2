@@ -405,6 +405,7 @@ export function CustomersSection({ data, isLoading, error }: SectionState) {
   const {
     customer_segments = [],
     primary_segment,
+    customer_journey_map,
     personas = [],
     painPoints = [],
     journeyStages,
