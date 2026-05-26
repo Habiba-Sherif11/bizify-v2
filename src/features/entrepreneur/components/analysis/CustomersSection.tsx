@@ -379,6 +379,7 @@ export function CustomersSection({ data, isLoading, error }: SectionState) {
 
   const {
     customer_segments = [],
+    primary_segment,
     personas = [],
     painPoints = [],
     journeyStages,
@@ -394,6 +395,11 @@ export function CustomersSection({ data, isLoading, error }: SectionState) {
   const showSegments = customer_segments.length > 0;
   const showPersonas = !showSegments && personas.length > 0;
 
+  // Find the primary segment details
+  const primarySegment = primary_segment?.id
+    ? customer_segments.find((s) => s.id === primary_segment.id)
+    : customer_segments[0];
+
   return (
     <div className="flex flex-col gap-10">
       <SectionHeader />
@@ -402,6 +408,28 @@ export function CustomersSection({ data, isLoading, error }: SectionState) {
       {summary && (
         <section className="rounded-xl border border-border bg-card p-5">
           <p className="text-sm text-foreground leading-relaxed">{summary}</p>
+        </section>
+      )}
+
+      {/* Primary Segment Recommendation Banner */}
+      {showSegments && primarySegment && (
+        <section className="rounded-xl border-2 border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/10 px-5 py-4 flex gap-4">
+          <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">
+            #1
+          </div>
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-200">
+              Focus on: {primarySegment.name}
+            </p>
+            {primary_segment?.reason && (
+              <p className="text-sm text-amber-700 dark:text-amber-300 leading-relaxed">{primary_segment.reason}</p>
+            )}
+            {!primary_segment?.reason && primarySegment.why_they_care && (
+              <p className="text-sm text-amber-700 dark:text-amber-300 leading-relaxed">
+                They care most because: {primarySegment.why_they_care}
+              </p>
+            )}
+          </div>
         </section>
       )}
 

@@ -157,12 +157,25 @@ function OverviewSection({
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2 border-t border-border">
           <MetaStat label="Budget" value={idea.budget != null ? `$${idea.budget.toLocaleString()}` : "—"} />
-          <MetaStat label="Feasibility" value={idea.feasibility != null ? `${idea.feasibility} / 10` : "—"} />
-          <MetaStat label="Status" value={idea.status ?? "—"} />
+          {idea.feasibility != null
+            ? <FeasibilityMeter score={idea.feasibility} />
+            : <MetaStat label="Feasibility" value="—" />
+          }
+          <MetaStat
+            label="Status"
+            value={
+              idea.status === "draft"    ? "In Progress" :
+              idea.status === "active"   ? "Active" :
+              idea.status === "archived" ? "Archived" :
+              idea.status ?? "—"
+            }
+          />
         </div>
 
         {idea.skills && !Array.isArray(idea.skills) && (
-          <SkillsAnalysis skills={idea.skills as SkillsGap} />
+          <div className="border-t border-border pt-4">
+            <SkillsAnalysis skills={idea.skills as SkillsGap} />
+          </div>
         )}
       </div>
 
@@ -183,32 +196,103 @@ function MetaStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SkillsAnalysis({ skills }: { skills: SkillsGap }) {
-  const groups: { label: string; items: string[]; color: string }[] = [
-    { label: "Your Skills",      items: skills.your_skills     ?? [], color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
-    { label: "Required Skills",  items: skills.required_skills ?? [], color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-    { label: "Skill Gaps",       items: skills.skill_gaps      ?? [], color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
-  ].filter((g) => g.items.length > 0);
-
-  if (groups.length === 0) return null;
+function FeasibilityMeter({ score }: { score: number }) {
+  const pct = Math.min(Math.max((score / 10) * 100, 0), 100);
+  const color =
+    score >= 7 ? "bg-green-500" : score >= 5 ? "bg-amber-500" : "bg-red-500";
+  const textColor =
+    score >= 7 ? "text-green-600 dark:text-green-400" : score >= 5 ? "text-amber-600 dark:text-amber-400" : "text-red-500";
+  const label =
+    score >= 8 ? "Highly Feasible" : score >= 6 ? "Moderately Feasible" : score >= 4 ? "Challenging" : "High Risk";
 
   return (
-    <div className="bg-card rounded-xl border border-border p-5 flex flex-col gap-4">
-      <h3 className="text-sm font-semibold text-foreground">Skills Analysis</h3>
-      <div className="flex flex-col gap-3">
-        {groups.map(({ label, items, color }) => (
-          <div key={label} className="flex flex-col gap-1.5">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
-            <div className="flex flex-wrap gap-1.5">
-              {items.map((skill) => (
-                <span key={skill} className={cn("px-2.5 py-0.5 rounded-full text-xs font-medium", color)}>
-                  {skill}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
+    <div className="flex flex-col gap-1.5">
+      <p className="text-xs text-muted-foreground uppercase tracking-wide">Feasibility</p>
+      <div className="flex items-center gap-3">
+        <span className={cn("text-sm font-bold", textColor)}>{score} / 10</span>
+        <div className="flex-1 h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-700">
+          <div className={cn("h-full rounded-full", color)} style={{ width: `${pct}%` }} />
+        </div>
       </div>
+      <p className={cn("text-xs font-medium", textColor)}>{label}</p>
+    </div>
+  );
+}
+
+// Maps gap skill names to suggested action heuristics
+function gapAction(gap: string): { label: string; color: string } {
+  const lower = gap.toLowerCase();
+  // Tech / dev skills → Learn or Partner
+  if (/developer|engineer|code|programming|software|backend|frontend|design|ui\/ux|ux|data science|ml|ai|devops/.test(lower))
+    return { label: "Consider hiring or partnering", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" };
+  // Sales / biz dev → Learn early
+  if (/sales|marketing|growth|seo|social media|copywriting|branding/.test(lower))
+    return { label: "Learn the basics first", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" };
+  // Finance / legal → Partner
+  if (/finance|accounting|legal|compliance|tax|audit/.test(lower))
+    return { label: "Outsource or get an advisor", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" };
+  // Default
+  return { label: "Hire or find a co-founder", color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400" };
+}
+
+function SkillsAnalysis({ skills }: { skills: SkillsGap }) {
+  const yourSkills     = skills.your_skills     ?? [];
+  const requiredSkills = skills.required_skills ?? [];
+  const skillGaps      = skills.skill_gaps      ?? [];
+
+  if (yourSkills.length === 0 && requiredSkills.length === 0 && skillGaps.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <h3 className="text-sm font-semibold text-foreground">Skills Analysis</h3>
+
+      {/* Your skills */}
+      {yourSkills.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Your Skills</p>
+          <div className="flex flex-wrap gap-1.5">
+            {yourSkills.map((skill) => (
+              <span key={skill} className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                {skill}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Required skills */}
+      {requiredSkills.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Required Skills</p>
+          <div className="flex flex-wrap gap-1.5">
+            {requiredSkills.map((skill) => (
+              <span key={skill} className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                {skill}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Skill gaps with actionable recommendations */}
+      {skillGaps.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Skill Gaps — How to Fill Them</p>
+          <div className="flex flex-col gap-2">
+            {skillGaps.map((gap) => {
+              const action = gapAction(gap);
+              return (
+                <div key={gap} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-neutral-50 dark:bg-neutral-800/40 px-3 py-2">
+                  <span className="text-xs font-medium text-foreground">{gap}</span>
+                  <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0", action.color)}>
+                    {action.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
