@@ -308,6 +308,7 @@ function IdeaEditChatModal({
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError]     = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Auto-scroll
   useEffect(() => {
@@ -323,51 +324,70 @@ function IdeaEditChatModal({
 
   const sendMessage = async (text: string, currentHistory: typeof history) => {
     if (!text.trim() || isSending) return;
-    const userMsg: EditChatMessage = { role: "user", content: text };
-    setMessages((prev) => [...prev, userMsg, { role: "assistant", content: "" }]);
+    setMessages((prev) => [...prev, { role: "user", content: text }, { role: "assistant", content: "" }]);
     setIsSending(true);
     setInputValue("");
 
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    let assistantText = "";
+
     try {
-      const res = await api.post("/ai/idea-intake", {
-        message: text,
-        history: currentHistory,
+      const response = await fetch("/api/ai/idea-intake/chat/stream", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, history: currentHistory }),
+        signal: ctrl.signal,
       });
 
-      const data = res.data as {
-        status: string;
-        reply?: string;
-        history?: Array<{ role: string; content: string }>;
-        intake?: IdeaIntake;
-      };
+      if (!response.ok || !response.body) throw new Error("Stream failed");
 
-      const reply = data.reply ?? "";
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
 
-      setMessages((prev) => {
-        const copy = [...prev];
-        copy[copy.length - 1] = { role: "assistant", content: reply };
-        return copy;
-      });
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
 
-      if (data.status === "ready" && data.intake) {
-        setReadyIntake(data.intake);
-        setApproveStep("approved");
-        // history from the agent when ready — may not be in the response, build it manually
-        setHistory([
-          ...currentHistory,
-          { role: "user", content: text },
-          { role: "assistant", content: reply },
-        ]);
-      } else {
-        // Continue chatting — use the history the agent sends back
-        const newHistory = data.history ?? [
-          ...currentHistory,
-          { role: "user", content: text },
-          { role: "assistant", content: reply },
-        ];
-        setHistory(newHistory);
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr || jsonStr === "[DONE]") continue;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+
+            if (parsed.type === "token" && parsed.content) {
+              assistantText += parsed.content;
+              setMessages((prev) => {
+                const copy = [...prev];
+                copy[copy.length - 1] = { role: "assistant", content: assistantText };
+                return copy;
+              });
+            } else if (parsed.type === "done") {
+              const newHistory = [
+                ...currentHistory,
+                { role: "user",      content: text },
+                { role: "assistant", content: assistantText },
+              ];
+              if (parsed.status === "ready" && parsed.intake) {
+                setReadyIntake(parsed.intake);
+                setApproveStep("approved");
+                setHistory(newHistory);
+              } else {
+                setHistory(parsed.history ?? newHistory);
+              }
+            }
+          } catch { /* skip malformed SSE events */ }
+        }
       }
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") return;
       setMessages((prev) => {
         const copy = [...prev];
         copy[copy.length - 1] = { role: "assistant", content: "Sorry, something went wrong. Please try again." };
