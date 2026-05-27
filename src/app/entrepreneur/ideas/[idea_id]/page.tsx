@@ -1287,8 +1287,19 @@ function buildBusinessModelPdfSection(data: string | null): string {
       <div class="pdf-grid3">${rows.map(([k, label]) => {
         const val = canvas[k];
         const items: unknown[] = Array.isArray(val) ? val : typeof val === "object" && val ? Object.values(val as Record<string, unknown>).flat() : [val];
+        const renderItem = (v: unknown): string => {
+          if (v == null) return "";
+          if (typeof v === "string" || typeof v === "number") return esc(v);
+          if (typeof v === "object") {
+            const obj = v as Record<string, unknown>;
+            const name = obj.name ?? obj.title ?? obj.tool ?? obj.label ?? obj.stream ?? obj.activity ?? obj.resource;
+            if (name) return esc(name);
+            return esc(Object.values(obj).filter((x) => typeof x === "string" || typeof x === "number").join(", "));
+          }
+          return esc(String(v));
+        };
         return `<div class="pdf-card"><div class="pdf-card-name">${label}</div>
-          <ul class="pdf-list">${items.filter(Boolean).map((v) => `<li>${esc(v)}</li>`).join("")}</ul>
+          <ul class="pdf-list">${items.filter(Boolean).map((v) => `<li>${renderItem(v)}</li>`).join("")}</ul>
         </div>`;
       }).join("")}</div>`);
     }
@@ -1429,12 +1440,28 @@ function buildFinancialPdfSection(data: string | null): string {
       if (val >= 1_000) return `$${(val / 1_000).toFixed(1)}K`;
       return `$${val.toLocaleString()}`;
     }
+    if (typeof val === "object" && val !== null) {
+      const obj = val as Record<string, unknown>;
+      const numVal = obj.value ?? obj.amount ?? obj.usd ?? obj.number;
+      if (typeof numVal === "number") return fmtVal(numVal);
+      const strVal = obj.label ?? obj.display ?? obj.formatted ?? obj.text ?? obj.description;
+      if (strVal) return esc(strVal);
+      return esc(Object.values(obj).filter((x) => typeof x === "string" || typeof x === "number").join(", "));
+    }
     return String(val);
   };
 
   const parts: string[] = [];
   if (d.summary) parts.push(`<p class="pdf-summary">${esc(d.summary)}</p>`);
-  if (d.overall_viability) parts.push(`<div class="pdf-info-box"><strong>Overall Viability:</strong> ${esc(d.overall_viability)}</div>`);
+  if (d.overall_viability) {
+    const ov = d.overall_viability;
+    const ovStr = typeof ov === "string" ? ov
+      : typeof ov === "object" && ov !== null
+        ? (((ov as Record<string, unknown>).rating ?? (ov as Record<string, unknown>).label ?? (ov as Record<string, unknown>).value) as string | undefined)
+          ?? Object.values(ov as Record<string, unknown>).filter((x) => typeof x === "string").join(", ")
+        : String(ov);
+    parts.push(`<div class="pdf-info-box"><strong>Overall Viability:</strong> ${esc(ovStr)}</div>`);
+  }
 
   const metrics = [
     { label: "LTV", value: d.ltv }, { label: "CAC", value: d.cac },
@@ -1476,10 +1503,17 @@ function buildFinancialPdfSection(data: string | null): string {
     }).join("")}</tbody></table>`);
   }
 
-  const wa = d.weak_assumptions as string[] | undefined;
+  const wa = d.weak_assumptions as Array<unknown> | undefined;
   if (wa?.length) {
     parts.push(`<h3 class="pdf-subsection">Key Assumptions to Validate</h3>
-    <ul class="pdf-list">${wa.map((a) => `<li style="color:#92400e;">⚠ ${esc(a)}</li>`).join("")}</ul>`);
+    <ul class="pdf-list">${wa.map((a) => {
+      const aStr = typeof a === "string" ? a
+        : typeof a === "object" && a !== null
+          ? (((a as Record<string, unknown>).assumption ?? (a as Record<string, unknown>).text ?? (a as Record<string, unknown>).description) as string | undefined)
+            ?? Object.values(a as Record<string, unknown>).filter((x) => typeof x === "string").join(", ")
+          : String(a);
+      return `<li style="color:#92400e;">⚠ ${esc(aStr)}</li>`;
+    }).join("")}</ul>`);
   }
 
   if (!parts.length) return buildGenericSection("Financial Analysis", data);
@@ -1536,6 +1570,11 @@ function buildFullReportPdfHtml(idea: Idea, sections: ReturnType<typeof useAiPip
     sections.goToMarket.data && "Go-to-Market Strategy",
   ].filter(Boolean) as string[];
 
+  // Number each section title so sections render with "1. Problems & Risks", "2. Customers", etc.
+  const numberedSections = allSections.map((html, i) =>
+    html.replace(/<h2 class="pdf-section-title">/, `<h2 class="pdf-section-title"><span class="sec-num">${i + 1}.</span> `)
+  );
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1544,131 +1583,163 @@ function buildFullReportPdfHtml(idea: Idea, sections: ReturnType<typeof useAiPip
 <style>
 /* ── Reset ── */
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: #1e293b; background: #fff; font-size: 10.5pt; line-height: 1.65; }
+body { font-family: "Segoe UI", Arial, Helvetica, sans-serif; color: #1a1a1a; background: #fff; font-size: 10.5pt; line-height: 1.7; }
 
-/* ── Cover ── */
-.cover { padding: 2.2cm 2.5cm 1.8cm; background: #0f172a; color: #fff; }
-.cover-brand { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .18em; color: #f59e0b; margin-bottom: 22px; }
-.cover-title { font-size: 28pt; font-weight: 800; line-height: 1.15; color: #fff; margin-bottom: 6px; }
-.cover-subtitle { font-size: 10pt; color: #94a3b8; margin-bottom: 18px; }
-.cover-desc { font-size: 10.5pt; color: #cbd5e1; max-width: 660px; line-height: 1.65; margin-bottom: 22px; white-space: pre-wrap; }
-.cover-meta { display: flex; gap: 36px; flex-wrap: wrap; padding: 18px 0; border-top: 1px solid #1e3a5f; border-bottom: 1px solid #1e3a5f; }
-.cover-meta-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #475569; margin-bottom: 4px; }
-.cover-meta-value { font-size: 13pt; font-weight: 800; color: #f1f5f9; }
-
-/* ── Content wrapper ── */
-.content { padding: 1.6cm 2.5cm 2.2cm; }
+/* ── Cover page ── */
+.cover { padding: 3cm 3cm 2.5cm; page-break-after: always; border-bottom: 4px solid #1e3a5f; }
+.cover-brand { font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: .22em; color: #b45309; margin-bottom: 2.8cm; }
+.cover-report-label { font-size: 10pt; text-transform: uppercase; letter-spacing: .12em; color: #6b7280; margin-bottom: 10px; }
+.cover-title { font-size: 30pt; font-weight: 700; line-height: 1.1; color: #0f172a; margin-bottom: 10px; }
+.cover-date { font-size: 10pt; color: #6b7280; margin-bottom: 1.6cm; }
+.cover-desc { font-size: 10.5pt; color: #374151; max-width: 660px; line-height: 1.7; margin-bottom: 2cm; white-space: pre-wrap; }
+.cover-info-table { width: 100%; border-collapse: collapse; border: 1px solid #d1d5db; }
+.cover-info-table td { padding: 12px 18px; border: 1px solid #d1d5db; vertical-align: top; }
+.cover-info-label { display: block; font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #9ca3af; margin-bottom: 4px; }
+.cover-info-value { font-size: 12pt; font-weight: 700; color: #0f172a; }
+.skills-block { margin-top: 1.4cm; border: 1px solid #e5e7eb; padding: 16px 20px; }
+.skills-block-title { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #9ca3af; margin-bottom: 12px; }
+.skills-row { display: flex; gap: 8px; align-items: baseline; margin-bottom: 8px; }
+.skills-row:last-child { margin-bottom: 0; }
+.skills-row-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #6b7280; min-width: 110px; flex-shrink: 0; }
+.skill-tag { display: inline-block; padding: 2px 9px; font-size: 8.5pt; font-weight: 500; margin: 2px 3px 2px 0; border: 1px solid; }
+.skill-yours { background: #dcfce7; color: #166534; border-color: #86efac; }
+.skill-required { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+.skill-gap { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
 
 /* ── Table of Contents ── */
-.pdf-toc { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 14px 18px; margin-bottom: 28px; }
-.pdf-toc-title { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #64748b; margin-bottom: 8px; }
-.pdf-toc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 20px; }
-.pdf-toc-item { font-size: 9.5pt; color: #374151; font-weight: 500; padding: 1px 0; }
-.pdf-toc-item::before { content: "→ "; color: #f59e0b; font-weight: 700; }
+.toc-page { padding: 2.5cm 3cm; page-break-after: always; }
+.toc-heading { font-size: 16pt; font-weight: 700; color: #0f172a; border-bottom: 2px solid #1e3a5f; padding-bottom: 10px; margin-bottom: 1.2cm; }
+.toc-item { display: flex; align-items: baseline; gap: 6px; padding: 7px 0; border-bottom: 1px solid #f3f4f6; }
+.toc-num { font-size: 10pt; font-weight: 700; color: #b45309; min-width: 24px; flex-shrink: 0; }
+.toc-name { font-size: 10pt; color: #1a1a1a; flex: 1; }
+.toc-line { flex: 1; border-bottom: 1px dotted #d1d5db; margin-bottom: 4px; }
+
+/* ── Content ── */
+.content { padding: 2cm 3cm 2.5cm; }
 
 /* ── Sections ── */
-.pdf-section { margin-bottom: 32px; break-inside: avoid; }
-.pdf-section-title { font-size: 13.5pt; font-weight: 800; color: #0f172a; padding-bottom: 7px; border-bottom: 2.5px solid #f59e0b; margin-bottom: 14px; letter-spacing: -.01em; }
-.pdf-section-body { display: flex; flex-direction: column; gap: 10px; }
-.pdf-summary { font-size: 10.5pt; color: #334155; line-height: 1.65; background: #f8fafc; border-left: 3px solid #f59e0b; padding: 10px 14px; border-radius: 0 6px 6px 0; }
-.pdf-subsection { font-size: 10.5pt; font-weight: 700; color: #1e293b; margin-top: 6px; margin-bottom: 4px; }
+.pdf-section { margin-bottom: 36px; break-inside: avoid; }
+.pdf-section-title { font-size: 13.5pt; font-weight: 700; color: #0f172a; padding-bottom: 8px; border-bottom: 2px solid #1e3a5f; margin-bottom: 16px; }
+.sec-num { color: #b45309; margin-right: 4px; }
+.pdf-section-body { display: flex; flex-direction: column; gap: 12px; }
+.pdf-summary { font-size: 10.5pt; color: #374151; line-height: 1.7; font-style: italic; border-left: 3px solid #b45309; padding-left: 14px; }
+.pdf-subsection { font-size: 9.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #1e3a5f; margin-top: 8px; margin-bottom: 6px; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; }
 
-/* ── Cards & Grids ── */
-.pdf-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* ── Grids & Cards ── */
+.pdf-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .pdf-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-.pdf-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; background: #fafafa; }
-.pdf-card.card-green { background: #f0fdf4; border-color: #bbf7d0; }
-.pdf-card-name { font-size: 10pt; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
-.pdf-card-meta { font-size: 8.5pt; color: #64748b; margin-bottom: 4px; }
-.pdf-card-desc { font-size: 9.5pt; color: #374151; line-height: 1.5; margin-top: 4px; }
-.pdf-card-id { font-size: 8pt; font-weight: 700; color: #94a3b8; letter-spacing: .12em; }
-.pdf-field-row { font-size: 9pt; color: #374151; margin-top: 4px; line-height: 1.45; }
-.pdf-fl { font-weight: 600; color: #64748b; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .04em; }
+.pdf-card { border: 1px solid #d1d5db; padding: 12px 14px; background: #fff; }
+.pdf-card.card-green { background: #f0fdf4; border-color: #86efac; }
+.pdf-card-name { font-size: 10pt; font-weight: 700; color: #0f172a; margin-bottom: 5px; }
+.pdf-card-meta { font-size: 9pt; color: #6b7280; margin-bottom: 4px; }
+.pdf-card-desc { font-size: 9.5pt; color: #374151; line-height: 1.55; margin-top: 4px; }
+.pdf-card-id { font-size: 8pt; font-weight: 700; color: #9ca3af; letter-spacing: .1em; }
+.pdf-field-row { font-size: 9.5pt; color: #374151; margin-top: 5px; line-height: 1.5; }
+.pdf-fl { font-weight: 700; color: #4b5563; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .04em; }
 
 /* ── Highlight boxes ── */
-.pdf-highlight { border-radius: 8px; padding: 12px 16px; border: 1px solid; }
-.pdf-highlight.amber { background: #fffbeb; border-color: #fde68a; }
-.pdf-highlight.green { background: #f0fdf4; border-color: #bbf7d0; }
-.pdf-highlight.red { background: #fef2f2; border-color: #fecaca; }
-.pdf-hl-label { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #92400e; margin-bottom: 5px; }
+.pdf-highlight { padding: 12px 16px; border: 1px solid; border-left-width: 4px; }
+.pdf-highlight.amber { background: #fffbeb; border-color: #fcd34d; border-left-color: #f59e0b; }
+.pdf-highlight.green { background: #f0fdf4; border-color: #86efac; border-left-color: #22c55e; }
+.pdf-highlight.red { background: #fef2f2; border-color: #fca5a5; border-left-color: #ef4444; }
+.pdf-hl-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #92400e; margin-bottom: 5px; }
 .pdf-highlight.green .pdf-hl-label { color: #15803d; }
 .pdf-highlight.red .pdf-hl-label { color: #dc2626; }
-.pdf-hl-title { font-size: 11pt; font-weight: 700; margin-bottom: 4px; color: #111; }
-.pdf-info-box { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 9px 14px; font-size: 10pt; color: #334155; line-height: 1.5; }
+.pdf-hl-title { font-size: 11pt; font-weight: 700; margin-bottom: 4px; color: #0f172a; }
+.pdf-info-box { background: #f8fafc; border: 1px solid #d1d5db; border-left: 4px solid #1e3a5f; padding: 10px 14px; font-size: 10pt; color: #334155; line-height: 1.6; }
 
 /* ── Metrics ── */
-.pdf-metric-row { display: flex; gap: 10px; flex-wrap: wrap; }
-.pdf-metric-card { flex: 1; min-width: 110px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; background: #fafafa; }
-.pdf-metric-label { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin-bottom: 3px; }
-.pdf-metric-sub { font-size: 8pt; color: #94a3b8; margin-bottom: 5px; }
-.pdf-metric-value { font-size: 15pt; font-weight: 800; color: #0f172a; line-height: 1.2; }
-.pdf-metric-note { font-size: 8.5pt; color: #94a3b8; margin-top: 4px; }
+.pdf-metric-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.pdf-metric-card { flex: 1; min-width: 120px; border: 1px solid #d1d5db; padding: 12px 14px; background: #f8fafc; }
+.pdf-metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; margin-bottom: 4px; }
+.pdf-metric-sub { font-size: 8pt; color: #9ca3af; margin-bottom: 4px; }
+.pdf-metric-value { font-size: 14pt; font-weight: 700; color: #0f172a; line-height: 1.2; }
+.pdf-metric-note { font-size: 8.5pt; color: #9ca3af; margin-top: 4px; }
 
 /* ── Tables ── */
 .pdf-table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
-.pdf-table th { text-align: left; font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #64748b; padding: 7px 10px; border-bottom: 2px solid #e2e8f0; background: #f8fafc; }
-.pdf-table td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; color: #374151; line-height: 1.45; }
-.pdf-table tr:last-child td { border-bottom: none; }
+.pdf-table th { text-align: left; font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #fff; padding: 8px 10px; border: 1px solid #1e3a5f; background: #1e3a5f; }
+.pdf-table td { padding: 7px 10px; border: 1px solid #e5e7eb; vertical-align: top; color: #374151; line-height: 1.5; }
+.pdf-table tr:nth-child(even) td { background: #f9fafb; }
 
 /* ── Tags & Badges ── */
 .pdf-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.pdf-tag { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 999px; padding: 2px 10px; font-size: 9pt; }
-.cyan-tag { background: #ecfeff; border-color: #a5f3fc; color: #0e7490; }
-.amber-badge { display: inline-block; background: #fef3c7; color: #92400e; border-radius: 999px; padding: 1px 8px; font-size: 8.5pt; font-weight: 600; }
+.pdf-tag { border: 1px solid #d1d5db; padding: 2px 10px; font-size: 9pt; color: #374151; }
+.cyan-tag { background: #ecfeff; border-color: #67e8f9; color: #0e7490; }
+.amber-badge { display: inline-block; background: #fef3c7; color: #92400e; padding: 1px 8px; font-size: 8.5pt; font-weight: 600; border: 1px solid #fcd34d; }
 
 /* ── Generic renderer ── */
-.pdf-field-block { margin-bottom: 8px; }
-.pdf-field-label { font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #64748b; margin-bottom: 3px; }
-.pdf-text { font-size: 10.5pt; color: #374151; line-height: 1.6; }
-.pdf-list { padding-left: 17px; margin: 4px 0; }
-.pdf-list li { margin-bottom: 3px; font-size: 9.5pt; color: #374151; }
+.pdf-field-block { margin-bottom: 10px; }
+.pdf-field-label { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #6b7280; margin-bottom: 4px; border-bottom: 1px solid #f3f4f6; padding-bottom: 2px; }
+.pdf-text { font-size: 10.5pt; color: #374151; line-height: 1.7; }
+.pdf-list { padding-left: 20px; margin: 4px 0; }
+.pdf-list li { margin-bottom: 4px; font-size: 9.5pt; color: #374151; }
 .pdf-item-list { display: flex; flex-direction: column; gap: 8px; }
-.pdf-item-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; }
-.pdf-nested { display: flex; flex-direction: column; gap: 3px; }
+.pdf-item-block { border: 1px solid #e5e7eb; padding: 10px 12px; }
+.pdf-nested { display: flex; flex-direction: column; gap: 4px; }
 .pdf-nested-field { font-size: 9.5pt; color: #374151; }
-.pdf-nested-label { font-weight: 600; color: #475569; }
-.pdf-num { font-size: 10pt; font-weight: 600; color: #0f172a; }
-.pdf-bool { font-size: 9pt; font-weight: 600; padding: 1px 8px; border-radius: 999px; }
+.pdf-nested-label { font-weight: 700; color: #374151; }
+.pdf-num { font-size: 10pt; font-weight: 700; color: #0f172a; }
+.pdf-bool { font-size: 9pt; font-weight: 700; padding: 1px 8px; }
 .bool-yes { background: #d1fae5; color: #065f46; }
 .bool-no { background: #fee2e2; color: #991b1b; }
-.pdf-small { font-size: 8.5pt; color: #94a3b8; }
+.pdf-small { font-size: 8pt; color: #9ca3af; }
 .pdf-check::before { content: "✓ "; color: #16a34a; font-weight: 700; }
 .pdf-cross::before { content: "✗ "; color: #dc2626; font-weight: 700; }
 
 /* ── Print ── */
-@page { size: A4; margin: 0; }
+@page { size: A4; margin: 2cm 2.5cm; }
 @media print {
-  .cover { padding: 2.2cm 2.5cm 1.8cm; }
-  .content { padding: 1.6cm 2.5cm 2.2cm; }
-  .pdf-section { break-inside: avoid; }
-  .pdf-section-title { break-after: avoid; }
+  body { font-size: 10pt; }
+  .cover { padding: 1.5cm 0 1.5cm; }
+  .toc-page { padding: 0; }
+  .content { padding: 0; }
+  .pdf-section { break-inside: avoid; page-break-inside: avoid; }
+  .pdf-section-title { break-after: avoid; page-break-after: avoid; }
 }
 </style>
 </head>
 <body>
 
+<!-- ═══ COVER PAGE ═══ -->
 <div class="cover">
-  <div class="cover-brand">BizifyAI — Business Analysis Report</div>
+  <div class="cover-brand">BizifyAI</div>
+  <div class="cover-report-label">Business Analysis Report</div>
   <h1 class="cover-title">${esc(idea.title ?? "Untitled Idea")}</h1>
-  ${date ? `<p class="cover-subtitle">${date}</p>` : ""}
+  ${date ? `<p class="cover-date">${date}</p>` : ""}
   ${idea.description ? `<p class="cover-desc">${esc(idea.description)}</p>` : ""}
-  <div class="cover-meta">
-    ${idea.budget != null ? `<div><div class="cover-meta-label">Budget</div><div class="cover-meta-value">$${idea.budget.toLocaleString()}</div></div>` : ""}
-    ${feasScore != null ? `<div><div class="cover-meta-label">Feasibility</div><div class="cover-meta-value" style="color:${feasColor};">${feasScore} / 10 — ${feasLabel}</div></div>` : ""}
-    ${idea.status ? `<div><div class="cover-meta-label">Status</div><div class="cover-meta-value">${esc(idea.status === "draft" ? "In Progress" : idea.status === "active" ? "Active" : idea.status === "archived" ? "Archived" : idea.status)}</div></div>` : ""}
-    ${tocItems.length > 0 ? `<div><div class="cover-meta-label">Sections Generated</div><div class="cover-meta-value">${tocItems.length} of 10</div></div>` : ""}
-  </div>
-  ${skillsHtml}
+  <table class="cover-info-table">
+    <tr>
+      ${idea.budget != null ? `<td><span class="cover-info-label">Budget</span><span class="cover-info-value">$${idea.budget.toLocaleString()}</span></td>` : ""}
+      ${feasScore != null ? `<td><span class="cover-info-label">Feasibility Score</span><span class="cover-info-value" style="color:${feasColor};">${feasScore} / 10 &mdash; ${feasLabel}</span></td>` : ""}
+      ${idea.status ? `<td><span class="cover-info-label">Status</span><span class="cover-info-value">${esc(idea.status === "draft" ? "Draft" : idea.status === "active" ? "Active" : idea.status === "archived" ? "Archived" : idea.status)}</span></td>` : ""}
+      ${tocItems.length > 0 ? `<td><span class="cover-info-label">Sections Generated</span><span class="cover-info-value">${tocItems.length} of 10</span></td>` : ""}
+    </tr>
+  </table>
+  ${skills ? `
+  <div class="skills-block">
+    <div class="skills-block-title">Skills Analysis</div>
+    ${skills.your_skills?.length ? `<div class="skills-row"><span class="skills-row-label">Your Skills</span><span>${skills.your_skills.map((s) => `<span class="skill-tag skill-yours">${esc(s)}</span>`).join("")}</span></div>` : ""}
+    ${skills.required_skills?.length ? `<div class="skills-row"><span class="skills-row-label">Required Skills</span><span>${skills.required_skills.map((s) => `<span class="skill-tag skill-required">${esc(s)}</span>`).join("")}</span></div>` : ""}
+    ${skills.skill_gaps?.length ? `<div class="skills-row"><span class="skills-row-label">Skill Gaps</span><span>${skills.skill_gaps.map((s) => `<span class="skill-tag skill-gap">${esc(s)}</span>`).join("")}</span></div>` : ""}
+  </div>` : ""}
 </div>
 
-<div class="content">
-  ${tocItems.length > 1 ? `
-  <div class="pdf-toc">
-    <div class="pdf-toc-title">Contents</div>
-    <div class="pdf-toc-grid">${tocItems.map((t) => `<div class="pdf-toc-item">${esc(t)}</div>`).join("")}</div>
-  </div>` : ""}
+<!-- ═══ TABLE OF CONTENTS ═══ -->
+${tocItems.length > 1 ? `
+<div class="toc-page">
+  <h2 class="toc-heading">Table of Contents</h2>
+  ${tocItems.map((t, i) => `
+  <div class="toc-item">
+    <span class="toc-num">${i + 1}.</span>
+    <span class="toc-name">${esc(t)}</span>
+    <span class="toc-line"></span>
+  </div>`).join("")}
+</div>` : ""}
 
-  ${allSections.length > 0 ? allSections.join("\n") : "<p style='color:#64748b;font-size:10pt;'>No AI analysis has been generated yet. Run the pipeline to generate insights.</p>"}
+<!-- ═══ SECTIONS ═══ -->
+<div class="content">
+  ${numberedSections.length > 0 ? numberedSections.join("\n") : "<p style='color:#6b7280;font-size:10pt;'>No AI analysis has been generated yet. Run the pipeline to generate insights.</p>"}
 </div>
 
 </body>
