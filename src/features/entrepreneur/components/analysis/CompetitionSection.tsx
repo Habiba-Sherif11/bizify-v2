@@ -294,6 +294,7 @@ export function CompetitionSection({ data, isLoading, error }: SectionState) {
     positioning_gaps = [],
     your_opening,
     porters_five_forces,
+    vrio_analysis = [],
     differentiation_opportunities = [],
   } = structured;
 
@@ -351,6 +352,51 @@ export function CompetitionSection({ data, isLoading, error }: SectionState) {
       {/* Porter&apos;s Five Forces */}
       {porters_five_forces && Object.keys(porters_five_forces).length > 0 && (
         <PortersSection forces={porters_five_forces} />
+      )}
+
+      {/* VRIO Analysis */}
+      {vrio_analysis.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">VRIO Analysis</h3>
+            <p className="text-sm text-muted-foreground mt-0.5">Resources evaluated for Value, Rarity, Imitability, and Organization.</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-neutral-50 dark:bg-neutral-800/50">
+                    <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Resource</th>
+                    <th className="px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Valuable</th>
+                    <th className="px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Rare</th>
+                    <th className="px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Inimitable</th>
+                    <th className="px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Organized</th>
+                    <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Implication</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vrio_analysis.map((item, i) => (
+                    <tr key={i} className={cn("border-t border-border", i % 2 === 1 && "bg-neutral-50/50 dark:bg-neutral-800/20")}>
+                      <td className="px-4 py-3 font-medium text-foreground">{item.resource ?? "—"}</td>
+                      {(["valuable", "rare", "inimitable", "organized"] as const).map((k) => (
+                        <td key={k} className="px-3 py-3 text-center">
+                          {item[k] === true ? (
+                            <span className="inline-block w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold leading-5">✓</span>
+                          ) : item[k] === false ? (
+                            <span className="inline-block w-5 h-5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold leading-5">✕</span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3 text-xs text-foreground leading-relaxed">{item.competitive_implication ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* Positioning Gaps */}
