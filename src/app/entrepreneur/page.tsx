@@ -8,7 +8,6 @@ import { useIdeas } from "@/features/entrepreneur/hooks/useIdeas";
 import { api } from "@/features/auth/lib/api";
 import { DashboardHeader } from "@/features/entrepreneur/components/DashboardHeader";
 import { GuidanceTour } from "@/features/guidance/components/GuidanceTour";
-import { ChatBotBubble } from "@/features/entrepreneur/components/ChatBotBubble";
 import { FeatureCard } from "@/features/entrepreneur/components/FeatureCard";
 import { RecentActivity, type ActivityItem } from "@/features/entrepreneur/components/RecentActivity";
 import { Button } from "@/components/ui/button";
@@ -132,7 +131,6 @@ export default function EntrepreneurDashboard() {
     <div className="min-h-screen bg-background dark:bg-neutral-900">
       <DashboardHeader />
       <GuidanceTour />
-      <ChatBotBubble />
 
       <main className="max-w-280 mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-16 flex flex-col gap-8 sm:gap-10">
 

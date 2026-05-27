@@ -989,6 +989,13 @@ function SectionChatPopup({
 
 // ─── PDF export ───────────────────────────────────────────────────────────────
 
+function esc(s: unknown): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function safeParseJson(raw: string | null): Record<string, unknown> | null {
   if (!raw) return null;
   try {
@@ -999,1554 +1006,671 @@ function safeParseJson(raw: string | null): Record<string, unknown> | null {
   }
 }
 
-function esc(s: unknown): string {
-  return String(s ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
+// ─── Smart generic renderer for unknown JSON shapes ───────────────────────────
 
-function strList(items: unknown[]): string {
-  if (!items.length) return "";
-  return `<ul>${items.map((v) => `<li>${esc(v)}</li>`).join("")}</ul>`;
-}
-
-// ─── MVP-specific PDF builder ─────────────────────────────────────────────────
-
-interface PdfMvpData {
-  mvp_goal?: string;
-  summary?: string;
-  riskiest_assumptions?: Array<{
-    id?: string; assumption?: string; risk_level?: string;
-    validation_method?: string; kill_signal?: string;
-  }>;
-  scope?: { included?: string[]; excluded?: string[] };
-  core_user_flows?: Array<{
-    id?: string; name?: string; steps?: string[]; success_metric?: string;
-  }>;
-  build_plan?: {
-    phases?: Array<{ phase?: string | number; name?: string; tasks?: string[]; milestone?: string }>;
-    total_timeline?: string;
-    no_code_tools_needed?: string[];
-  };
-  validation_experiments?: Array<{
-    id?: string; hypothesis?: string; method?: string;
-    success_metric?: string; timeline?: string; cost_usd?: number;
-  }>;
-  launch_criteria?: { must_be_true?: string[]; success_metrics?: string[]; kill_criteria?: string[] };
-  testing_plan?: Array<{ area?: string; method?: string; pass_criteria?: string }>;
-  qa_checklist?: string[];
-  first_100_users_plan?: string;
-  source_mode?: string;
-  sources_used?: number;
-  sources_list?: Array<{ url?: string; title?: string }>;
-}
-
-function buildMvpPdfHtml(idea: Idea, raw: string | null): string {
-  const date = idea.created_at
-    ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
-    : "";
-
-  let mvp: PdfMvpData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") mvp = p as PdfMvpData;
-  } catch { /* render what we have */ }
-
-  const riskBadge = (level?: string) => {
-    const l = (level ?? "").toLowerCase();
-    const bg = l === "high" ? "#fee2e2" : l === "medium" ? "#fef3c7" : "#d1fae5";
-    const color = l === "high" ? "#b91c1c" : l === "medium" ? "#92400e" : "#065f46";
-    return level
-      ? `<span style="background:${bg};color:${color};padding:1px 7px;border-radius:999px;font-size:8pt;font-weight:700;text-transform:uppercase;">${esc(level)} risk</span>`
-      : "";
-  };
-
-  // Goal
-  const goalHtml = (mvp.mvp_goal || mvp.summary) ? `
-    <section class="goal-card">
-      ${mvp.mvp_goal ? `<div class="goal-label">MVP Goal</div><p class="goal-text">${esc(mvp.mvp_goal)}</p>` : ""}
-      ${mvp.summary ? `<p class="summary-text">${esc(mvp.summary)}</p>` : ""}
-    </section>` : "";
-
-  // Assumptions
-  const assumptionsHtml = mvp.riskiest_assumptions?.length ? `
-    <section>
-      <h2>Riskiest Assumptions</h2>
-      <div class="grid2">
-        ${mvp.riskiest_assumptions.map((a, i) => `
-          <div class="card">
-            <div class="card-header">
-              <span class="card-id">${esc(a.id ?? `A${i + 1}`)}</span>
-              ${riskBadge(a.risk_level)}
-            </div>
-            ${a.assumption ? `<p class="card-title">${esc(a.assumption)}</p>` : ""}
-            ${a.validation_method ? `<div class="sublabel">Validation</div><p class="subtext">${esc(a.validation_method)}</p>` : ""}
-            ${a.kill_signal ? `<div class="kill-signal"><span class="kill-label">Kill signal</span><p>${esc(a.kill_signal)}</p></div>` : ""}
-          </div>`).join("")}
-      </div>
-    </section>` : "";
-
-  // Scope
-  const scopeHtml = (mvp.scope?.included?.length || mvp.scope?.excluded?.length) ? `
-    <section>
-      <h2>Scope</h2>
-      <div class="grid2">
-        <div class="card scope-in">
-          <div class="scope-title green">✓ Included</div>
-          ${strList(mvp.scope?.included ?? [])}
-        </div>
-        <div class="card scope-out">
-          <div class="scope-title gray">✕ Excluded</div>
-          ${strList(mvp.scope?.excluded ?? [])}
-        </div>
-      </div>
-    </section>` : "";
-
-  // User flows
-  const flowsHtml = mvp.core_user_flows?.length ? `
-    <section>
-      <h2>Core User Flows</h2>
-      <div class="grid2">
-        ${mvp.core_user_flows.map((f, i) => `
-          <div class="card">
-            <div class="card-header">
-              <span class="flow-badge">${esc(f.id ?? `UF${i + 1}`)}</span>
-              <span class="card-title-inline">${esc(f.name ?? "Flow")}</span>
-            </div>
-            ${f.steps?.length ? `<ol class="steps">${f.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>` : ""}
-            ${f.success_metric ? `<div class="metric-box"><span class="metric-label">Success metric</span><p>${esc(f.success_metric)}</p></div>` : ""}
-          </div>`).join("")}
-      </div>
-    </section>` : "";
-
-  // Build plan
-  const buildPlanHtml = (() => {
-    const bp = mvp.build_plan;
-    if (!bp) return "";
-    const parts: string[] = [];
-    if (bp.total_timeline) parts.push(`<div class="timeline-badge">📅 Timeline: ${esc(bp.total_timeline)}</div>`);
-    if (bp.phases?.length) {
-      parts.push(`<div class="phases">${bp.phases.map((p, i) => `
-        <div class="phase">
-          <div class="phase-num">${esc(p.phase ?? i + 1)}</div>
-          <div class="phase-body">
-            <h4>${esc(p.name ?? `Phase ${p.phase ?? i + 1}`)}</h4>
-            ${p.tasks?.length ? strList(p.tasks) : ""}
-            ${p.milestone ? `<div class="milestone">🏁 ${esc(p.milestone)}</div>` : ""}
-          </div>
-        </div>`).join("")}</div>`);
-    }
-    if (bp.no_code_tools_needed?.length) {
-      parts.push(`<div class="tools-section"><div class="sublabel">No-code tools</div><div class="tags">${bp.no_code_tools_needed.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div></div>`);
-    }
-    return parts.length ? `<section><h2>Build Plan</h2>${parts.join("")}</section>` : "";
-  })();
-
-  // Experiments
-  const experimentsHtml = mvp.validation_experiments?.length ? `
-    <section>
-      <h2>Validation Experiments</h2>
-      <div class="grid2">
-        ${mvp.validation_experiments.map((e, i) => `
-          <div class="card">
-            <div class="card-header">
-              <span class="card-id">${esc(e.id ?? `E${i + 1}`)}</span>
-              <div style="display:flex;gap:6px;">
-                ${e.timeline ? `<span class="badge-cyan">📅 ${esc(e.timeline)}</span>` : ""}
-                ${typeof e.cost_usd === "number" ? `<span class="badge-green">$${e.cost_usd}</span>` : ""}
-              </div>
-            </div>
-            ${e.hypothesis ? `<p class="card-title">${esc(e.hypothesis)}</p>` : ""}
-            ${e.method ? `<div class="sublabel">Method</div><p class="subtext">${esc(e.method)}</p>` : ""}
-            ${e.success_metric ? `<div class="sublabel">Success metric</div><p class="subtext">${esc(e.success_metric)}</p>` : ""}
-          </div>`).join("")}
-      </div>
-    </section>` : "";
-
-  // Launch criteria
-  const launchHtml = (() => {
-    const lc = mvp.launch_criteria;
-    if (!lc) return "";
-    const parts: string[] = [];
-    if (lc.must_be_true?.length) parts.push(`<div class="criteria-box green"><div class="crit-title green">✓ Must be true</div>${strList(lc.must_be_true)}</div>`);
-    if (lc.success_metrics?.length) parts.push(`<div class="criteria-box amber"><div class="crit-title amber">⬤ Success metrics</div>${strList(lc.success_metrics)}</div>`);
-    if (lc.kill_criteria?.length) parts.push(`<div class="criteria-box red"><div class="crit-title red">✕ Kill criteria</div>${strList(lc.kill_criteria)}</div>`);
-    return parts.length ? `<section><h2>Launch Criteria</h2><div class="grid3">${parts.join("")}</div></section>` : "";
-  })();
-
-  // Testing
-  const testingHtml = (() => {
-    const parts: string[] = [];
-    if (mvp.testing_plan?.length) {
-      parts.push(`<table class="testing-table">
-        <thead><tr><th>Area</th><th>Method</th><th>Pass Criteria</th></tr></thead>
-        <tbody>${mvp.testing_plan.map((t) => `<tr><td><strong>${esc(t.area ?? "—")}</strong></td><td>${esc(t.method ?? "—")}</td><td>${esc(t.pass_criteria ?? "—")}</td></tr>`).join("")}</tbody>
-      </table>`);
-    }
-    if (mvp.qa_checklist?.length) {
-      parts.push(`<div class="sublabel" style="margin-top:12px;">QA Checklist</div>${strList(mvp.qa_checklist)}`);
-    }
-    return parts.length ? `<section><h2>Testing &amp; QA</h2>${parts.join("")}</section>` : "";
-  })();
-
-  // First 100 users
-  const firstUsersHtml = mvp.first_100_users_plan
-    ? `<section><h2>First 100 Users Plan</h2><p>${esc(mvp.first_100_users_plan)}</p></section>` : "";
-
-  // Sources
-  const sourcesHtml = (() => {
-    const srcs = (mvp.sources_list ?? []).filter((s) => s.url);
-    if (!srcs.length && !mvp.source_mode && mvp.sources_used == null) return "";
-    return `<section><h2>Sources</h2>
-      ${mvp.source_mode ? `<span class="tag">${esc(mvp.source_mode.replace(/_/g, " "))}</span>` : ""}
-      ${mvp.sources_used != null ? `<span class="tag amber">${mvp.sources_used} source${mvp.sources_used !== 1 ? "s" : ""} used</span>` : ""}
-      ${srcs.length ? `<ol style="margin-top:10px;">${srcs.map((s) => `<li><a href="${esc(s.url)}">${esc(s.title ?? s.url)}</a></li>`).join("")}</ol>` : ""}
-    </section>`;
-  })();
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<title>${esc(idea.title ?? "Idea")} — MVP Plan</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
-  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
-  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
-  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
-  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
-  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
-  section { break-inside: avoid; }
-
-  /* Goal card */
-  .goal-card { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 14px 16px; margin-bottom: 4px; }
-  .goal-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #92400e; margin-bottom: 4px; }
-  .goal-text { font-size: 11pt; font-weight: 600; color: #111; margin-bottom: 6px; }
-  .summary-text { font-size: 10pt; color: #555; border-top: 1px solid #fde68a; padding-top: 8px; margin-top: 8px; }
-
-  /* Grid layouts */
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-
-  /* Cards */
-  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
-  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-  .card-id { font-size: 8pt; font-weight: 700; color: #9ca3af; letter-spacing: .1em; }
-  .card-title { font-size: 10pt; font-weight: 600; color: #111; margin-bottom: 6px; }
-  .card-title-inline { font-size: 10pt; font-weight: 600; color: #111; }
-  .sublabel { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; margin: 6px 0 2px; }
-  .subtext { font-size: 9.5pt; color: #555; }
-  .kill-signal { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 6px 10px; margin-top: 6px; }
-  .kill-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #dc2626; letter-spacing: .06em; }
-  .kill-signal p { font-size: 9pt; color: #7f1d1d; margin-top: 2px; }
-
-  /* Scope */
-  .scope-in { background: #f0fdf4; border-color: #bbf7d0; }
-  .scope-out { background: #f9fafb; border-color: #e5e7eb; }
-  .scope-title { font-size: 10pt; font-weight: 600; margin-bottom: 6px; }
-  .scope-title.green { color: #15803d; }
-  .scope-title.gray { color: #6b7280; }
-
-  /* User flows */
-  .flow-badge { background: #f3e8ff; color: #7e22ce; font-size: 8.5pt; font-weight: 700; padding: 2px 7px; border-radius: 6px; }
-  .steps { padding-left: 18px; font-size: 9.5pt; color: #333; }
-  .steps li { margin-bottom: 2px; }
-  .metric-box { background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 6px; padding: 6px 10px; margin-top: 8px; }
-  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #7e22ce; letter-spacing: .06em; }
-
-  /* Build plan */
-  .timeline-badge { display: inline-block; background: #fffbeb; border: 1px solid #fde68a; border-radius: 999px; padding: 3px 12px; font-size: 9pt; font-weight: 600; color: #92400e; margin-bottom: 10px; }
-  .phases { display: flex; flex-direction: column; gap: 10px; }
-  .phase { display: flex; gap: 10px; align-items: flex-start; }
-  .phase-num { min-width: 26px; height: 26px; background: #f59e0b; color: #fff; border-radius: 999px; font-size: 9pt; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .phase-body { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; background: #fafafa; flex: 1; }
-  .milestone { display: inline-block; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 2px 10px; font-size: 9pt; color: #15803d; margin-top: 6px; }
-  .tools-section { margin-top: 12px; border-top: 1px solid #e5e7eb; padding-top: 10px; }
-  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-  .tag { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 999px; padding: 2px 10px; font-size: 9pt; }
-  .tag.amber { background: #fffbeb; border-color: #fde68a; color: #92400e; font-weight: 600; }
-
-  /* Badges */
-  .badge-cyan { background: #ecfeff; color: #0e7490; font-size: 8pt; font-weight: 600; padding: 1px 7px; border-radius: 999px; }
-  .badge-green { background: #f0fdf4; color: #15803d; font-size: 8pt; font-weight: 600; padding: 1px 7px; border-radius: 999px; }
-
-  /* Launch criteria */
-  .criteria-box { border-radius: 8px; padding: 10px 12px; border: 1px solid; }
-  .criteria-box.green { background: #f0fdf4; border-color: #bbf7d0; }
-  .criteria-box.amber { background: #fffbeb; border-color: #fde68a; }
-  .criteria-box.red { background: #fef2f2; border-color: #fecaca; }
-  .crit-title { font-size: 10pt; font-weight: 600; margin-bottom: 6px; }
-  .crit-title.green { color: #15803d; }
-  .crit-title.amber { color: #92400e; }
-  .crit-title.red { color: #dc2626; }
-
-  /* Testing */
-  .testing-table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
-  .testing-table th { text-align: left; font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; padding: 6px 10px; border-bottom: 2px solid #e5e7eb; }
-  .testing-table td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
-
-  /* Lists */
-  ul, ol { padding-left: 18px; margin: 4px 0; }
-  li { margin-bottom: 2px; font-size: 10pt; }
-  a { color: #d97706; text-decoration: underline; word-break: break-all; }
-
-  @page { size: A4; margin: 1.5cm 2cm; }
-  @media print { body { padding: 0; } }
-</style>
-</head>
-<body>
-  <h1>${esc(idea.title ?? "Untitled Idea")} — MVP Plan</h1>
-  ${date ? `<p class="meta-line">${date}</p>` : ""}
-  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
-  ${goalHtml}
-  ${assumptionsHtml}
-  ${scopeHtml}
-  ${flowsHtml}
-  ${buildPlanHtml}
-  ${experimentsHtml}
-  ${launchHtml}
-  ${testingHtml}
-  ${firstUsersHtml}
-  ${sourcesHtml}
-</body>
-</html>`;
-}
-
-function renderPdfValue(value: unknown, depth = 0): string {
-  if (value === null || value === undefined) return "";
-  if (typeof value === "string") return `<span>${esc(value)}</span>`;
-  if (typeof value === "number" || typeof value === "boolean") return `<span>${String(value)}</span>`;
+function smartRenderValue(value: unknown, depth = 0): string {
+  if (value === null || value === undefined || value === "") return "";
+  if (typeof value === "boolean") {
+    return `<span class="pdf-bool ${value ? "bool-yes" : "bool-no"}">${value ? "✓ Yes" : "✗ No"}</span>`;
+  }
+  if (typeof value === "number") return `<span class="pdf-num">${value.toLocaleString()}</span>`;
+  if (typeof value === "string") {
+    if (!value.trim()) return "";
+    return `<p class="pdf-text">${esc(value)}</p>`;
+  }
   if (Array.isArray(value)) {
-    const items = value.filter((v) => v !== null && v !== undefined);
-    if (items.length === 0) return "";
+    const items = value.filter((v) => v !== null && v !== undefined && v !== "");
+    if (!items.length) return "";
     if (items.every((v) => typeof v === "string" || typeof v === "number")) {
-      return `<ul>${items.map((v) => `<li>${esc(v)}</li>`).join("")}</ul>`;
+      return `<ul class="pdf-list">${items.map((v) => `<li>${esc(v)}</li>`).join("")}</ul>`;
     }
-    return items.map((v) => renderPdfValue(v, depth + 1)).join("");
+    return `<div class="pdf-item-list">${items.map((v) => `<div class="pdf-item-block">${smartRenderValue(v, depth + 1)}</div>`).join("")}</div>`;
   }
   if (typeof value === "object") {
+    const skip = ["sources_list", "source_mode", "sources_used"];
     const entries = Object.entries(value as Record<string, unknown>).filter(
-      ([, v]) => v !== null && v !== undefined && v !== ""
+      ([k, v]) => !skip.includes(k) && v !== null && v !== undefined && v !== ""
     );
-    if (entries.length === 0) return "";
-    const tag = depth === 0 ? "h3" : "h4";
-    return entries
-      .map(([k, v]) => {
+    if (!entries.length) return "";
+    if (depth === 0) {
+      return entries.map(([k, v]) => {
         const label = k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-        const rendered = renderPdfValue(v, depth + 1);
+        const rendered = smartRenderValue(v, 1);
         if (!rendered) return "";
-        return `<div class="field"><${tag}>${label}</${tag}>${rendered}</div>`;
-      })
-      .join("");
+        return `<div class="pdf-field-block"><h3 class="pdf-field-label">${esc(label)}</h3>${rendered}</div>`;
+      }).join("");
+    }
+    return `<div class="pdf-nested">${entries.map(([k, v]) => {
+      const label = k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      const rendered = smartRenderValue(v, depth + 1);
+      if (!rendered) return "";
+      return `<div class="pdf-nested-field"><span class="pdf-nested-label">${esc(label)}:</span> ${rendered}</div>`;
+    }).join("")}</div>`;
   }
   return "";
 }
 
-function buildSectionHtml(title: string, data: string | null): string {
+function buildGenericSection(title: string, data: string | null): string {
+  if (!data) return "";
   const parsed = safeParseJson(data);
-  if (!parsed) return "";
-  const body = renderPdfValue(parsed);
+  const body = parsed ? smartRenderValue(parsed) : `<p class="pdf-text">${esc(data)}</p>`;
   if (!body) return "";
-  return `<section><h2>${title}</h2>${body}</section>`;
+  return `<section class="pdf-section"><h2 class="pdf-section-title">${esc(title)}</h2><div class="pdf-section-body">${body}</div></section>`;
 }
 
-// ─── PDF Builders for Each Section ────────────────────────────────────────────
+// ─── Specialized section PDF builders ─────────────────────────────────────────
 
-interface PdfCustomersData {
-  customer_segments?: Array<{ id?: string; name: string; description?: string; pain_intensity?: string; size_estimate?: string; willingness_to_pay?: string; where_to_find?: string[] }>;
-  primary_segment?: { id?: string; reason?: string };
-  acquisition_channels?: string[];
-  early_adopter_profile?: string;
-  customer_journey_map?: Array<{ stage?: string; specific_touchpoint?: string; founder_action?: string; drop_off_risk?: string }>;
-  summary?: string;
+function buildCustomersPdfSection(data: string | null): string {
+  if (!data) return "";
+  let d: Record<string, unknown> = {};
+  try { d = JSON.parse(data); } catch { return buildGenericSection("Customers", data); }
+
+  const parts: string[] = [];
+  if (d.summary) parts.push(`<p class="pdf-summary">${esc(d.summary)}</p>`);
+
+  const segs = d.customer_segments as Array<Record<string, unknown>> | undefined;
+  if (segs?.length) {
+    const ps = d.primary_segment as Record<string, unknown> | undefined;
+    const primary = ps?.id ? segs.find((s) => s.id === ps.id) ?? segs[0] : segs[0];
+    if (primary) {
+      parts.push(`<div class="pdf-highlight amber">
+        <div class="pdf-hl-label">🎯 Primary Focus Segment</div>
+        <div class="pdf-hl-title">${esc(primary.name ?? "")}</div>
+        ${ps?.reason ? `<p>${esc(ps.reason)}</p>` : primary.why_they_care ? `<p>They care most because: ${esc(primary.why_they_care)}</p>` : ""}
+      </div>`);
+    }
+    parts.push(`<h3 class="pdf-subsection">Customer Segments</h3>
+    <div class="pdf-grid2">${segs.map((seg, i) => {
+      const colors = ["#f59e0b", "#06b6d4", "#8b5cf6", "#ec4899"];
+      const c = colors[i % colors.length];
+      const wf = seg.where_to_find as string[] | undefined;
+      return `<div class="pdf-card" style="border-left:3px solid ${c};">
+        <div class="pdf-card-name">${esc(seg.name ?? "")}</div>
+        ${seg.size_estimate ? `<div class="pdf-card-meta">${esc(seg.size_estimate)}</div>` : ""}
+        ${seg.pain_intensity ? `<span class="pdf-badge amber-badge">Pain: ${esc(seg.pain_intensity)}</span>` : ""}
+        ${seg.description ? `<p class="pdf-card-desc">${esc(seg.description)}</p>` : ""}
+        ${seg.why_they_care ? `<div class="pdf-field-row"><span class="pdf-fl">Why they care:</span> ${esc(seg.why_they_care)}</div>` : ""}
+        ${seg.willingness_to_pay ? `<div class="pdf-field-row"><span class="pdf-fl">WTP:</span> ${esc(seg.willingness_to_pay)}</div>` : ""}
+        ${wf?.length ? `<div class="pdf-field-row"><span class="pdf-fl">Find them at:</span> ${wf.join(", ")}</div>` : ""}
+      </div>`;
+    }).join("")}</div>`);
+  }
+
+  if (d.early_adopter_profile) {
+    parts.push(`<h3 class="pdf-subsection">Early Adopter Profile</h3><p class="pdf-text">${esc(d.early_adopter_profile)}</p>`);
+  }
+
+  const channels = d.acquisition_channels as string[] | undefined;
+  if (channels?.length) {
+    parts.push(`<h3 class="pdf-subsection">Acquisition Channels</h3><div class="pdf-tags">${channels.map((c) => `<span class="pdf-tag cyan-tag">${esc(c)}</span>`).join("")}</div>`);
+  }
+
+  const journey = d.customer_journey_map as Array<Record<string, unknown>> | undefined;
+  if (journey?.length) {
+    parts.push(`<h3 class="pdf-subsection">Customer Journey</h3>
+    <table class="pdf-table"><thead><tr><th>Stage</th><th>Touchpoint</th><th>Founder Action</th><th>Drop-off Risk</th></tr></thead>
+    <tbody>${journey.map((j) => `<tr>
+      <td><strong>${esc(j.stage ?? "")}</strong></td>
+      <td>${esc(j.specific_touchpoint ?? "—")}</td>
+      <td>${esc(j.founder_action ?? "—")}</td>
+      <td>${esc(j.drop_off_risk ?? "—")}</td>
+    </tr>`).join("")}</tbody></table>`);
+  }
+
+  if (!parts.length) return buildGenericSection("Customers", data);
+  return `<section class="pdf-section"><h2 class="pdf-section-title">Customers</h2><div class="pdf-section-body">${parts.join("")}</div></section>`;
 }
 
-function buildCustomersPdfHtml(idea: Idea, raw: string | null): string {
-  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
-  let data: PdfCustomersData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") data = p as PdfCustomersData;
-  } catch { /* render what we have */ }
+function buildCompetitionPdfSection(data: string | null): string {
+  if (!data) return "";
+  let d: Record<string, unknown> = {};
+  try { d = JSON.parse(data); } catch { return buildGenericSection("Competitor Analysis", data); }
 
-  const segmentsHtml = data.customer_segments?.length ? `
-    <section>
-      <h2>Customer Segments</h2>
-      <div class="grid2">
-        ${data.customer_segments.map((seg, i) => `
-          <div class="card">
-            <div class="card-id">${esc(seg.id ?? `S${i + 1}`)}</div>
-            <h4>${esc(seg.name)}</h4>
-            ${seg.description ? `<p class="subtext">${esc(seg.description)}</p>` : ""}
-            ${seg.pain_intensity ? `<div class="metric"><span class="metric-label">Pain intensity</span><span>${esc(seg.pain_intensity)}</span></div>` : ""}
-            ${seg.size_estimate ? `<div class="metric"><span class="metric-label">Size estimate</span><span>${esc(seg.size_estimate)}</span></div>` : ""}
-            ${seg.willingness_to_pay ? `<div class="metric"><span class="metric-label">Willingness to pay</span><span>${esc(seg.willingness_to_pay)}</span></div>` : ""}
-            ${seg.where_to_find?.length ? `<div class="metric"><span class="metric-label">Where to find</span>${strList(seg.where_to_find)}</div>` : ""}
-          </div>
-        `).join("")}
+  const parts: string[] = [];
+  if (d.summary) parts.push(`<p class="pdf-summary">${esc(d.summary)}</p>`);
+  if (d.your_opening) parts.push(`<div class="pdf-highlight green"><div class="pdf-hl-label">🚀 Your Opening</div><p>${esc(d.your_opening)}</p></div>`);
+
+  const direct = d.direct_competitors as Array<Record<string, unknown>> | undefined;
+  if (direct?.length) {
+    parts.push(`<h3 class="pdf-subsection">Direct Competitors</h3>
+    <table class="pdf-table"><thead><tr><th>Competitor</th><th>Description</th><th>Strengths</th><th>Weaknesses</th><th>Pricing</th></tr></thead>
+    <tbody>${direct.map((c) => `<tr>
+      <td><strong>${esc(c.name ?? "")}</strong>${c.website ? `<br><span class="pdf-small">${esc(c.website)}</span>` : ""}</td>
+      <td>${esc(c.description ?? "—")}</td>
+      <td>${(c.strengths as string[] | undefined)?.map((s) => `<div class="pdf-check">${esc(s)}</div>`).join("") ?? "—"}</td>
+      <td>${(c.weaknesses as string[] | undefined)?.map((w) => `<div class="pdf-cross">${esc(w)}</div>`).join("") ?? "—"}</td>
+      <td>${esc(c.pricing ?? "—")}</td>
+    </tr>`).join("")}</tbody></table>`);
+  }
+
+  const gaps = d.positioning_gaps as Array<Record<string, unknown>> | undefined;
+  if (gaps?.length) {
+    parts.push(`<h3 class="pdf-subsection">Positioning Gaps &amp; Opportunities</h3>
+    <div class="pdf-grid2">${gaps.map((g) => `<div class="pdf-card card-green">
+      <div class="pdf-card-name">${esc(g.gap ?? g.opportunity ?? "")}</div>
+      ${g.description ? `<p class="pdf-card-desc">${esc(g.description)}</p>` : ""}
+    </div>`).join("")}</div>`);
+  }
+
+  const porters = d.porters_five_forces as Record<string, Record<string, unknown>> | undefined;
+  if (porters) {
+    const fl: Record<string, string> = {
+      threat_of_new_entrants: "New Entrants", bargaining_power_of_suppliers: "Supplier Power",
+      bargaining_power_of_buyers: "Buyer Power", threat_of_substitutes: "Substitutes", competitive_rivalry: "Rivalry",
+    };
+    parts.push(`<h3 class="pdf-subsection">Porter's Five Forces</h3>
+    <table class="pdf-table"><thead><tr><th>Force</th><th>Level</th><th>Reasoning</th></tr></thead>
+    <tbody>${Object.entries(porters).map(([k, v]) => {
+      const level = String(v?.level ?? v?.rating ?? "");
+      const lc = level.toLowerCase();
+      const lcolor = lc === "high" ? "#dc2626" : lc === "medium" ? "#d97706" : "#16a34a";
+      return `<tr>
+        <td><strong>${esc(fl[k] ?? k.replace(/_/g, " "))}</strong></td>
+        <td><span style="color:${lcolor};font-weight:700;">${esc(level)}</span></td>
+        <td>${esc(v?.explanation ?? v?.reasoning ?? "")}</td>
+      </tr>`;
+    }).join("")}</tbody></table>`);
+  }
+
+  const diffs = d.differentiation_opportunities as string[] | undefined;
+  if (diffs?.length) {
+    parts.push(`<h3 class="pdf-subsection">Differentiation Opportunities</h3><ul class="pdf-list">${diffs.map((d) => `<li>${esc(d)}</li>`).join("")}</ul>`);
+  }
+
+  if (!parts.length) return buildGenericSection("Competitor Analysis", data);
+  return `<section class="pdf-section"><h2 class="pdf-section-title">Competitor Analysis</h2><div class="pdf-section-body">${parts.join("")}</div></section>`;
+}
+
+function buildMarketPdfSection(data: string | null): string {
+  if (!data) return "";
+  let d: Record<string, unknown> = {};
+  try { d = JSON.parse(data); } catch { return buildGenericSection("Market Potential", data); }
+
+  const parts: string[] = [];
+  if (d.summary) parts.push(`<p class="pdf-summary">${esc(d.summary)}</p>`);
+  if (d.market_definition) parts.push(`<div class="pdf-info-box"><strong>Market Definition:</strong> ${esc(d.market_definition)}</div>`);
+
+  const ms = [
+    { key: "tam", label: "TAM", sub: "Total Addressable Market", color: "#f59e0b" },
+    { key: "sam", label: "SAM", sub: "Serviceable Addressable Market", color: "#06b6d4" },
+    { key: "som", label: "SOM", sub: "Serviceable Obtainable Market", color: "#8b5cf6" },
+  ].filter(({ key }) => d[key]);
+
+  if (ms.length) {
+    parts.push(`<div class="pdf-metric-row">${ms.map(({ key, label, sub, color }) => {
+      const sz = d[key] as Record<string, unknown>;
+      const val = sz?.value != null ? `${sz.value}${sz.unit ? " " + sz.unit : ""}` : "—";
+      return `<div class="pdf-metric-card" style="border-top:3px solid ${color};">
+        <div class="pdf-metric-label" style="color:${color};">${label}</div>
+        <div class="pdf-metric-sub">${sub}</div>
+        <div class="pdf-metric-value">${esc(val)}</div>
+        ${sz?.methodology ? `<p class="pdf-metric-note">${esc(sz.methodology)}</p>` : ""}
+      </div>`;
+    }).join("")}</div>`);
+  }
+
+  const timing = d.timing_assessment as Record<string, unknown> | undefined;
+  if (timing) {
+    const good = timing.is_right_time === true;
+    parts.push(`<div class="pdf-highlight ${good ? "green" : "amber"}">
+      <div class="pdf-hl-label">${good ? "✓" : "⚠"} Market Timing</div>
+      <p>${esc(timing.reasoning ?? "")}</p>
+    </div>`);
+  }
+
+  if (d.opportunity_score != null) {
+    parts.push(`<div class="pdf-info-box"><strong>Opportunity Score:</strong> ${esc(d.opportunity_score)} / 10${d.opportunity_attractiveness ? ` — ${esc(d.opportunity_attractiveness)}` : ""}</div>`);
+  }
+
+  const pestel = d.pestel_analysis as Record<string, unknown> | undefined;
+  if (pestel) {
+    const keys = ["political", "economic", "social", "technological", "environmental", "legal"].filter((k) => pestel[k]);
+    if (keys.length) {
+      parts.push(`<h3 class="pdf-subsection">PESTEL Analysis</h3>
+      <table class="pdf-table"><thead><tr><th>Factor</th><th>Description</th><th>Impact</th></tr></thead>
+      <tbody>${keys.map((k) => {
+        const f = pestel[k] as Record<string, unknown> | string;
+        const desc = typeof f === "string" ? f : String(f?.description ?? f?.implication ?? "");
+        const impact = typeof f === "string" ? "" : String(f?.impact ?? "");
+        return `<tr><td><strong>${k.charAt(0).toUpperCase() + k.slice(1)}</strong></td><td>${esc(desc)}</td><td>${esc(impact)}</td></tr>`;
+      }).join("")}</tbody></table>`);
+    }
+  }
+
+  if (!parts.length) return buildGenericSection("Market Potential", data);
+  return `<section class="pdf-section"><h2 class="pdf-section-title">Market Potential</h2><div class="pdf-section-body">${parts.join("")}</div></section>`;
+}
+
+function buildBusinessModelPdfSection(data: string | null): string {
+  if (!data) return "";
+  let d: Record<string, unknown> = {};
+  try { d = JSON.parse(data); } catch { return buildGenericSection("Business Model", data); }
+
+  const parts: string[] = [];
+  if (d.summary) parts.push(`<p class="pdf-summary">${esc(d.summary)}</p>`);
+  if (d.business_model_type) parts.push(`<div class="pdf-info-box"><strong>Business Model Type:</strong> ${esc(d.business_model_type)}</div>`);
+
+  const revs = d.revenue_streams as Array<Record<string, unknown>> | undefined;
+  if (revs?.length) {
+    parts.push(`<h3 class="pdf-subsection">Revenue Streams</h3>
+    <table class="pdf-table"><thead><tr><th>Stream</th><th>Type</th><th>Description</th><th>Pricing</th><th>Monthly Potential</th></tr></thead>
+    <tbody>${revs.map((r) => `<tr>
+      <td><strong>${esc(r.name ?? r.stream ?? "")}</strong></td>
+      <td>${esc(r.type ?? "—")}</td>
+      <td>${esc(r.description ?? "—")}</td>
+      <td>${esc(r.pricing ?? "—")}</td>
+      <td>${esc(r.monthly_potential ?? "—")}</td>
+    </tr>`).join("")}</tbody></table>`);
+  }
+
+  const pricing = d.pricing_strategy;
+  if (pricing) {
+    const p = typeof pricing === "string" ? { rationale: pricing } : pricing as Record<string, unknown>;
+    parts.push(`<h3 class="pdf-subsection">Pricing Strategy</h3>
+    <div class="pdf-info-box">
+      ${p.model ? `<strong>${esc(p.model)}</strong>` : ""}${p.price_point ? ` — ${esc(p.price_point)}` : ""}
+      ${p.rationale ? `<p style="margin-top:4px;">${esc(p.rationale)}</p>` : ""}
+    </div>`);
+  }
+
+  const canvas = d.business_model_canvas as Record<string, unknown> | undefined;
+  if (canvas) {
+    const blocks: [string, string][] = [
+      ["key_partners","Key Partners"],["key_activities","Key Activities"],["key_resources","Key Resources"],
+      ["value_propositions","Value Propositions"],["customer_relationships","Customer Relationships"],
+      ["channels","Channels"],["customer_segments","Customer Segments"],["cost_structure","Cost Structure"],
+      ["revenue_streams","Revenue Streams"],
+    ];
+    const rows = blocks.filter(([k]) => canvas[k]);
+    if (rows.length) {
+      parts.push(`<h3 class="pdf-subsection">Business Model Canvas</h3>
+      <div class="pdf-grid3">${rows.map(([k, label]) => {
+        const val = canvas[k];
+        const items: unknown[] = Array.isArray(val) ? val : typeof val === "object" && val ? Object.values(val as Record<string, unknown>).flat() : [val];
+        return `<div class="pdf-card"><div class="pdf-card-name">${label}</div>
+          <ul class="pdf-list">${items.filter(Boolean).map((v) => `<li>${esc(v)}</li>`).join("")}</ul>
+        </div>`;
+      }).join("")}</div>`);
+    }
+  }
+
+  const ff = d.founder_fit_assessment;
+  if (ff != null) {
+    const fit = typeof ff === "boolean" ? { can_execute: ff } : ff as Record<string, unknown>;
+    parts.push(`<div class="pdf-highlight ${fit.can_execute ? "green" : "amber"}">
+      <div class="pdf-hl-label">Founder Fit Assessment</div>
+      <div style="font-weight:700;">${fit.can_execute ? "✓ Can Execute" : "⚠ Execution Risk"}</div>
+      ${fit.reasoning ? `<p>${esc(fit.reasoning)}</p>` : ""}
+      ${fit.biggest_execution_risk ? `<p><strong>Biggest Risk:</strong> ${esc(fit.biggest_execution_risk)}</p>` : ""}
+    </div>`);
+  }
+
+  if (!parts.length) return buildGenericSection("Business Model", data);
+  return `<section class="pdf-section"><h2 class="pdf-section-title">Business Model</h2><div class="pdf-section-body">${parts.join("")}</div></section>`;
+}
+
+function buildMvpPdfSection(data: string | null): string {
+  if (!data) return "";
+  let mvp: Record<string, unknown> = {};
+  try { mvp = JSON.parse(data); } catch { return buildGenericSection("MVP Planning", data); }
+
+  const parts: string[] = [];
+  if (mvp.mvp_goal) parts.push(`<div class="pdf-highlight amber"><div class="pdf-hl-label">MVP Goal</div><p style="font-weight:600;">${esc(mvp.mvp_goal)}</p></div>`);
+  if (mvp.summary) parts.push(`<p class="pdf-summary">${esc(mvp.summary)}</p>`);
+
+  const assumptions = mvp.riskiest_assumptions as Array<Record<string, unknown>> | undefined;
+  if (assumptions?.length) {
+    parts.push(`<h3 class="pdf-subsection">Riskiest Assumptions</h3>
+    <div class="pdf-grid2">${assumptions.map((a, i) => {
+      const rl = String(a.risk_level ?? "").toLowerCase();
+      const rc = rl === "high" ? "#dc2626" : rl === "medium" ? "#d97706" : "#16a34a";
+      return `<div class="pdf-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <span class="pdf-card-id">${esc(a.id ?? `A${i + 1}`)}</span>
+          <span style="color:${rc};font-weight:700;font-size:8.5pt;">${esc(a.risk_level ?? "")} Risk</span>
+        </div>
+        <p class="pdf-card-desc" style="font-weight:600;">${esc(a.assumption ?? "")}</p>
+        ${a.validation_method ? `<div class="pdf-field-row"><span class="pdf-fl">Validation:</span> ${esc(a.validation_method)}</div>` : ""}
+        ${a.kill_signal ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:4px;padding:5px 8px;margin-top:6px;font-size:9pt;"><strong style="color:#dc2626;">Kill signal:</strong> ${esc(a.kill_signal)}</div>` : ""}
+      </div>`;
+    }).join("")}</div>`);
+  }
+
+  const scope = mvp.scope as Record<string, unknown> | undefined;
+  if (scope?.included || scope?.excluded) {
+    parts.push(`<h3 class="pdf-subsection">Scope</h3>
+    <div class="pdf-grid2">
+      <div class="pdf-card" style="background:#f0fdf4;border-color:#bbf7d0;"><div class="pdf-card-name" style="color:#15803d;">✓ Included</div><ul class="pdf-list">${(scope.included as string[] ?? []).map((i) => `<li>${esc(i)}</li>`).join("")}</ul></div>
+      <div class="pdf-card" style="background:#f9fafb;"><div class="pdf-card-name" style="color:#6b7280;">✕ Excluded</div><ul class="pdf-list">${(scope.excluded as string[] ?? []).map((i) => `<li>${esc(i)}</li>`).join("")}</ul></div>
+    </div>`);
+  }
+
+  const flows = mvp.core_user_flows as Array<Record<string, unknown>> | undefined;
+  if (flows?.length) {
+    parts.push(`<h3 class="pdf-subsection">Core User Flows</h3>
+    <div class="pdf-grid2">${flows.map((f, i) => `<div class="pdf-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="background:#f3e8ff;color:#7e22ce;font-size:8.5pt;font-weight:700;padding:2px 7px;border-radius:6px;">${esc(f.id ?? `UF${i + 1}`)}</span>
+        <span class="pdf-card-name" style="margin-bottom:0;">${esc(f.name ?? "Flow")}</span>
       </div>
-    </section>` : "";
+      ${f.steps ? `<ol class="pdf-list" style="padding-left:18px;">${(f.steps as string[]).map((s) => `<li>${esc(s)}</li>`).join("")}</ol>` : ""}
+      ${f.success_metric ? `<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:5px;padding:6px 10px;margin-top:8px;font-size:9pt;"><strong style="color:#7e22ce;">Success metric:</strong> ${esc(f.success_metric)}</div>` : ""}
+    </div>`).join("")}</div>`);
+  }
 
-  const journeyHtml = data.customer_journey_map?.length ? `
-    <section>
-      <h2>Customer Journey</h2>
-      <div class="journey-map">
-        ${data.customer_journey_map.map((stage, i) => `
-          <div class="journey-stage">
-            <div class="stage-number">${i + 1}</div>
-            <div class="stage-content">
-              ${stage.stage ? `<div class="stage-title">${esc(stage.stage)}</div>` : ""}
-              ${stage.specific_touchpoint ? `<p class="stage-detail"><strong>Touchpoint:</strong> ${esc(stage.specific_touchpoint)}</p>` : ""}
-              ${stage.founder_action ? `<p class="stage-detail"><strong>Action:</strong> ${esc(stage.founder_action)}</p>` : ""}
-              ${stage.drop_off_risk ? `<p class="stage-detail"><strong>Risk:</strong> ${esc(stage.drop_off_risk)}</p>` : ""}
-            </div>
-          </div>
-        `).join("")}
+  const bp = mvp.build_plan as Record<string, unknown> | undefined;
+  if (bp) {
+    parts.push(`<h3 class="pdf-subsection">Build Plan</h3>`);
+    if (bp.total_timeline) parts.push(`<div class="pdf-info-box">📅 Total Timeline: <strong>${esc(bp.total_timeline)}</strong></div>`);
+    const phases = bp.phases as Array<Record<string, unknown>> | undefined;
+    if (phases?.length) {
+      parts.push(`<table class="pdf-table"><thead><tr><th>Phase</th><th>Tasks</th><th>Milestone</th></tr></thead>
+      <tbody>${phases.map((p, i) => `<tr>
+        <td><strong>Phase ${esc(p.phase ?? i + 1)}</strong><br><span class="pdf-small">${esc(p.name ?? "")}</span></td>
+        <td><ul class="pdf-list">${(p.tasks as string[] ?? []).map((t) => `<li>${esc(t)}</li>`).join("")}</ul></td>
+        <td>${esc(p.milestone ?? "—")}</td>
+      </tr>`).join("")}</tbody></table>`);
+    }
+    const tools = bp.no_code_tools_needed as string[] | undefined;
+    if (tools?.length) parts.push(`<div class="pdf-field-block"><h3 class="pdf-field-label">No-code Tools</h3><div class="pdf-tags">${tools.map((t) => `<span class="pdf-tag">${esc(t)}</span>`).join("")}</div></div>`);
+  }
+
+  const exps = mvp.validation_experiments as Array<Record<string, unknown>> | undefined;
+  if (exps?.length) {
+    parts.push(`<h3 class="pdf-subsection">Validation Experiments</h3>
+    <div class="pdf-grid2">${exps.map((e, i) => `<div class="pdf-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <span class="pdf-card-id">${esc(e.id ?? `E${i + 1}`)}</span>
+        <div style="display:flex;gap:4px;">
+          ${e.timeline ? `<span style="background:#ecfeff;color:#0e7490;font-size:8pt;padding:1px 6px;border-radius:999px;">📅 ${esc(e.timeline)}</span>` : ""}
+          ${typeof e.cost_usd === "number" ? `<span style="background:#f0fdf4;color:#15803d;font-size:8pt;padding:1px 6px;border-radius:999px;">$${e.cost_usd}</span>` : ""}
+        </div>
       </div>
-    </section>` : "";
+      ${e.hypothesis ? `<p class="pdf-card-desc" style="font-weight:600;">${esc(e.hypothesis)}</p>` : ""}
+      ${e.method ? `<div class="pdf-field-row"><span class="pdf-fl">Method:</span> ${esc(e.method)}</div>` : ""}
+      ${e.success_metric ? `<div class="pdf-field-row"><span class="pdf-fl">Success metric:</span> ${esc(e.success_metric)}</div>` : ""}
+    </div>`).join("")}</div>`);
+  }
 
-  const channelsHtml = data.acquisition_channels?.length ? `
-    <section>
-      <h2>Acquisition Channels</h2>
-      ${strList(data.acquisition_channels)}
-    </section>` : "";
+  const lc = mvp.launch_criteria as Record<string, unknown> | undefined;
+  if (lc) {
+    parts.push(`<h3 class="pdf-subsection">Launch Criteria</h3>
+    <div class="pdf-grid3">
+      ${(lc.must_be_true as string[])?.length ? `<div class="pdf-card" style="background:#f0fdf4;border-color:#bbf7d0;"><div class="pdf-card-name" style="color:#15803d;">✓ Must Be True</div><ul class="pdf-list">${(lc.must_be_true as string[]).map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div>` : ""}
+      ${(lc.success_metrics as string[])?.length ? `<div class="pdf-card" style="background:#fffbeb;border-color:#fde68a;"><div class="pdf-card-name" style="color:#92400e;">⬤ Success Metrics</div><ul class="pdf-list">${(lc.success_metrics as string[]).map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div>` : ""}
+      ${(lc.kill_criteria as string[])?.length ? `<div class="pdf-card" style="background:#fef2f2;border-color:#fecaca;"><div class="pdf-card-name" style="color:#dc2626;">✕ Kill Criteria</div><ul class="pdf-list">${(lc.kill_criteria as string[]).map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div>` : ""}
+    </div>`);
+  }
 
-  const earlyAdopterHtml = data.early_adopter_profile ? `
-    <section>
-      <h2>Early Adopter Profile</h2>
-      <p>${esc(data.early_adopter_profile)}</p>
-    </section>` : "";
+  const testing = mvp.testing_plan as Array<Record<string, unknown>> | undefined;
+  if (testing?.length) {
+    parts.push(`<h3 class="pdf-subsection">Testing &amp; QA</h3>
+    <table class="pdf-table"><thead><tr><th>Area</th><th>Method</th><th>Pass Criteria</th></tr></thead>
+    <tbody>${testing.map((t) => `<tr><td><strong>${esc(t.area ?? "—")}</strong></td><td>${esc(t.method ?? "—")}</td><td>${esc(t.pass_criteria ?? "—")}</td></tr>`).join("")}</tbody></table>`);
+  }
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<title>${esc(idea.title ?? "Idea")} — Customers</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
-  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
-  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
-  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
-  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
-  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
-  section { break-inside: avoid; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
-  .card-id { font-size: 8pt; font-weight: 700; color: #9ca3af; letter-spacing: .1em; margin-bottom: 4px; }
-  .metric { margin: 6px 0; }
-  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; display: block; margin-bottom: 2px; }
-  .subtext { font-size: 9.5pt; color: #555; margin: 4px 0; }
-  .journey-map { display: flex; flex-direction: column; gap: 8px; }
-  .journey-stage { display: flex; gap: 10px; align-items: flex-start; }
-  .stage-number { min-width: 28px; height: 28px; background: #f59e0b; color: #fff; border-radius: 999px; font-size: 9pt; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .stage-content { flex: 1; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 10px; background: #fafafa; }
-  .stage-title { font-weight: 600; font-size: 10pt; margin-bottom: 4px; }
-  .stage-detail { font-size: 9pt; margin: 2px 0; color: #555; }
-  ul, ol { padding-left: 18px; margin: 4px 0; }
-  li { margin-bottom: 2px; font-size: 10pt; }
-  @page { size: A4; margin: 1.5cm 2cm; }
-  @media print { body { padding: 0; } }
-</style>
-</head>
-<body>
-  <h1>${esc(idea.title ?? "Untitled Idea")} — Customers</h1>
-  ${date ? `<p class="meta-line">${date}</p>` : ""}
-  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
-  ${data.summary ? `<section><h2>Summary</h2><p>${esc(data.summary)}</p></section>` : ""}
-  ${segmentsHtml}
-  ${journeyHtml}
-  ${channelsHtml}
-  ${earlyAdopterHtml}
-</body>
-</html>`;
+  if (mvp.first_100_users_plan) {
+    parts.push(`<h3 class="pdf-subsection">First 100 Users Plan</h3><p class="pdf-text">${esc(mvp.first_100_users_plan)}</p>`);
+  }
+
+  if (!parts.length) return buildGenericSection("MVP Planning", data);
+  return `<section class="pdf-section"><h2 class="pdf-section-title">MVP Planning</h2><div class="pdf-section-body">${parts.join("")}</div></section>`;
 }
 
-interface PdfCompetitionData {
-  direct_competitors?: Array<{ name: string; strengths?: string[]; weaknesses?: string[]; positioning?: string }>;
-  indirect_alternatives?: string[];
-  porters_five_forces?: Array<{ force: string; threat_level?: string; description?: string }>;
-  positioning_gaps?: string[];
-  competitive_advantage?: string;
-}
+function buildFinancialPdfSection(data: string | null): string {
+  if (!data) return "";
+  let d: Record<string, unknown> = {};
+  try { d = JSON.parse(data); } catch { return buildGenericSection("Financial Analysis", data); }
 
-function buildCompetitionPdfHtml(idea: Idea, raw: string | null): string {
-  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
-  let data: PdfCompetitionData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") data = p as PdfCompetitionData;
-  } catch { /* render what we have */ }
-
-  const levelColor = (level?: string) => {
-    const l = (level ?? "").toLowerCase();
-    if (l === "high") return "#dc2626";
-    if (l === "medium") return "#f59e0b";
-    return "#15803d";
+  const fmtVal = (val: unknown): string => {
+    if (val == null) return "—";
+    if (typeof val === "number") {
+      if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`;
+      if (val >= 1_000) return `$${(val / 1_000).toFixed(1)}K`;
+      return `$${val.toLocaleString()}`;
+    }
+    return String(val);
   };
 
-  const competitorsHtml = data.direct_competitors?.length ? `
-    <section>
-      <h2>Direct Competitors</h2>
-      <div class="grid2">
-        ${data.direct_competitors.map((comp, i) => `
-          <div class="card">
-            <h4>${esc(comp.name)}</h4>
-            ${comp.positioning ? `<p class="subtext"><em>${esc(comp.positioning)}</em></p>` : ""}
-            ${comp.strengths?.length ? `<div class="metric"><span class="metric-label">Strengths</span>${strList(comp.strengths)}</div>` : ""}
-            ${comp.weaknesses?.length ? `<div class="metric"><span class="metric-label">Weaknesses</span>${strList(comp.weaknesses)}</div>` : ""}
-          </div>
-        `).join("")}
+  const parts: string[] = [];
+  if (d.summary) parts.push(`<p class="pdf-summary">${esc(d.summary)}</p>`);
+  if (d.overall_viability) parts.push(`<div class="pdf-info-box"><strong>Overall Viability:</strong> ${esc(d.overall_viability)}</div>`);
+
+  const metrics = [
+    { label: "LTV", value: d.ltv }, { label: "CAC", value: d.cac },
+    { label: "LTV / CAC Ratio", value: d.ltv_cac_ratio }, { label: "Payback Period", value: d.payback_period },
+  ].filter((m) => m.value != null);
+
+  if (metrics.length) {
+    parts.push(`<div class="pdf-metric-row">${metrics.map((m) => `<div class="pdf-metric-card">
+      <div class="pdf-metric-label">${m.label}</div>
+      <div class="pdf-metric-value">${fmtVal(m.value)}</div>
+    </div>`).join("")}</div>`);
+  }
+
+  const be = d.break_even as Record<string, unknown> | undefined;
+  if (be) {
+    const beCards = [
+      be.timeline_to_break_even && `<div class="pdf-card"><div class="pdf-card-name">Timeline</div><div class="pdf-metric-value" style="font-size:12pt;">${esc(be.timeline_to_break_even)}</div></div>`,
+      be.buyers_needed_to_break_even != null && `<div class="pdf-card"><div class="pdf-card-name">Customers Needed</div><div class="pdf-metric-value" style="font-size:12pt;">${fmtVal(be.buyers_needed_to_break_even)}</div></div>`,
+      be.monthly_revenue_at_break_even != null && `<div class="pdf-card"><div class="pdf-card-name">Monthly Revenue at B/E</div><div class="pdf-metric-value" style="font-size:12pt;">${fmtVal(be.monthly_revenue_at_break_even)}</div></div>`,
+      be.monthly_cost_at_break_even != null && `<div class="pdf-card"><div class="pdf-card-name">Monthly Cost at B/E</div><div class="pdf-metric-value" style="font-size:12pt;">${fmtVal(be.monthly_cost_at_break_even)}</div></div>`,
+    ].filter(Boolean) as string[];
+    if (beCards.length) parts.push(`<h3 class="pdf-subsection">Break-Even Analysis</h3><div class="pdf-grid2">${beCards.join("")}</div>`);
+  }
+
+  const projs = d.monthly_projections as Array<Record<string, unknown>> | undefined;
+  if (projs?.length) {
+    parts.push(`<h3 class="pdf-subsection">Monthly Projections</h3>
+    <table class="pdf-table"><thead><tr><th>Month</th><th>Revenue</th><th>Costs</th><th>Profit / Loss</th><th>Customers</th></tr></thead>
+    <tbody>${projs.map((p) => {
+      const profit = typeof p.profit === "number" ? p.profit : parseFloat(String(p.profit ?? "0").replace(/[^0-9.-]/g, ""));
+      const pc = !isNaN(profit) ? (profit > 0 ? "#16a34a" : profit < 0 ? "#dc2626" : "") : "";
+      return `<tr>
+        <td>Month ${esc(p.month ?? "")}</td>
+        <td>${fmtVal(p.revenue)}</td>
+        <td>${fmtVal(p.costs)}</td>
+        <td style="color:${pc};font-weight:600;">${fmtVal(p.profit)}</td>
+        <td>${fmtVal(p.customers)}</td>
+      </tr>`;
+    }).join("")}</tbody></table>`);
+  }
+
+  const wa = d.weak_assumptions as string[] | undefined;
+  if (wa?.length) {
+    parts.push(`<h3 class="pdf-subsection">Key Assumptions to Validate</h3>
+    <ul class="pdf-list">${wa.map((a) => `<li style="color:#92400e;">⚠ ${esc(a)}</li>`).join("")}</ul>`);
+  }
+
+  if (!parts.length) return buildGenericSection("Financial Analysis", data);
+  return `<section class="pdf-section"><h2 class="pdf-section-title">Financial Analysis</h2><div class="pdf-section-body">${parts.join("")}</div></section>`;
+}
+
+// ─── Master full-report PDF builder ───────────────────────────────────────────
+
+function buildFullReportPdfHtml(idea: Idea, sections: ReturnType<typeof useAiPipeline>["sections"]): string {
+  const date = idea.created_at
+    ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+    : "";
+
+  const feasScore = idea.feasibility;
+  const feasLabel = feasScore != null
+    ? (feasScore >= 8 ? "Highly Feasible" : feasScore >= 6 ? "Moderately Feasible" : feasScore >= 4 ? "Challenging" : "High Risk")
+    : null;
+  const feasColor = feasScore != null ? (feasScore >= 7 ? "#16a34a" : feasScore >= 5 ? "#d97706" : "#dc2626") : "#94a3b8";
+
+  const skills = (!Array.isArray(idea.skills) && idea.skills) ? idea.skills as { your_skills?: string[]; required_skills?: string[]; skill_gaps?: string[] } : null;
+  const skillsHtml = skills ? `
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid #334155;">
+      <div style="font-size:8.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#64748b;margin-bottom:10px;">Skills Analysis</div>
+      <div style="display:flex;gap:28px;flex-wrap:wrap;">
+        ${skills.your_skills?.length ? `<div><div style="font-size:8pt;color:#64748b;margin-bottom:5px;">YOUR SKILLS</div><div style="display:flex;flex-wrap:wrap;gap:4px;">${skills.your_skills.map((s) => `<span style="background:#d1fae5;color:#065f46;padding:2px 9px;border-radius:999px;font-size:8.5pt;font-weight:500;">${esc(s)}</span>`).join("")}</div></div>` : ""}
+        ${skills.required_skills?.length ? `<div><div style="font-size:8pt;color:#64748b;margin-bottom:5px;">REQUIRED SKILLS</div><div style="display:flex;flex-wrap:wrap;gap:4px;">${skills.required_skills.map((s) => `<span style="background:#dbeafe;color:#1e40af;padding:2px 9px;border-radius:999px;font-size:8.5pt;font-weight:500;">${esc(s)}</span>`).join("")}</div></div>` : ""}
+        ${skills.skill_gaps?.length ? `<div><div style="font-size:8pt;color:#64748b;margin-bottom:5px;">SKILL GAPS</div><div style="display:flex;flex-wrap:wrap;gap:4px;">${skills.skill_gaps.map((s) => `<span style="background:#fef3c7;color:#92400e;padding:2px 9px;border-radius:999px;font-size:8.5pt;font-weight:500;">${esc(s)}</span>`).join("")}</div></div>` : ""}
       </div>
-    </section>` : "";
+    </div>` : "";
 
-  const indirectHtml = data.indirect_alternatives?.length ? `
-    <section>
-      <h2>Indirect Alternatives</h2>
-      ${strList(data.indirect_alternatives)}
-    </section>` : "";
+  const allSections = [
+    buildGenericSection("Problems & Risks", sections.problems.data),
+    buildCustomersPdfSection(sections.customers.data),
+    buildCompetitionPdfSection(sections.competition.data),
+    buildMarketPdfSection(sections.marketPotential.data),
+    buildGenericSection("Strategy", sections.ideaStrategy.data),
+    buildBusinessModelPdfSection(sections.businessModel.data),
+    buildGenericSection("Functions List", sections.functionsList.data),
+    buildMvpPdfSection(sections.mvpPlanning.data),
+    buildFinancialPdfSection(sections.unitEconomics.data),
+    buildGenericSection("Go-to-Market Strategy", sections.goToMarket.data),
+  ].filter(Boolean);
 
-  const forcesHtml = data.porters_five_forces?.length ? `
-    <section>
-      <h2>Porter's Five Forces</h2>
-      <div class="forces-grid">
-        ${data.porters_five_forces.map((force) => {
-          const color = levelColor(force.threat_level);
-          return `
-            <div class="force-card" style="border-left: 4px solid ${color};">
-              <h4>${esc(force.force)}</h4>
-              ${force.threat_level ? `<div style="font-size:8pt;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.06em;margin:4px 0;">${esc(force.threat_level)}</div>` : ""}
-              ${force.description ? `<p class="subtext">${esc(force.description)}</p>` : ""}
-            </div>
-          `;
-        }).join("")}
-      </div>
-    </section>` : "";
-
-  const gapsHtml = data.positioning_gaps?.length ? `
-    <section>
-      <h2>Positioning Gaps</h2>
-      ${strList(data.positioning_gaps)}
-    </section>` : "";
-
-  const advHtml = data.competitive_advantage ? `
-    <section>
-      <h2>Competitive Advantage</h2>
-      <p>${esc(data.competitive_advantage)}</p>
-    </section>` : "";
+  const tocItems = [
+    sections.problems.data && "Problems & Risks",
+    sections.customers.data && "Customers",
+    sections.competition.data && "Competitor Analysis",
+    sections.marketPotential.data && "Market Potential",
+    sections.ideaStrategy.data && "Strategy",
+    sections.businessModel.data && "Business Model",
+    sections.functionsList.data && "Functions List",
+    sections.mvpPlanning.data && "MVP Planning",
+    sections.unitEconomics.data && "Financial Analysis",
+    sections.goToMarket.data && "Go-to-Market Strategy",
+  ].filter(Boolean) as string[];
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>${esc(idea.title ?? "Idea")} — Competition</title>
+<title>${esc(idea.title ?? "Idea")} — Business Analysis Report</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
-  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
-  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
-  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
-  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
-  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
-  section { break-inside: avoid; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
-  .metric { margin: 6px 0; }
-  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; display: block; margin-bottom: 2px; }
-  .subtext { font-size: 9.5pt; color: #555; margin: 4px 0; }
-  .forces-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .force-card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; background: #fafafa; }
-  ul, ol { padding-left: 18px; margin: 4px 0; }
-  li { margin-bottom: 2px; font-size: 10pt; }
-  @page { size: A4; margin: 1.5cm 2cm; }
-  @media print { body { padding: 0; } }
+/* ── Reset ── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: #1e293b; background: #fff; font-size: 10.5pt; line-height: 1.65; }
+
+/* ── Cover ── */
+.cover { padding: 2.2cm 2.5cm 1.8cm; background: #0f172a; color: #fff; }
+.cover-brand { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .18em; color: #f59e0b; margin-bottom: 22px; }
+.cover-title { font-size: 28pt; font-weight: 800; line-height: 1.15; color: #fff; margin-bottom: 6px; }
+.cover-subtitle { font-size: 10pt; color: #94a3b8; margin-bottom: 18px; }
+.cover-desc { font-size: 10.5pt; color: #cbd5e1; max-width: 660px; line-height: 1.65; margin-bottom: 22px; white-space: pre-wrap; }
+.cover-meta { display: flex; gap: 36px; flex-wrap: wrap; padding: 18px 0; border-top: 1px solid #1e3a5f; border-bottom: 1px solid #1e3a5f; }
+.cover-meta-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #475569; margin-bottom: 4px; }
+.cover-meta-value { font-size: 13pt; font-weight: 800; color: #f1f5f9; }
+
+/* ── Content wrapper ── */
+.content { padding: 1.6cm 2.5cm 2.2cm; }
+
+/* ── Table of Contents ── */
+.pdf-toc { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 14px 18px; margin-bottom: 28px; }
+.pdf-toc-title { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #64748b; margin-bottom: 8px; }
+.pdf-toc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 20px; }
+.pdf-toc-item { font-size: 9.5pt; color: #374151; font-weight: 500; padding: 1px 0; }
+.pdf-toc-item::before { content: "→ "; color: #f59e0b; font-weight: 700; }
+
+/* ── Sections ── */
+.pdf-section { margin-bottom: 32px; break-inside: avoid; }
+.pdf-section-title { font-size: 13.5pt; font-weight: 800; color: #0f172a; padding-bottom: 7px; border-bottom: 2.5px solid #f59e0b; margin-bottom: 14px; letter-spacing: -.01em; }
+.pdf-section-body { display: flex; flex-direction: column; gap: 10px; }
+.pdf-summary { font-size: 10.5pt; color: #334155; line-height: 1.65; background: #f8fafc; border-left: 3px solid #f59e0b; padding: 10px 14px; border-radius: 0 6px 6px 0; }
+.pdf-subsection { font-size: 10.5pt; font-weight: 700; color: #1e293b; margin-top: 6px; margin-bottom: 4px; }
+
+/* ── Cards & Grids ── */
+.pdf-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pdf-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.pdf-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; background: #fafafa; }
+.pdf-card.card-green { background: #f0fdf4; border-color: #bbf7d0; }
+.pdf-card-name { font-size: 10pt; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+.pdf-card-meta { font-size: 8.5pt; color: #64748b; margin-bottom: 4px; }
+.pdf-card-desc { font-size: 9.5pt; color: #374151; line-height: 1.5; margin-top: 4px; }
+.pdf-card-id { font-size: 8pt; font-weight: 700; color: #94a3b8; letter-spacing: .12em; }
+.pdf-field-row { font-size: 9pt; color: #374151; margin-top: 4px; line-height: 1.45; }
+.pdf-fl { font-weight: 600; color: #64748b; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .04em; }
+
+/* ── Highlight boxes ── */
+.pdf-highlight { border-radius: 8px; padding: 12px 16px; border: 1px solid; }
+.pdf-highlight.amber { background: #fffbeb; border-color: #fde68a; }
+.pdf-highlight.green { background: #f0fdf4; border-color: #bbf7d0; }
+.pdf-highlight.red { background: #fef2f2; border-color: #fecaca; }
+.pdf-hl-label { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #92400e; margin-bottom: 5px; }
+.pdf-highlight.green .pdf-hl-label { color: #15803d; }
+.pdf-highlight.red .pdf-hl-label { color: #dc2626; }
+.pdf-hl-title { font-size: 11pt; font-weight: 700; margin-bottom: 4px; color: #111; }
+.pdf-info-box { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 9px 14px; font-size: 10pt; color: #334155; line-height: 1.5; }
+
+/* ── Metrics ── */
+.pdf-metric-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.pdf-metric-card { flex: 1; min-width: 110px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; background: #fafafa; }
+.pdf-metric-label { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin-bottom: 3px; }
+.pdf-metric-sub { font-size: 8pt; color: #94a3b8; margin-bottom: 5px; }
+.pdf-metric-value { font-size: 15pt; font-weight: 800; color: #0f172a; line-height: 1.2; }
+.pdf-metric-note { font-size: 8.5pt; color: #94a3b8; margin-top: 4px; }
+
+/* ── Tables ── */
+.pdf-table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+.pdf-table th { text-align: left; font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #64748b; padding: 7px 10px; border-bottom: 2px solid #e2e8f0; background: #f8fafc; }
+.pdf-table td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; color: #374151; line-height: 1.45; }
+.pdf-table tr:last-child td { border-bottom: none; }
+
+/* ── Tags & Badges ── */
+.pdf-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.pdf-tag { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 999px; padding: 2px 10px; font-size: 9pt; }
+.cyan-tag { background: #ecfeff; border-color: #a5f3fc; color: #0e7490; }
+.amber-badge { display: inline-block; background: #fef3c7; color: #92400e; border-radius: 999px; padding: 1px 8px; font-size: 8.5pt; font-weight: 600; }
+
+/* ── Generic renderer ── */
+.pdf-field-block { margin-bottom: 8px; }
+.pdf-field-label { font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #64748b; margin-bottom: 3px; }
+.pdf-text { font-size: 10.5pt; color: #374151; line-height: 1.6; }
+.pdf-list { padding-left: 17px; margin: 4px 0; }
+.pdf-list li { margin-bottom: 3px; font-size: 9.5pt; color: #374151; }
+.pdf-item-list { display: flex; flex-direction: column; gap: 8px; }
+.pdf-item-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; }
+.pdf-nested { display: flex; flex-direction: column; gap: 3px; }
+.pdf-nested-field { font-size: 9.5pt; color: #374151; }
+.pdf-nested-label { font-weight: 600; color: #475569; }
+.pdf-num { font-size: 10pt; font-weight: 600; color: #0f172a; }
+.pdf-bool { font-size: 9pt; font-weight: 600; padding: 1px 8px; border-radius: 999px; }
+.bool-yes { background: #d1fae5; color: #065f46; }
+.bool-no { background: #fee2e2; color: #991b1b; }
+.pdf-small { font-size: 8.5pt; color: #94a3b8; }
+.pdf-check::before { content: "✓ "; color: #16a34a; font-weight: 700; }
+.pdf-cross::before { content: "✗ "; color: #dc2626; font-weight: 700; }
+
+/* ── Print ── */
+@page { size: A4; margin: 0; }
+@media print {
+  .cover { padding: 2.2cm 2.5cm 1.8cm; }
+  .content { padding: 1.6cm 2.5cm 2.2cm; }
+  .pdf-section { break-inside: avoid; }
+  .pdf-section-title { break-after: avoid; }
+}
 </style>
 </head>
 <body>
-  <h1>${esc(idea.title ?? "Untitled Idea")} — Competition</h1>
-  ${date ? `<p class="meta-line">${date}</p>` : ""}
-  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
-  ${competitorsHtml}
-  ${indirectHtml}
-  ${forcesHtml}
-  ${gapsHtml}
-  ${advHtml}
-</body>
-</html>`;
-}
 
-interface PdfMarketData {
-  tam?: string;
-  sam?: string;
-  som?: string;
-  market_size_confidence?: string;
-  growth_rate?: string;
-  timing_assessment?: string;
-  opportunity_score?: string;
-  pestel_analysis?: Array<{ factor: string; impact?: string; description?: string }>;
-  market_trends?: string[];
-}
+<div class="cover">
+  <div class="cover-brand">BizifyAI — Business Analysis Report</div>
+  <h1 class="cover-title">${esc(idea.title ?? "Untitled Idea")}</h1>
+  ${date ? `<p class="cover-subtitle">${date}</p>` : ""}
+  ${idea.description ? `<p class="cover-desc">${esc(idea.description)}</p>` : ""}
+  <div class="cover-meta">
+    ${idea.budget != null ? `<div><div class="cover-meta-label">Budget</div><div class="cover-meta-value">$${idea.budget.toLocaleString()}</div></div>` : ""}
+    ${feasScore != null ? `<div><div class="cover-meta-label">Feasibility</div><div class="cover-meta-value" style="color:${feasColor};">${feasScore} / 10 — ${feasLabel}</div></div>` : ""}
+    ${idea.status ? `<div><div class="cover-meta-label">Status</div><div class="cover-meta-value">${esc(idea.status === "draft" ? "In Progress" : idea.status === "active" ? "Active" : idea.status === "archived" ? "Archived" : idea.status)}</div></div>` : ""}
+    ${tocItems.length > 0 ? `<div><div class="cover-meta-label">Sections Generated</div><div class="cover-meta-value">${tocItems.length} of 10</div></div>` : ""}
+  </div>
+  ${skillsHtml}
+</div>
+
+<div class="content">
+  ${tocItems.length > 1 ? `
+  <div class="pdf-toc">
+    <div class="pdf-toc-title">Contents</div>
+    <div class="pdf-toc-grid">${tocItems.map((t) => `<div class="pdf-toc-item">${esc(t)}</div>`).join("")}</div>
+  </div>` : ""}
+
+  ${allSections.length > 0 ? allSections.join("\n") : "<p style='color:#64748b;font-size:10pt;'>No AI analysis has been generated yet. Run the pipeline to generate insights.</p>"}
+</div>
 
-function buildMarketPdfHtml(idea: Idea, raw: string | null): string {
-  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
-  let data: PdfMarketData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") data = p as PdfMarketData;
-  } catch { /* render what we have */ }
-
-  const marketSizeHtml = (data.tam || data.sam || data.som) ? `
-    <section>
-      <h2>Market Size (TAM/SAM/SOM)</h2>
-      <div class="market-funnel">
-        ${data.tam ? `<div class="funnel-level tam"><div class="level-label">TAM (Total)</div><div class="level-value">${esc(data.tam)}</div></div>` : ""}
-        ${data.sam ? `<div class="funnel-level sam"><div class="level-label">SAM (Serviceable)</div><div class="level-value">${esc(data.sam)}</div></div>` : ""}
-        ${data.som ? `<div class="funnel-level som"><div class="level-label">SOM (Obtainable)</div><div class="level-value">${esc(data.som)}</div></div>` : ""}
-      </div>
-    </section>` : "";
-
-  const opportunityHtml = data.opportunity_score ? `
-    <section>
-      <div class="opportunity-banner">
-        <div class="opportunity-label">Opportunity Score</div>
-        <div class="opportunity-score">${esc(data.opportunity_score)}</div>
-      </div>
-    </section>` : "";
-
-  const timingHtml = data.timing_assessment ? `
-    <section>
-      <h2>Timing Assessment</h2>
-      <p>${esc(data.timing_assessment)}</p>
-    </section>` : "";
-
-  const pestelHtml = data.pestel_analysis?.length ? `
-    <section>
-      <h2>PESTEL Analysis</h2>
-      <div class="grid3">
-        ${data.pestel_analysis.map((item) => `
-          <div class="pestel-card">
-            <h4>${esc(item.factor)}</h4>
-            ${item.impact ? `<div style="font-size:8pt;font-weight:700;color:#f59e0b;text-transform:uppercase;margin:4px 0;">Impact: ${esc(item.impact)}</div>` : ""}
-            ${item.description ? `<p class="subtext">${esc(item.description)}</p>` : ""}
-          </div>
-        `).join("")}
-      </div>
-    </section>` : "";
-
-  const trendsHtml = data.market_trends?.length ? `
-    <section>
-      <h2>Market Trends</h2>
-      ${strList(data.market_trends)}
-    </section>` : "";
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<title>${esc(idea.title ?? "Idea")} — Market</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
-  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
-  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
-  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
-  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
-  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
-  section { break-inside: avoid; }
-  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-  .market-funnel { display: flex; flex-direction: column; gap: 8px; }
-  .funnel-level { border-radius: 6px; padding: 12px; border: 1px solid #e5e7eb; }
-  .tam { background: #fef3c7; border-color: #fcd34d; }
-  .sam { background: #fef08a; border-color: #fde047; }
-  .som { background: #feef5e; border-color: #facc15; }
-  .level-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #92400e; letter-spacing: .06em; }
-  .level-value { font-size: 11pt; font-weight: 600; color: #111; margin-top: 4px; }
-  .opportunity-banner { background: #f0fdf4; border: 2px solid #bbf7d0; border-radius: 8px; padding: 16px; text-align: center; }
-  .opportunity-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #15803d; letter-spacing: .06em; }
-  .opportunity-score { font-size: 24pt; font-weight: 700; color: #15803d; margin-top: 4px; }
-  .pestel-card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; background: #fafafa; }
-  .subtext { font-size: 9.5pt; color: #555; margin: 4px 0; }
-  ul, ol { padding-left: 18px; margin: 4px 0; }
-  li { margin-bottom: 2px; font-size: 10pt; }
-  @page { size: A4; margin: 1.5cm 2cm; }
-  @media print { body { padding: 0; } }
-</style>
-</head>
-<body>
-  <h1>${esc(idea.title ?? "Untitled Idea")} — Market Potential</h1>
-  ${date ? `<p class="meta-line">${date}</p>` : ""}
-  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
-  ${opportunityHtml}
-  ${marketSizeHtml}
-  ${timingHtml}
-  ${pestelHtml}
-  ${trendsHtml}
-</body>
-</html>`;
-}
-
-interface PdfBusinessModelData {
-  business_model_canvas?: Record<string, string>;
-  revenue_streams?: Array<{ stream: string; description?: string; potential?: string }>;
-  pricing_strategy?: string;
-  cost_structure?: string;
-  summary?: string;
-}
-
-function buildBusinessModelPdfHtml(idea: Idea, raw: string | null): string {
-  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
-  let data: PdfBusinessModelData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") data = p as PdfBusinessModelData;
-  } catch { /* render what we have */ }
-
-  const canvasHtml = data.business_model_canvas ? `
-    <section>
-      <h2>Business Model Canvas</h2>
-      <div class="canvas-grid">
-        ${["key_partners", "key_activities", "key_resources", "value_propositions", "customer_segments", "customer_relationships", "channels", "cost_structure", "revenue_streams"]
-          .map((block, i) => {
-            const colors = ["bg-blue-50", "bg-purple-50", "bg-indigo-50", "bg-red-50", "bg-green-50", "bg-yellow-50", "bg-orange-50", "bg-pink-50", "bg-cyan-50"];
-            const value = data.business_model_canvas?.[block] || "";
-            const label = block.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
-            return value ? `
-              <div class="canvas-block ${colors[i % colors.length]}">
-                <div class="canvas-label">${esc(label)}</div>
-                <div class="canvas-content">${esc(value).split("\n").map((line) => `<div>${esc(line)}</div>`).join("")}</div>
-              </div>
-            ` : "";
-          }).join("")}
-      </div>
-    </section>` : "";
-
-  const revenueHtml = data.revenue_streams?.length ? `
-    <section>
-      <h2>Revenue Streams</h2>
-      <div class="grid2">
-        ${data.revenue_streams.map((stream) => `
-          <div class="card">
-            <h4>${esc(stream.stream)}</h4>
-            ${stream.description ? `<p class="subtext">${esc(stream.description)}</p>` : ""}
-            ${stream.potential ? `<div class="metric"><span class="metric-label">Potential</span><span>${esc(stream.potential)}</span></div>` : ""}
-          </div>
-        `).join("")}
-      </div>
-    </section>` : "";
-
-  const pricingHtml = data.pricing_strategy ? `
-    <section>
-      <h2>Pricing Strategy</h2>
-      <p>${esc(data.pricing_strategy)}</p>
-    </section>` : "";
-
-  const costHtml = data.cost_structure ? `
-    <section>
-      <h2>Cost Structure</h2>
-      <p>${esc(data.cost_structure)}</p>
-    </section>` : "";
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<title>${esc(idea.title ?? "Idea")} — Business Model</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
-  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
-  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
-  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
-  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
-  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
-  section { break-inside: avoid; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
-  .metric { margin: 6px 0; }
-  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; display: block; margin-bottom: 2px; }
-  .subtext { font-size: 9.5pt; color: #555; margin: 4px 0; }
-  .canvas-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .canvas-block { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; }
-  .canvas-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; margin-bottom: 6px; }
-  .canvas-content { font-size: 9pt; color: #333; }
-  .bg-blue-50 { background: #eff6ff; }
-  .bg-purple-50 { background: #f5f3ff; }
-  .bg-indigo-50 { background: #f0f4ff; }
-  .bg-red-50 { background: #fef2f2; }
-  .bg-green-50 { background: #f0fdf4; }
-  .bg-yellow-50 { background: #fefce8; }
-  .bg-orange-50 { background: #fff7ed; }
-  .bg-pink-50 { background: #fdf2f8; }
-  .bg-cyan-50 { background: #ecfdf5; }
-  @page { size: A4; margin: 1.5cm 2cm; }
-  @media print { body { padding: 0; } }
-</style>
-</head>
-<body>
-  <h1>${esc(idea.title ?? "Untitled Idea")} — Business Model</h1>
-  ${date ? `<p class="meta-line">${date}</p>` : ""}
-  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
-  ${data.summary ? `<section><h2>Summary</h2><p>${esc(data.summary)}</p></section>` : ""}
-  ${canvasHtml}
-  ${revenueHtml}
-  ${pricingHtml}
-  ${costHtml}
-</body>
-</html>`;
-}
-
-interface PdfProblemsData {
-  problems?: Array<{ problem: string; severity?: string; impact?: string; affected_users?: string }>;
-  risks?: Array<{ risk: string; probability?: string; impact?: string; mitigation?: string }>;
-  assumptions?: Array<{ assumption: string; criticality?: string; validation?: string }>;
-  summary?: string;
-}
-
-function buildProblemsRiskPdfHtml(idea: Idea, raw: string | null): string {
-  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
-  let data: PdfProblemsData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") data = p as PdfProblemsData;
-  } catch { /* render what we have */ }
-
-  const severityColor = (level?: string) => {
-    const l = (level ?? "").toLowerCase();
-    if (l === "critical" || l === "high") return "#dc2626";
-    if (l === "medium") return "#f59e0b";
-    return "#15803d";
-  };
-
-  const problemsHtml = data.problems?.length ? `
-    <section>
-      <h2>Problems</h2>
-      <div class="grid2">
-        ${data.problems.map((p, i) => `
-          <div class="card">
-            <h4>${esc(p.problem)}</h4>
-            ${p.severity ? `<div style="font-size:8pt;font-weight:700;color:${severityColor(p.severity)};text-transform:uppercase;margin:4px 0;">${esc(p.severity)}</div>` : ""}
-            ${p.impact ? `<div class="metric"><span class="metric-label">Impact</span><span class="subtext">${esc(p.impact)}</span></div>` : ""}
-            ${p.affected_users ? `<div class="metric"><span class="metric-label">Affected</span><span class="subtext">${esc(p.affected_users)}</span></div>` : ""}
-          </div>
-        `).join("")}
-      </div>
-    </section>` : "";
-
-  const risksHtml = data.risks?.length ? `
-    <section>
-      <h2>Key Risks</h2>
-      <div class="grid2">
-        ${data.risks.map((r) => `
-          <div class="card">
-            <h4>${esc(r.risk)}</h4>
-            ${r.probability ? `<div class="metric"><span class="metric-label">Probability</span><span class="subtext">${esc(r.probability)}</span></div>` : ""}
-            ${r.impact ? `<div class="metric"><span class="metric-label">Impact</span><span class="subtext">${esc(r.impact)}</span></div>` : ""}
-            ${r.mitigation ? `<div class="metric"><span class="metric-label">Mitigation</span><span class="subtext">${esc(r.mitigation)}</span></div>` : ""}
-          </div>
-        `).join("")}
-      </div>
-    </section>` : "";
-
-  const assumptionsHtml = data.assumptions?.length ? `
-    <section>
-      <h2>Key Assumptions</h2>
-      <div class="grid2">
-        ${data.assumptions.map((a) => `
-          <div class="card">
-            <h4>${esc(a.assumption)}</h4>
-            ${a.criticality ? `<div class="metric"><span class="metric-label">Criticality</span><span class="subtext">${esc(a.criticality)}</span></div>` : ""}
-            ${a.validation ? `<div class="metric"><span class="metric-label">Validation</span><span class="subtext">${esc(a.validation)}</span></div>` : ""}
-          </div>
-        `).join("")}
-      </div>
-    </section>` : "";
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<title>${esc(idea.title ?? "Idea")} — Risk</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
-  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
-  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
-  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
-  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
-  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
-  section { break-inside: avoid; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
-  .metric { margin: 6px 0; }
-  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; display: block; margin-bottom: 2px; }
-  .subtext { font-size: 9.5pt; color: #555; }
-  @page { size: A4; margin: 1.5cm 2cm; }
-  @media print { body { padding: 0; } }
-</style>
-</head>
-<body>
-  <h1>${esc(idea.title ?? "Untitled Idea")} — Risk & Problems</h1>
-  ${date ? `<p class="meta-line">${date}</p>` : ""}
-  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
-  ${data.summary ? `<section><h2>Summary</h2><p>${esc(data.summary)}</p></section>` : ""}
-  ${problemsHtml}
-  ${risksHtml}
-  ${assumptionsHtml}
-</body>
-</html>`;
-}
-
-interface PdfFinancialData {
-  break_even?: { breakeven_point?: string; timeframe?: string; assumptions?: string };
-  monthly_projections?: Array<{ month?: string | number; customers?: number; revenue?: number; costs?: number; profit?: number }>;
-  ltv_cac_ratio?: string;
-  ltv?: string;
-  cac?: string;
-  payback_period?: string;
-  overall_viability?: string;
-  unit_economics_summary?: string;
-}
-
-function buildFinancialPdfHtml(idea: Idea, raw: string | null): string {
-  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
-  let data: PdfFinancialData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") data = p as PdfFinancialData;
-  } catch { /* render what we have */ }
-
-  const metricsHtml = (data.ltv || data.cac || data.ltv_cac_ratio || data.payback_period) ? `
-    <section>
-      <h2>Unit Economics Metrics</h2>
-      <div class="metrics-grid">
-        ${data.ltv ? `<div class="metric-box"><div class="metric-label">LTV</div><div class="metric-value">${esc(data.ltv)}</div></div>` : ""}
-        ${data.cac ? `<div class="metric-box"><div class="metric-label">CAC</div><div class="metric-value">${esc(data.cac)}</div></div>` : ""}
-        ${data.ltv_cac_ratio ? `<div class="metric-box"><div class="metric-label">LTV:CAC Ratio</div><div class="metric-value">${esc(data.ltv_cac_ratio)}</div></div>` : ""}
-        ${data.payback_period ? `<div class="metric-box"><div class="metric-label">Payback Period</div><div class="metric-value">${esc(data.payback_period)}</div></div>` : ""}
-      </div>
-    </section>` : "";
-
-  const beHtml = data.break_even ? `
-    <section>
-      <h2>Break-Even Analysis</h2>
-      <div class="card">
-        ${data.break_even.breakeven_point ? `<div class="metric"><span class="metric-label">Break-Even Point</span><span>${esc(data.break_even.breakeven_point)}</span></div>` : ""}
-        ${data.break_even.timeframe ? `<div class="metric"><span class="metric-label">Timeframe</span><span>${esc(data.break_even.timeframe)}</span></div>` : ""}
-        ${data.break_even.assumptions ? `<div class="metric"><span class="metric-label">Assumptions</span><p class="subtext">${esc(data.break_even.assumptions)}</p></div>` : ""}
-      </div>
-    </section>` : "";
-
-  const projectionsHtml = data.monthly_projections?.length ? `
-    <section>
-      <h2>Monthly Projections</h2>
-      <table class="projections-table">
-        <thead>
-          <tr>
-            <th>Month</th>
-            <th>Customers</th>
-            <th>Revenue</th>
-            <th>Costs</th>
-            <th>Profit</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.monthly_projections.slice(0, 12).map((p) => `
-            <tr>
-              <td>${esc(String(p.month ?? "—"))}</td>
-              <td>${p.customers ?? "—"}</td>
-              <td>$${p.revenue ?? "—"}</td>
-              <td>$${p.costs ?? "—"}</td>
-              <td style="color:${(p.profit ?? 0) >= 0 ? "#15803d" : "#dc2626"};font-weight:600;">$${p.profit ?? "—"}</td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    </section>` : "";
-
-  const viabilityHtml = data.overall_viability ? `
-    <section>
-      <h2>Overall Viability Assessment</h2>
-      <p>${esc(data.overall_viability)}</p>
-    </section>` : "";
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<title>${esc(idea.title ?? "Idea")} — Financial</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
-  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
-  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
-  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
-  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
-  section { break-inside: avoid; }
-  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
-  .metric-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 10px; text-align: center; }
-  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #92400e; letter-spacing: .06em; margin-bottom: 4px; }
-  .metric-value { font-size: 13pt; font-weight: 700; color: #1a1a1a; }
-  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
-  .metric { margin: 8px 0; }
-  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; display: block; margin-bottom: 2px; }
-  .subtext { font-size: 9.5pt; color: #555; }
-  .projections-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
-  .projections-table th { text-align: left; font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; padding: 6px 8px; border-bottom: 2px solid #e5e7eb; background: #f9fafb; }
-  .projections-table td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; }
-  @page { size: A4; margin: 1.5cm 2cm; }
-  @media print { body { padding: 0; } }
-</style>
-</head>
-<body>
-  <h1>${esc(idea.title ?? "Untitled Idea")} — Unit Economics & Financial</h1>
-  ${date ? `<p class="meta-line">${date}</p>` : ""}
-  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
-  ${data.unit_economics_summary ? `<section><h2>Summary</h2><p>${esc(data.unit_economics_summary)}</p></section>` : ""}
-  ${metricsHtml}
-  ${beHtml}
-  ${projectionsHtml}
-  ${viabilityHtml}
-</body>
-</html>`;
-}
-
-interface PdfStrategyData {
-  executive_summary?: string;
-  vision?: string;
-  mission?: string;
-  core_values?: string[];
-  goals?: Array<{ goal: string; timeline?: string; kpis?: string }>;
-  success_metrics?: string[];
-  strategic_focus?: string;
-}
-
-function buildStrategyPdfHtml(idea: Idea, raw: string | null): string {
-  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
-  let data: PdfStrategyData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") data = p as PdfStrategyData;
-  } catch { /* render what we have */ }
-
-  const goalsHtml = data.goals?.length ? `
-    <section>
-      <h2>Strategic Goals</h2>
-      <div class="goals-list">
-        ${data.goals.map((g, i) => `
-          <div class="goal-item">
-            <div class="goal-number">${i + 1}</div>
-            <div class="goal-content">
-              <h4>${esc(g.goal)}</h4>
-              ${g.timeline ? `<div class="metric"><span class="metric-label">Timeline</span><span class="subtext">${esc(g.timeline)}</span></div>` : ""}
-              ${g.kpis ? `<div class="metric"><span class="metric-label">KPIs</span><span class="subtext">${esc(g.kpis)}</span></div>` : ""}
-            </div>
-          </div>
-        `).join("")}
-      </div>
-    </section>` : "";
-
-  const coreValuesHtml = data.core_values?.length ? `
-    <section>
-      <h2>Core Values</h2>
-      <div class="values-list">
-        ${data.core_values.map((v) => `<div class="value-item">• ${esc(v)}</div>`).join("")}
-      </div>
-    </section>` : "";
-
-  const metricsHtml = data.success_metrics?.length ? `
-    <section>
-      <h2>Success Metrics</h2>
-      ${strList(data.success_metrics)}
-    </section>` : "";
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<title>${esc(idea.title ?? "Idea")} — Strategy</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
-  h1 { font-size: 20pt; font-weight: 700; margin-bottom: 2px; }
-  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
-  .desc { color: #333; font-size: 10pt; margin-bottom: 20px; max-width: 680px; white-space: pre-wrap; }
-  h2 { font-size: 12.5pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin: 22px 0 12px; color: #1a1a1a; }
-  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
-  section { break-inside: avoid; }
-  .goals-list { display: flex; flex-direction: column; gap: 10px; }
-  .goal-item { display: flex; gap: 12px; align-items: flex-start; }
-  .goal-number { min-width: 26px; height: 26px; background: #f59e0b; color: #fff; border-radius: 999px; font-size: 9pt; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .goal-content { flex: 1; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; background: #fafafa; }
-  .metric { margin: 6px 0; }
-  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; display: block; margin-bottom: 2px; }
-  .subtext { font-size: 9.5pt; color: #555; }
-  .values-list { display: flex; flex-direction: column; gap: 6px; }
-  .value-item { font-size: 10pt; color: #333; }
-  ul, ol { padding-left: 18px; margin: 4px 0; }
-  li { margin-bottom: 2px; font-size: 10pt; }
-  @page { size: A4; margin: 1.5cm 2cm; }
-  @media print { body { padding: 0; } }
-</style>
-</head>
-<body>
-  <h1>${esc(idea.title ?? "Untitled Idea")} — Strategy</h1>
-  ${date ? `<p class="meta-line">${date}</p>` : ""}
-  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
-  ${data.executive_summary ? `<section><h2>Executive Summary</h2><p>${esc(data.executive_summary)}</p></section>` : ""}
-  ${data.vision ? `<section><h2>Vision</h2><p>${esc(data.vision)}</p></section>` : ""}
-  ${data.mission ? `<section><h2>Mission</h2><p>${esc(data.mission)}</p></section>` : ""}
-  ${coreValuesHtml}
-  ${goalsHtml}
-  ${metricsHtml}
-  ${data.strategic_focus ? `<section><h2>Strategic Focus</h2><p>${esc(data.strategic_focus)}</p></section>` : ""}
-</body>
-</html>`;
-}
-
-function buildFullAnalysisPdfHtml(idea: Idea, sections: ReturnType<typeof useAiPipeline>["sections"]): string {
-  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
-
-  const strategyHtml = sections.ideaStrategy.data ? buildStrategySection(sections.ideaStrategy.data) : "";
-  const customersHtml = sections.customers.data ? buildCustomersSection(sections.customers.data) : "";
-  const competitionHtml = sections.competition.data ? buildCompetitionSection(sections.competition.data) : "";
-  const marketHtml = sections.marketPotential.data ? buildMarketSection(sections.marketPotential.data) : "";
-  const businessModelHtml = sections.businessModel.data ? buildBusinessModelSection(sections.businessModel.data) : "";
-  const mvpHtml = sections.mvpPlanning.data ? buildMvpSection(sections.mvpPlanning.data) : "";
-  const problemsHtml = sections.problems.data ? buildProblemsSection(sections.problems.data) : "";
-  const financialHtml = sections.unitEconomics.data ? buildFinancialSection(sections.unitEconomics.data) : "";
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<title>${esc(idea.title ?? "Idea")} — Complete Analysis</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; background: #fff; padding: 2cm 2.5cm; font-size: 10.5pt; line-height: 1.6; }
-  h1 { font-size: 24pt; font-weight: 700; margin-bottom: 4px; }
-  .meta-line { color: #666; font-size: 9.5pt; margin-bottom: 6px; }
-  .desc { color: #333; font-size: 10pt; margin-bottom: 28px; max-width: 700px; white-space: pre-wrap; }
-  .meta-table { margin-bottom: 28px; }
-  .meta-table tr td { padding: 4px 16px 4px 0; font-size: 10pt; }
-  .meta-table td:first-child { font-weight: 600; color: #666; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .05em; width: 100px; }
-  h2 { font-size: 13pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 6px; margin: 28px 0 14px; color: #1a1a1a; page-break-after: avoid; }
-  h4 { font-size: 10pt; font-weight: 600; margin: 0 0 4px; }
-  section { break-inside: avoid; margin-bottom: 4px; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
-  .card-id { font-size: 8pt; font-weight: 700; color: #9ca3af; letter-spacing: .1em; margin-bottom: 4px; }
-  .metric { margin: 8px 0; }
-  .metric-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; display: block; margin-bottom: 2px; }
-  .subtext { font-size: 9.5pt; color: #555; margin: 4px 0; }
-  .tag { display: inline-block; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 999px; padding: 2px 10px; font-size: 9pt; margin-right: 6px; margin-bottom: 4px; }
-  .tag.amber { background: #fffbeb; border-color: #fde68a; color: #92400e; font-weight: 600; }
-  ul, ol { padding-left: 18px; margin: 6px 0; }
-  li { margin-bottom: 3px; font-size: 10pt; }
-  a { color: #d97706; text-decoration: underline; word-break: break-all; }
-  .table-wrapper { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 8px 0; }
-  th { text-align: left; font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; padding: 6px 10px; border-bottom: 2px solid #e5e7eb; background: #f9fafb; }
-  td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
-  .phase { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
-  .phase-num { min-width: 28px; height: 28px; background: #f59e0b; color: #fff; border-radius: 999px; font-size: 9pt; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .phase-body { flex: 1; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; background: #fafafa; }
-  @page { size: A4; margin: 1.5cm 2cm; }
-  @media print { body { padding: 0; } }
-</style>
-</head>
-<body>
-  <h1>${esc(idea.title ?? "Untitled Idea")} — Complete Analysis</h1>
-  ${date ? `<p class="meta-line">${date}</p>` : ""}
-  ${idea.description ? `<p class="desc">${esc(idea.description)}</p>` : ""}
-  ${idea.budget || idea.feasibility || idea.status ? `
-    <table class="meta-table">
-      <tbody>
-        ${idea.budget != null ? `<tr><td>Budget</td><td>$${idea.budget.toLocaleString()}</td></tr>` : ""}
-        ${idea.feasibility != null ? `<tr><td>Feasibility</td><td>${idea.feasibility} / 10</td></tr>` : ""}
-        ${idea.status ? `<tr><td>Status</td><td>${esc(idea.status)}</td></tr>` : ""}
-      </tbody>
-    </table>
-  ` : ""}
-  ${strategyHtml}
-  ${customersHtml}
-  ${competitionHtml}
-  ${marketHtml}
-  ${businessModelHtml}
-  ${mvpHtml}
-  ${problemsHtml}
-  ${financialHtml}
-</body>
-</html>`;
-}
-
-// ─── PDF Section Renderers ────────────────────────────────────────────────────
-
-function buildStrategySection(raw: string | null): string {
-  let data: PdfStrategyData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") data = p as PdfStrategyData;
-  } catch { /* render what we have */ }
-
-  if (!data.executive_summary && !data.vision && !data.goals?.length) return "";
-
-  const goalsHtml = data.goals?.length ? `
-    ${data.goals.map((g, i) => `
-      <div class="phase">
-        <div class="phase-num">${i + 1}</div>
-        <div class="phase-body">
-          <h4>${esc(g.goal)}</h4>
-          ${g.timeline ? `<div class="metric"><span class="metric-label">Timeline</span><span class="subtext">${esc(g.timeline)}</span></div>` : ""}
-          ${g.kpis ? `<div class="metric"><span class="metric-label">KPIs</span><span class="subtext">${esc(g.kpis)}</span></div>` : ""}
-        </div>
-      </div>
-    `).join("")}
-  ` : "";
-
-  return `
-    <section>
-      <h2>Strategy</h2>
-      ${data.executive_summary ? `<p>${esc(data.executive_summary)}</p>` : ""}
-      ${data.vision ? `<div style="margin-top:12px;"><strong>Vision:</strong> ${esc(data.vision)}</div>` : ""}
-      ${data.mission ? `<div style="margin-top:8px;"><strong>Mission:</strong> ${esc(data.mission)}</div>` : ""}
-      ${goalsHtml}
-    </section>
-  `;
-}
-
-function buildCustomersSection(raw: string | null): string {
-  let data: PdfCustomersData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") data = p as PdfCustomersData;
-  } catch { /* render what we have */ }
-
-  if (!data.customer_segments?.length && !data.acquisition_channels?.length) return "";
-
-  return `
-    <section>
-      <h2>Customers</h2>
-      ${data.customer_segments?.length ? `
-        <div class="grid2">
-          ${data.customer_segments.map((seg, i) => `
-            <div class="card">
-              <div class="card-id">${esc(seg.id ?? `S${i + 1}`)}</div>
-              <h4>${esc(seg.name)}</h4>
-              ${seg.description ? `<p class="subtext">${esc(seg.description)}</p>` : ""}
-              ${seg.pain_intensity ? `<div class="metric"><span class="metric-label">Pain</span><span class="subtext">${esc(seg.pain_intensity)}</span></div>` : ""}
-              ${seg.size_estimate ? `<div class="metric"><span class="metric-label">Size</span><span class="subtext">${esc(seg.size_estimate)}</span></div>` : ""}
-            </div>
-          `).join("")}
-        </div>
-      ` : ""}
-      ${data.acquisition_channels?.length ? `
-        <div style="margin-top:12px;">
-          <h4 style="margin-top:0;">Acquisition Channels</h4>
-          <ul>${data.acquisition_channels.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
-        </div>
-      ` : ""}
-    </section>
-  `;
-}
-
-function buildCompetitionSection(raw: string | null): string {
-  let data: PdfCompetitionData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") data = p as PdfCompetitionData;
-  } catch { /* render what we have */ }
-
-  if (!data.direct_competitors?.length && !data.porters_five_forces?.length) return "";
-
-  return `
-    <section>
-      <h2>Competition</h2>
-      ${data.direct_competitors?.length ? `
-        <div class="grid2">
-          ${data.direct_competitors.map((comp) => `
-            <div class="card">
-              <h4>${esc(comp.name)}</h4>
-              ${comp.positioning ? `<p class="subtext"><em>${esc(comp.positioning)}</em></p>` : ""}
-              ${comp.strengths?.length ? `<div class="metric"><span class="metric-label">Strengths</span><ul style="margin:2px 0;">${comp.strengths.map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div>` : ""}
-            </div>
-          `).join("")}
-        </div>
-      ` : ""}
-      ${data.porters_five_forces?.length ? `
-        <div style="margin-top:12px;">
-          <h4>Porter's Five Forces</h4>
-          <div class="grid3">
-            ${data.porters_five_forces.map((f) => `
-              <div class="card">
-                <h4 style="font-size:9pt;">${esc(f.force)}</h4>
-                ${f.threat_level ? `<div style="font-size:8pt;font-weight:700;color:#f59e0b;margin:4px 0;">${esc(f.threat_level)}</div>` : ""}
-                ${f.description ? `<p class="subtext" style="font-size:8.5pt;">${esc(f.description)}</p>` : ""}
-              </div>
-            `).join("")}
-          </div>
-        </div>
-      ` : ""}
-    </section>
-  `;
-}
-
-function buildMarketSection(raw: string | null): string {
-  let data: PdfMarketData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") data = p as PdfMarketData;
-  } catch { /* render what we have */ }
-
-  if (!data.tam && !data.opportunity_score && !data.pestel_analysis?.length) return "";
-
-  return `
-    <section>
-      <h2>Market Potential</h2>
-      ${(data.tam || data.sam || data.som) ? `
-        <div>
-          ${data.tam ? `<div><strong>TAM:</strong> ${esc(data.tam)}</div>` : ""}
-          ${data.sam ? `<div><strong>SAM:</strong> ${esc(data.sam)}</div>` : ""}
-          ${data.som ? `<div><strong>SOM:</strong> ${esc(data.som)}</div>` : ""}
-        </div>
-      ` : ""}
-      ${data.opportunity_score ? `<div style="margin-top:8px;"><strong>Opportunity Score:</strong> ${esc(data.opportunity_score)}</div>` : ""}
-      ${data.pestel_analysis?.length ? `
-        <div style="margin-top:12px;">
-          <h4>PESTEL Analysis</h4>
-          <div class="grid3">
-            ${data.pestel_analysis.map((item) => `
-              <div class="card">
-                <h4 style="font-size:9pt;">${esc(item.factor)}</h4>
-                ${item.impact ? `<div style="font-size:8.5pt;color:#f59e0b;font-weight:600;">${esc(item.impact)}</div>` : ""}
-                ${item.description ? `<p class="subtext" style="font-size:8.5pt;">${esc(item.description)}</p>` : ""}
-              </div>
-            `).join("")}
-          </div>
-        </div>
-      ` : ""}
-    </section>
-  `;
-}
-
-function buildBusinessModelSection(raw: string | null): string {
-  let data: PdfBusinessModelData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") data = p as PdfBusinessModelData;
-  } catch { /* render what we have */ }
-
-  if (!data.business_model_canvas && !data.revenue_streams?.length) return "";
-
-  return `
-    <section>
-      <h2>Business Model</h2>
-      ${data.revenue_streams?.length ? `
-        <div class="grid2">
-          ${data.revenue_streams.map((stream) => `
-            <div class="card">
-              <h4>${esc(stream.stream)}</h4>
-              ${stream.description ? `<p class="subtext">${esc(stream.description)}</p>` : ""}
-              ${stream.potential ? `<div class="metric"><span class="metric-label">Potential</span><span class="subtext">${esc(stream.potential)}</span></div>` : ""}
-            </div>
-          `).join("")}
-        </div>
-      ` : ""}
-      ${data.pricing_strategy ? `<div style="margin-top:12px;"><strong>Pricing:</strong> ${esc(data.pricing_strategy)}</div>` : ""}
-    </section>
-  `;
-}
-
-function buildMvpSection(raw: string | null): string {
-  let data: PdfMvpData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") data = p as PdfMvpData;
-  } catch { /* render what we have */ }
-
-  if (!data.mvp_goal && !data.riskiest_assumptions?.length && !data.core_user_flows?.length) return "";
-
-  const assumptionsHtml = data.riskiest_assumptions?.length ? `
-    <div style="margin-top:12px;">
-      <h4>Riskiest Assumptions</h4>
-      <div class="grid2">
-        ${data.riskiest_assumptions.map((a, i) => `
-          <div class="card">
-            <div class="card-id">${esc(a.id ?? `A${i + 1}`)}</div>
-            <p style="font-size:9.5pt;font-weight:500;">${esc(a.assumption)}</p>
-            ${a.risk_level ? `<div style="font-size:8pt;font-weight:700;color:#92400e;text-transform:uppercase;margin:6px 0;">${esc(a.risk_level)} risk</div>` : ""}
-            ${a.validation_method ? `<div class="metric"><span class="metric-label">Validation</span><span class="subtext">${esc(a.validation_method)}</span></div>` : ""}
-          </div>
-        `).join("")}
-      </div>
-    </div>
-  ` : "";
-
-  return `
-    <section>
-      <h2>MVP Planning</h2>
-      ${data.mvp_goal ? `<p><strong>${esc(data.mvp_goal)}</strong></p>` : ""}
-      ${data.scope?.included?.length ? `
-        <div style="margin-top:12px;">
-          <h4>Scope (Included)</h4>
-          <ul>${data.scope.included.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>
-        </div>
-      ` : ""}
-      ${data.core_user_flows?.length ? `
-        <div style="margin-top:12px;">
-          <h4>User Flows</h4>
-          <div class="grid2">
-            ${data.core_user_flows.map((f, i) => `
-              <div class="card">
-                <div style="font-size:8.5pt;font-weight:700;background:#f3e8ff;color:#7e22ce;padding:4px 8px;border-radius:4px;width:fit-content;margin-bottom:6px;">${esc(f.id ?? `UF${i + 1}`)}</div>
-                <h4 style="font-size:9pt;">${esc(f.name)}</h4>
-                ${f.steps?.length ? `<ol style="font-size:8.5pt;">${f.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>` : ""}
-              </div>
-            `).join("")}
-          </div>
-        </div>
-      ` : ""}
-      ${assumptionsHtml}
-    </section>
-  `;
-}
-
-function buildProblemsSection(raw: string | null): string {
-  let data: PdfProblemsData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") data = p as PdfProblemsData;
-  } catch { /* render what we have */ }
-
-  if (!data.problems?.length && !data.risks?.length) return "";
-
-  return `
-    <section>
-      <h2>Risk & Problems</h2>
-      ${data.problems?.length ? `
-        <div class="grid2">
-          ${data.problems.map((p, i) => `
-            <div class="card">
-              <h4 style="font-size:9pt;">${esc(p.problem)}</h4>
-              ${p.severity ? `<div style="font-size:8pt;font-weight:700;color:#dc2626;text-transform:uppercase;margin:4px 0;">${esc(p.severity)}</div>` : ""}
-              ${p.impact ? `<div class="metric"><span class="metric-label">Impact</span><span class="subtext" style="font-size:8.5pt;">${esc(p.impact)}</span></div>` : ""}
-            </div>
-          `).join("")}
-        </div>
-      ` : ""}
-      ${data.risks?.length ? `
-        <div style="margin-top:12px;">
-          <h4>Key Risks</h4>
-          <div class="grid2">
-            ${data.risks.map((r) => `
-              <div class="card">
-                <h4 style="font-size:9pt;">${esc(r.risk)}</h4>
-                ${r.probability ? `<div class="metric"><span class="metric-label">Probability</span><span class="subtext" style="font-size:8.5pt;">${esc(r.probability)}</span></div>` : ""}
-              </div>
-            `).join("")}
-          </div>
-        </div>
-      ` : ""}
-    </section>
-  `;
-}
-
-function buildFinancialSection(raw: string | null): string {
-  let data: PdfFinancialData = {};
-  try {
-    const p = JSON.parse(raw ?? "");
-    if (p && typeof p === "object") data = p as PdfFinancialData;
-  } catch { /* render what we have */ }
-
-  if (!data.ltv && !data.cac && !data.monthly_projections?.length) return "";
-
-  return `
-    <section>
-      <h2>Unit Economics & Financial</h2>
-      ${(data.ltv || data.cac || data.ltv_cac_ratio) ? `
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
-          ${data.ltv ? `<div class="card" style="text-align:center;"><div class="metric-label">LTV</div><div style="font-size:13pt;font-weight:700;color:#1a1a1a;">${esc(data.ltv)}</div></div>` : ""}
-          ${data.cac ? `<div class="card" style="text-align:center;"><div class="metric-label">CAC</div><div style="font-size:13pt;font-weight:700;color:#1a1a1a;">${esc(data.cac)}</div></div>` : ""}
-          ${data.ltv_cac_ratio ? `<div class="card" style="text-align:center;"><div class="metric-label">LTV:CAC</div><div style="font-size:13pt;font-weight:700;color:#1a1a1a;">${esc(data.ltv_cac_ratio)}</div></div>` : ""}
-          ${data.payback_period ? `<div class="card" style="text-align:center;"><div class="metric-label">Payback</div><div style="font-size:13pt;font-weight:700;color:#1a1a1a;">${esc(data.payback_period)}</div></div>` : ""}
-        </div>
-      ` : ""}
-      ${data.monthly_projections?.length ? `
-        <div style="margin-top:12px;overflow-x:auto;">
-          <table>
-            <thead><tr><th>Month</th><th>Customers</th><th>Revenue</th><th>Costs</th><th>Profit</th></tr></thead>
-            <tbody>
-              ${data.monthly_projections.slice(0, 12).map((p) => `
-                <tr>
-                  <td>${esc(String(p.month ?? ""))}</td>
-                  <td>${p.customers ?? "—"}</td>
-                  <td>$${p.revenue ?? "—"}</td>
-                  <td>$${p.costs ?? "—"}</td>
-                  <td style="color:${(p.profit ?? 0) >= 0 ? "#15803d" : "#dc2626"};font-weight:600;">$${p.profit ?? "—"}</td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        </div>
-      ` : ""}
-    </section>
-  `;
-}
-
-function buildPdfHtml(idea: Idea, sections: ReturnType<typeof useAiPipeline>["sections"]): string {
-  const metaRows = [
-    idea.budget != null ? `<tr><td>Budget</td><td>$${idea.budget.toLocaleString()}</td></tr>` : "",
-    idea.feasibility != null ? `<tr><td>Feasibility</td><td>${idea.feasibility} / 10</td></tr>` : "",
-    idea.status ? `<tr><td>Status</td><td>${esc(idea.status)}</td></tr>` : "",
-  ].filter(Boolean).join("");
-
-  const sectionBlocks = [
-    buildSectionHtml("Strategy", sections.ideaStrategy.data),
-    buildSectionHtml("Customers", sections.customers.data),
-    buildSectionHtml("Competitor Analysis", sections.competition.data),
-    buildSectionHtml("Market Potential", sections.marketPotential.data),
-    buildSectionHtml("Business Model", sections.businessModel.data),
-    buildSectionHtml("MVP Planning", sections.mvpPlanning.data),
-    buildSectionHtml("Risk & Problems", sections.problems.data),
-    buildSectionHtml("Unit Economics", sections.unitEconomics.data),
-  ].filter(Boolean).join("");
-
-  const date = idea.created_at ? new Date(idea.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<title>${esc(idea.title ?? "Idea")} — Analysis Report</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Georgia, serif; color: #111; background: #fff; padding: 2.5cm 3cm; font-size: 11pt; line-height: 1.6; }
-  h1 { font-size: 22pt; font-weight: 700; margin-bottom: 4px; }
-  .meta-date { color: #666; font-size: 10pt; margin-bottom: 16px; }
-  .description { font-size: 11pt; color: #333; max-width: 680px; margin-bottom: 18px; white-space: pre-wrap; }
-  table.meta { border-collapse: collapse; margin-bottom: 24px; }
-  table.meta td { padding: 4px 16px 4px 0; font-size: 10pt; vertical-align: top; }
-  table.meta td:first-child { font-weight: 600; color: #555; text-transform: uppercase; font-size: 9pt; letter-spacing: .04em; width: 120px; }
-  section { margin-top: 32px; break-inside: avoid; }
-  h2 { font-size: 14pt; font-weight: 700; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin-bottom: 14px; color: #1a1a1a; }
-  h3 { font-size: 11pt; font-weight: 600; margin: 12px 0 4px; color: #333; }
-  h4 { font-size: 10pt; font-weight: 600; margin: 8px 0 2px; color: #444; }
-  .field { margin-bottom: 10px; }
-  ul { padding-left: 20px; margin: 4px 0; }
-  li { margin-bottom: 2px; font-size: 10.5pt; }
-  span { display: block; font-size: 10.5pt; }
-  @page { size: A4; margin: 1.5cm 2cm; }
-  @media print { body { padding: 0; } }
-</style>
-</head>
-<body>
-  <h1>${esc(idea.title ?? "Untitled Idea")}</h1>
-  ${date ? `<p class="meta-date">${date}</p>` : ""}
-  ${idea.description ? `<p class="description">${esc(idea.description)}</p>` : ""}
-  ${metaRows ? `<table class="meta"><tbody>${metaRows}</tbody></table>` : ""}
-  ${sectionBlocks || "<p>No AI analysis generated yet.</p>"}
 </body>
 </html>`;
 }
@@ -2624,14 +1748,14 @@ export default function IdeaDetailPage({
 
   const handleDownloadPDF = () => {
     if (!idea) return;
-    const html = buildFullAnalysisPdfHtml(idea, sections);
+    const html = buildFullReportPdfHtml(idea, sections);
     const win = window.open("", "_blank");
     if (!win) return;
     win.document.open();
     win.document.write(html);
     win.document.close();
     win.focus();
-    setTimeout(() => win.print(), 400);
+    setTimeout(() => win.print(), 500);
   };
 
   useEffect(() => {
