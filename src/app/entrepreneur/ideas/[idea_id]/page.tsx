@@ -149,13 +149,22 @@ function OverviewSection({
   onRun: () => void;
   isRunning: boolean;
 }) {
+  const pe = idea.problem_evidence;
+
   return (
     <div className="flex flex-col gap-6">
       {/* Idea meta card */}
       <div className="bg-card rounded-xl border border-border p-6 flex flex-col gap-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="flex flex-col gap-1">
-            <h3 className="text-base font-semibold text-foreground">About this idea</h3>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-base font-semibold text-foreground">About this idea</h3>
+              {idea.domain && (
+                <span className="px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-xs font-medium text-amber-700 dark:text-amber-400">
+                  {idea.domain}
+                </span>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl whitespace-pre-wrap">
               {idea.description}
             </p>
@@ -178,6 +187,59 @@ function OverviewSection({
             }
           />
         </div>
+
+        {/* AI seed insight fields */}
+        {(idea.core_insight || idea.target_segment || idea.founding_hypothesis) && (
+          <div className="border-t border-border pt-4 flex flex-col gap-3">
+            {idea.core_insight && (
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">Core Insight</p>
+                <p className="text-sm text-foreground leading-relaxed">{idea.core_insight}</p>
+              </div>
+            )}
+            {idea.target_segment && (
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">Target Segment</p>
+                <p className="text-sm text-foreground leading-relaxed">{idea.target_segment}</p>
+              </div>
+            )}
+            {idea.founding_hypothesis && (
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">Why You Can Do This</p>
+                <p className="text-sm text-foreground leading-relaxed">{idea.founding_hypothesis}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Problem evidence summary */}
+        {pe && (pe.why_this_idea || (pe.top_validated && pe.top_validated.length > 0)) && (
+          <div className="border-t border-border pt-4">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">
+              Why This Idea
+              {pe.problems_analyzed > 0 && (
+                <span className="ml-1 normal-case font-normal text-muted-foreground/70">
+                  · from {pe.problems_analyzed} problems analyzed
+                </span>
+              )}
+            </p>
+            {pe.why_this_idea && (
+              <p className="text-sm text-foreground leading-relaxed mb-2">{pe.why_this_idea}</p>
+            )}
+            {pe.top_validated && pe.top_validated.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {pe.top_validated.map((p) => (
+                  <span
+                    key={p.id}
+                    className="px-2 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 text-xs text-cyan-700 dark:text-cyan-400"
+                  >
+                    {p.title}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {idea.skills && !Array.isArray(idea.skills) && (
           <div className="border-t border-border pt-4">

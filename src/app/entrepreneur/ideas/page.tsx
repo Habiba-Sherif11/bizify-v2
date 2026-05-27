@@ -76,6 +76,7 @@ function toCardProps(idea: Idea): IdeaCardProps {
     status: (idea.status ?? "draft").toUpperCase(),
     description: idea.description ?? "",
     skills: flattenSkills(idea.skills),
+    domain: idea.domain ?? null,
   };
 }
 

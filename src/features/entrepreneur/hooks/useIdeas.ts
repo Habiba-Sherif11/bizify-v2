@@ -28,6 +28,7 @@ export function useIdeas() {
       if (filters?.max_budget != null) params.set("max_budget", String(filters.max_budget));
       if (filters?.skills) params.set("skills", filters.skills);
       if (filters?.feasibility != null) params.set("feasibility", String(filters.feasibility));
+      if (filters?.domain) params.set("domain", filters.domain);
       if (filters?.sort_by) params.set("sort_by", filters.sort_by);
       if (filters?.sort_order) params.set("sort_order", filters.sort_order);
 

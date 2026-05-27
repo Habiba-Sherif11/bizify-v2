@@ -15,6 +15,7 @@ export interface IdeaCardProps {
   status: IdeaStatus;
   description: string;
   skills?: string[];
+  domain?: string | null;
   isFavorited?: boolean;
   onToggleFavorite?: () => void;
   onEdit?: () => void;
@@ -39,6 +40,7 @@ export function IdeaCard({
   date,
   status,
   skills,
+  domain,
   isFavorited = false,
   onToggleFavorite,
   onEdit,
@@ -190,10 +192,17 @@ export function IdeaCard({
         </div>
       </div>
 
-      {/* Status badge */}
-      <div className={cn("self-start flex items-center gap-1 px-2 py-0.5 rounded-lg", bg)}>
-        <Icon size={11} className="text-white" />
-        <span className="text-xs font-semibold text-white leading-4">{label}</span>
+      {/* Status badge + domain tag */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className={cn("flex items-center gap-1 px-2 py-0.5 rounded-lg", bg)}>
+          <Icon size={11} className="text-white" />
+          <span className="text-xs font-semibold text-white leading-4">{label}</span>
+        </div>
+        {domain && (
+          <span className="px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-xs font-medium text-amber-700 dark:text-amber-400">
+            {domain}
+          </span>
+        )}
       </div>
 
       {/* Skills */}

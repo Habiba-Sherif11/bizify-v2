@@ -4,6 +4,20 @@ export interface SkillsGap {
   skill_gaps:      string[];
 }
 
+export interface TopValidatedProblem {
+  id:    string;
+  title: string;
+  score: number;
+}
+
+export interface ProblemEvidence {
+  problems_analyzed: number;
+  top_validated:     TopValidatedProblem[];
+  why_this_idea:     string;
+  primary_gap:       string;
+  customer_signal:   string;
+}
+
 export interface Idea {
   id: string;
   owner_id: string;
@@ -21,6 +35,12 @@ export interface Idea {
   converted_at: string | null;
   created_at: string;
   updated_at: string;
+  // AI seed fields
+  domain:              string | null;
+  problem_evidence:    ProblemEvidence | null;
+  core_insight:        string | null;
+  target_segment:      string | null;
+  founding_hypothesis: string | null;
 }
 
 export interface CreateIdeaPayload {
@@ -33,6 +53,7 @@ export interface IdeaFilters {
   max_budget?: number;
   skills?: string;
   feasibility?: number;
+  domain?: string;
   sort_by?: string;
   sort_order?: "asc" | "desc";
 }
