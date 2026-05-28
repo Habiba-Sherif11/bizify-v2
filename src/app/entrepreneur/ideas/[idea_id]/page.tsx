@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Home, ChevronRight, FileDown, Share2, Sparkles,
   Play, Loader2, AlertCircle, RefreshCw, Wand2, MessageCircle, X, Send,
-  CheckCircle2, PlusCircle, RotateCcw,
+  CheckCircle2, PlusCircle, RotateCcw, ChevronDown, ChevronUp, Info,
 } from "lucide-react";
 import { api } from "@/features/auth/lib/api";
 import { cn } from "@/lib/utils";
@@ -25,7 +25,7 @@ import { MvpPlanningSection }     from "@/features/entrepreneur/components/analy
 import { UnitEconomicsSection }   from "@/features/entrepreneur/components/analysis/UnitEconomicsSection";
 import { GoToMarketSection }      from "@/features/entrepreneur/components/analysis/GoToMarketSection";
 import { ProblemsSection }        from "@/features/entrepreneur/components/analysis/ProblemsSection";
-import type { SkillsGap }         from "@/features/entrepreneur/types/idea";
+import type { SkillsGap, FeasibilityBreakdown } from "@/features/entrepreneur/types/idea";
 import { ShareModal, type ShareItem } from "@/features/entrepreneur/components/ShareModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -171,11 +171,18 @@ function OverviewSection({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-border">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-border">
           <MetaStat label="Budget" value={idea.budget != null ? `$${idea.budget.toLocaleString()}` : "—"} />
           {idea.feasibility != null
-            ? <FeasibilityMeter score={idea.feasibility} />
+            ? <FeasibilityMeter
+                score={idea.feasibility}
+                breakdown={idea.problem_evidence?.feasibility_breakdown}
+              />
             : <MetaStat label="Feasibility" value="—" />
+          }
+          {idea.ai_score != null
+            ? <ValidationScoreStat score={idea.ai_score} />
+            : <MetaStat label="Validation" value="—" />
           }
           <MetaStat
             label="Status"
@@ -265,7 +272,8 @@ function MetaStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function FeasibilityMeter({ score }: { score: number }) {
+function FeasibilityMeter({ score, breakdown }: { score: number; breakdown?: FeasibilityBreakdown }) {
+  const [open, setOpen] = useState(false);
   const pct = Math.min(Math.max((score / 10) * 100, 0), 100);
   const color =
     score >= 7 ? "bg-green-500" : score >= 5 ? "bg-amber-500" : "bg-red-500";
@@ -286,6 +294,86 @@ function FeasibilityMeter({ score }: { score: number }) {
       <div className="h-2 rounded-full bg-neutral-200 dark:bg-neutral-700">
         <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${pct}%` }} />
       </div>
+      {breakdown && (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer mt-0.5 self-start"
+        >
+          {open ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+          {open ? "Hide breakdown" : "Why this score?"}
+        </button>
+      )}
+      {open && breakdown && (
+        <div className="mt-1 flex flex-col gap-3 text-xs border-t border-border/50 pt-2">
+          {breakdown.why_this_score && (
+            <p className="text-muted-foreground leading-relaxed">{breakdown.why_this_score}</p>
+          )}
+          {breakdown.limiting_factors && breakdown.limiting_factors.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <p className="font-semibold text-foreground">What&apos;s holding it back</p>
+              <ul className="flex flex-col gap-1">
+                {breakdown.limiting_factors.map((f, i) => (
+                  <li key={i} className="flex items-start gap-1.5 text-muted-foreground">
+                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {breakdown.to_reach_10 && breakdown.to_reach_10.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <p className="font-semibold text-green-700 dark:text-green-400">How to reach 10 / 10</p>
+              <ul className="flex flex-col gap-1">
+                {breakdown.to_reach_10.map((step, i) => (
+                  <li key={i} className="flex items-start gap-1.5 text-muted-foreground">
+                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+                    {step}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ValidationScoreStat({ score }: { score: number }) {
+  const [showTip, setShowTip] = useState(false);
+  const pct = Math.min(Math.max((score / 100) * 100, 0), 100);
+  const color = score >= 70 ? "bg-cyan-500" : score >= 45 ? "bg-amber-500" : "bg-red-500";
+  const textColor = score >= 70 ? "text-cyan-600 dark:text-cyan-400" : score >= 45 ? "text-amber-600 dark:text-amber-400" : "text-red-500";
+  const label = score >= 70 ? "Strong" : score >= 45 ? "Moderate" : "Weak";
+
+  return (
+    <div className="flex flex-col gap-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800/50 px-3 py-3 border border-border/50">
+      <div className="flex items-center gap-1">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Validation</p>
+        <button
+          type="button"
+          onClick={() => setShowTip((v) => !v)}
+          className="text-muted-foreground/60 hover:text-muted-foreground transition-colors cursor-pointer"
+        >
+          <Info size={10} />
+        </button>
+      </div>
+      <div className="flex items-end justify-between">
+        <span className={cn("text-xl font-bold leading-tight", textColor)}>
+          {score}<span className="text-sm font-normal text-muted-foreground"> / 100</span>
+        </span>
+        <span className={cn("text-xs font-medium", textColor)}>{label}</span>
+      </div>
+      <div className="h-2 rounded-full bg-neutral-200 dark:bg-neutral-700">
+        <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${pct}%` }} />
+      </div>
+      {showTip && (
+        <p className="text-[10px] text-muted-foreground leading-relaxed border-t border-border/50 pt-1.5 mt-0.5">
+          Confidence that the problem this idea solves is real — measured by how many independent web sources (Reddit, Quora, Trustpilot…) confirmed it. Max 85 from web sources.
+        </p>
+      )}
     </div>
   );
 }

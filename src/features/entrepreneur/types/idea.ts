@@ -10,12 +10,19 @@ export interface TopValidatedProblem {
   score: number;
 }
 
+export interface FeasibilityBreakdown {
+  why_this_score:   string;
+  limiting_factors: string[];
+  to_reach_10:      string[];
+}
+
 export interface ProblemEvidence {
-  problems_analyzed: number;
-  top_validated:     TopValidatedProblem[];
-  why_this_idea:     string;
-  primary_gap:       string;
-  customer_signal:   string;
+  problems_analyzed:    number;
+  top_validated:        TopValidatedProblem[];
+  why_this_idea:        string;
+  primary_gap:          string;
+  customer_signal:      string;
+  feasibility_breakdown?: FeasibilityBreakdown;
 }
 
 export interface Idea {
