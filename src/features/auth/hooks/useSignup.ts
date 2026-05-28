@@ -93,8 +93,8 @@ export function useSignup() {
     const started = Date.now();
 
     toast.info("Warming up server… this may take up to 2 minutes on first load.", {
-      autoClose: false,
-      toastId: "wakeup",
+      duration: Infinity,
+      id: "wakeup",
     });
 
     while (Date.now() - started < MAX_WAIT) {
@@ -229,7 +229,7 @@ export function useSignup() {
     } catch (error) {
       console.error("[Questionnaire] Submit error:", error);
       toast.error(extractErrorMessage(error, "Failed to save questionnaire. Please try again."), {
-        autoClose: 6000,
+        duration: 6000,
       });
     }
   };
