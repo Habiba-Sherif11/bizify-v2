@@ -7,6 +7,7 @@ import {
   Home, ChevronRight, FileDown, Share2, Sparkles,
   Play, Loader2, AlertCircle, RefreshCw, Wand2, MessageCircle, X, Send,
   CheckCircle2, PlusCircle, RotateCcw, ChevronDown, ChevronUp, Info,
+  Pencil, Check,
 } from "lucide-react";
 import { api } from "@/features/auth/lib/api";
 import { cn } from "@/lib/utils";
@@ -355,6 +356,7 @@ function ValidationScoreStat({ score }: { score: number }) {
         <button
           type="button"
           onClick={() => setShowTip((v) => !v)}
+          aria-label="What is the Validation Score?"
           className="text-muted-foreground/60 hover:text-muted-foreground transition-colors cursor-pointer"
         >
           <Info size={10} />
@@ -730,6 +732,7 @@ function IdeaEditChatModal({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close"
             className="p-1.5 rounded-lg hover:bg-white/20 transition-colors cursor-pointer"
           >
             <X size={15} className="text-white" />
@@ -1069,6 +1072,7 @@ function SectionChatPopup({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close"
             className="p-1 rounded-lg hover:bg-white/20 transition-colors cursor-pointer"
           >
             <X size={15} className="text-white" />
@@ -1934,6 +1938,74 @@ export default function IdeaDetailPage({
 
   const [editModalOpen, setEditModalOpen] = useState(false);
 
+  // Inline title editing
+  const [editingTitle, setEditingTitle]     = useState(false);
+  const [titleDraft, setTitleDraft]         = useState("");
+  const [titleSaving, setTitleSaving]       = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  const startEditTitle = useCallback(() => {
+    setTitleDraft(idea?.title ?? "");
+    setEditingTitle(true);
+    setTimeout(() => titleInputRef.current?.select(), 0);
+  }, [idea]);
+
+  const cancelEditTitle = useCallback(() => {
+    setEditingTitle(false);
+    setTitleDraft("");
+  }, []);
+
+  const saveTitle = useCallback(async () => {
+    const trimmed = titleDraft.trim();
+    if (!trimmed || trimmed === idea?.title) { cancelEditTitle(); return; }
+    setTitleSaving(true);
+    try {
+      const { data } = await api.patch<Idea>(`/ideas/${idea_id}`, { title: trimmed });
+      setIdea(data);
+      setEditingTitle(false);
+    } catch {
+      // keep editing on failure
+    } finally {
+      setTitleSaving(false);
+    }
+  }, [titleDraft, idea, idea_id, cancelEditTitle]);
+
+  const handleTitleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") { e.preventDefault(); saveTitle(); }
+    if (e.key === "Escape") cancelEditTitle();
+  }, [saveTitle, cancelEditTitle]);
+
+  // AI name suggestion
+  const [suggestNameOpen, setSuggestNameOpen]   = useState(false);
+  const [nameSuggestions, setNameSuggestions]   = useState<string[]>([]);
+  const [nameSuggesting, setNameSuggesting]     = useState(false);
+  const [nameSuggestError, setNameSuggestError] = useState<string | null>(null);
+
+  const handleSuggestName = useCallback(async () => {
+    setNameSuggesting(true);
+    setNameSuggestError(null);
+    setSuggestNameOpen(true);
+    try {
+      const { data } = await api.post<{ suggestions: string[] }>(
+        `/ai/ideas/${idea_id}/suggest-name`, {}
+      );
+      setNameSuggestions(data.suggestions ?? []);
+    } catch {
+      setNameSuggestError("Could not generate name suggestions. Please try again.");
+    } finally {
+      setNameSuggesting(false);
+    }
+  }, [idea_id]);
+
+  const handlePickName = useCallback(async (name: string) => {
+    try {
+      const { data } = await api.patch<Idea>(`/ideas/${idea_id}`, { title: name });
+      setIdea(data);
+      setSuggestNameOpen(false);
+      setNameSuggestions([]);
+    } catch { /* non-fatal */ }
+  }, [idea_id]);
+
   const [shareItems, setShareItems] = useState<ShareItem[] | null>(null);
   const [isSharing, setIsSharing]   = useState(false);
 
@@ -2030,9 +2102,61 @@ export default function IdeaDetailPage({
         {/* Header row */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
           {/* Title + date */}
-          <div className="flex flex-col gap-2">
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{idea.title ?? "Untitled idea"}</h1>
-            <p className="text-sm text-muted-foreground">{formatIdeaDate(idea.created_at)}</p>
+          <div className="flex flex-col gap-2 min-w-0">
+            {editingTitle ? (
+              <div className="flex items-center gap-2">
+                <input
+                  ref={titleInputRef}
+                  value={titleDraft}
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  onKeyDown={handleTitleKeyDown}
+                  disabled={titleSaving}
+                  className="text-2xl sm:text-3xl font-bold bg-transparent border-b-2 border-amber-500 outline-none text-foreground w-full max-w-lg"
+                />
+                <button
+                  type="button"
+                  onClick={saveTitle}
+                  disabled={titleSaving}
+                  className="p-1.5 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors cursor-pointer shrink-0"
+                >
+                  {titleSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelEditTitle}
+                  disabled={titleSaving}
+                  className="p-1.5 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer shrink-0"
+                >
+                  <X size={14} className="text-muted-foreground" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 group">
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{idea.title ?? "Untitled idea"}</h1>
+                <button
+                  type="button"
+                  onClick={startEditTitle}
+                  className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all cursor-pointer shrink-0"
+                  title="Rename idea"
+                >
+                  <Pencil size={14} className="text-muted-foreground" />
+                </button>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-muted-foreground">{formatIdeaDate(idea.created_at)}</p>
+              {hasRun && !isRunning && !suggestNameOpen && (
+                <button
+                  type="button"
+                  onClick={handleSuggestName}
+                  disabled={nameSuggesting}
+                  className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 hover:underline cursor-pointer transition-colors"
+                >
+                  <Sparkles size={11} />
+                  {nameSuggesting ? "Thinking…" : "Suggest a catchier name"}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Actions */}
@@ -2274,6 +2398,66 @@ export default function IdeaDetailPage({
       {shareItems && (
         <ShareModal items={shareItems} onClose={() => setShareItems(null)} />
       )}
+
+      {/* AI Name Suggestion dialog */}
+      {suggestNameOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-200 dark:border-neutral-700 bg-gradient-to-r from-amber-500 to-yellow-500">
+              <div className="flex items-center gap-2">
+                <Sparkles size={15} className="text-white" />
+                <span className="text-sm font-semibold text-white">AI Name Suggestions</span>
+              </div>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => { setSuggestNameOpen(false); setNameSuggestions([]); setNameSuggestError(null); }}
+                className="p-1.5 rounded-lg hover:bg-white/20 transition-colors cursor-pointer"
+              >
+                <X size={15} className="text-white" />
+              </button>
+            </div>
+
+            <div className="px-5 py-4 flex flex-col gap-3">
+              {nameSuggesting && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-4 justify-center">
+                  <Loader2 size={16} className="animate-spin text-amber-500" />
+                  Generating catchy names based on your full business plan…
+                </div>
+              )}
+              {nameSuggestError && (
+                <p className="text-sm text-red-500 text-center py-2">{nameSuggestError}</p>
+              )}
+              {!nameSuggesting && !nameSuggestError && nameSuggestions.length > 0 && (
+                <>
+                  <p className="text-xs text-muted-foreground">Pick a name to apply it, or close to keep the current one.</p>
+                  <div className="flex flex-col gap-2">
+                    {nameSuggestions.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => handlePickName(name)}
+                        className={cn(
+                          "flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-medium text-left transition-all cursor-pointer group",
+                          idea?.title === name
+                            ? "border-amber-400 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400"
+                            : "border-border hover:border-amber-400 hover:bg-amber-50/50 dark:hover:bg-amber-900/10 text-foreground"
+                        )}
+                      >
+                        {name}
+                        {idea?.title === name
+                          ? <Check size={14} className="text-amber-500 shrink-0" />
+                          : <ChevronRight size={14} className="text-muted-foreground group-hover:text-amber-500 shrink-0 transition-colors" />
+                        }
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2297,6 +2481,7 @@ function SectionIconButton({
             type="button"
             onClick={onClick}
             disabled={disabled}
+            aria-label={tooltip}
             className={cn(
               "p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer text-neutral-500 dark:text-neutral-400",
               disabled && "opacity-40 cursor-not-allowed"
