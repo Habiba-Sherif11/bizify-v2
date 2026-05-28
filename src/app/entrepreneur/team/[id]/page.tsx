@@ -4,7 +4,7 @@ import { useState, useEffect, use } from "react";
 import { Home, ChevronRight, Settings, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { api } from "@/features/auth/lib/api";
 import { parseBackendError } from "@/lib/backend-error";
 import { TeamMembersCard } from "@/features/entrepreneur/components/TeamMembersCard";

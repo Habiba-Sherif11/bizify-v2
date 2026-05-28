@@ -14,7 +14,7 @@ import {
   Plus,
   User,
 } from "lucide-react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { api } from "@/features/auth/lib/api";
 import { parseBackendError } from "@/lib/backend-error";
 import { Button } from "@/components/ui/button";

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, ChevronRight, Home } from "lucide-react";
 import Link from "next/link";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { api } from "@/features/auth/lib/api";
 import { parseBackendError } from "@/lib/backend-error";
 import { useAuth } from "@/features/auth/context/AuthContext";

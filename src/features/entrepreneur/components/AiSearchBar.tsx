@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const SUGGESTIONS = [
   "Analyze my target market",
@@ -40,7 +42,7 @@ export function AiSearchBar() {
           className="text-neutral-400 dark:text-neutral-500 shrink-0"
         />
         <label htmlFor="ai-search" className="sr-only">Ask Bizify</label>
-        <input
+        <Input
           id="ai-search"
           type="text"
           value={query}
@@ -48,30 +50,21 @@ export function AiSearchBar() {
           onKeyDown={(e) => e.key === "Enter" && submit(query)}
           placeholder="Ask Bizify anything — validate an idea, find a supplier, draft a pitch…"
           className="
-            flex-1 bg-transparent outline-none min-w-0
-            text-sm
+            flex-1 bg-transparent border-0 shadow-none outline-none min-w-0 h-auto p-0
+            text-sm focus-visible:ring-0 focus-visible:border-0
             text-neutral-900 dark:text-white
             placeholder:text-neutral-400 dark:placeholder:text-neutral-500
           "
         />
-        <button
+        <Button
           type="button"
           onClick={() => submit(query)}
-          className="
-            shrink-0
-            h-8 px-3.5
-            rounded-lg
-            bg-linear-to-r from-amber-500 to-yellow-500
-            hover:from-amber-400 hover:to-yellow-400
-            text-white text-xs font-medium
-            shadow-[0_2px_13px_rgba(255,183,3,0.5)]
-            border border-amber-500/60
-            transition-all duration-150
-            cursor-pointer whitespace-nowrap
-          "
+          variant="primary-gradient"
+          size="sm"
+          className="shrink-0 h-8 px-3.5 rounded-lg whitespace-nowrap"
         >
           Ask AI
-        </button>
+        </Button>
       </div>
 
       <div className="flex items-center gap-5 flex-wrap">
@@ -80,22 +73,22 @@ export function AiSearchBar() {
         </span>
         <div className="flex items-center gap-4 flex-wrap">
           {SUGGESTIONS.map((s) => (
-            <button
+            <Button
               key={s}
               type="button"
+              variant="outline"
               onClick={() => submit(s)}
               className="
-                px-3.5 py-1 rounded-xl
-                bg-card dark:bg-neutral-800
-                border border-amber-500
+                px-3.5 py-1 rounded-xl h-auto
+                border-amber-500
                 text-[10px] font-medium uppercase tracking-wide leading-3
                 text-amber-500
                 hover:bg-amber-50 dark:hover:bg-amber-500/10
-                transition-colors cursor-pointer
+                bg-card dark:bg-neutral-800
               "
             >
               {s}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

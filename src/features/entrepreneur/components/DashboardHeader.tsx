@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { useTheme } from "@/features/dashboard/context/ThemeContext";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 // ─── Logout confirmation dialog ───────────────────────────────────────────────
 
@@ -72,21 +75,21 @@ function LogoutConfirmDialog({
           Are you sure you want to log out of your account?
         </p>
         <div className="mt-5 flex gap-3 justify-end">
-          <button
+          <Button
             ref={cancelRef}
             type="button"
+            variant="secondary"
             onClick={onCancel}
-            className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-neutral-100 dark:bg-neutral-700 cursor-pointer"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={onConfirm}
-            className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-red-500 cursor-pointer"
+            className="bg-red-500 hover:bg-red-600 text-white border-0"
           >
             Log out
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -107,15 +110,17 @@ function NavButton({
   "aria-label"?: string;
 }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
+      size="icon"
       onClick={onClick}
       title={title}
       aria-label={ariaLabel ?? title}
-      className="w-11 h-11 justify-center bg-background dark:bg-neutral-800 rounded-[10px] ring-1 ring-black/10 dark:ring-white/10 flex items-center cursor-pointer transition-colors hover:bg-neutral-200/60 dark:hover:bg-neutral-700/60"
+      className="w-11 h-11 bg-background dark:bg-neutral-800 rounded-[10px] ring-1 ring-black/10 dark:ring-white/10 border-0 hover:bg-neutral-200/60 dark:hover:bg-neutral-700/60"
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -126,7 +131,6 @@ export function DashboardHeader() {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -207,14 +211,15 @@ export function DashboardHeader() {
         </div>
 
         {/* ── Left: user identity ── */}
-        <div ref={menuContainerRef} className="relative flex items-center gap-2.5 ">
-          <button
+        <div ref={menuContainerRef} className="relative flex items-center gap-2.5">
+          <Button
             type="button"
+            variant="ghost"
             onClick={() => setShowMenu((v) => !v)}
             aria-expanded={showMenu}
             aria-haspopup="menu"
             aria-label="User menu"
-            className="no-lift flex items-center gap-2.5 cursor-pointer"
+            className="no-lift flex items-center gap-2.5 h-auto p-0 hover:bg-transparent"
           >
             {/* Avatar */}
             <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 flex items-center justify-center shrink-0 overflow-hidden">
@@ -240,7 +245,7 @@ export function DashboardHeader() {
                 {user?.email}
               </span>
             </div>
-          </button>
+          </Button>
 
           {/* Dropdown menu */}
           {showMenu && (
@@ -251,43 +256,47 @@ export function DashboardHeader() {
               onKeyDown={handleMenuKeyDown}
               className="absolute top-full mt-2 inset-s-0 bg-background dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-1 z-50 min-w-44 dropdown-enter"
             >
-              <button
+              <Button
                 type="button"
                 role="menuitem"
+                variant="ghost"
                 onClick={handleProfileClick}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded-lg justify-start h-auto font-normal"
               >
                 <User size={14} aria-hidden="true" />
                 Profile
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 role="menuitem"
+                variant="ghost"
                 onClick={handleSettingsClick}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded-lg justify-start h-auto font-normal"
               >
                 <Settings size={14} aria-hidden="true" />
                 Settings
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 role="menuitem"
+                variant="ghost"
                 onClick={handleConceptsGuideClick}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded-lg justify-start h-auto font-normal"
               >
                 <BookOpen size={14} aria-hidden="true" />
                 Concepts Guide
-              </button>
-              <div role="separator" className="my-1 h-px bg-gray-100 dark:bg-neutral-700" />
-              <button
+              </Button>
+              <Separator className="my-1 bg-gray-100 dark:bg-neutral-700" />
+              <Button
                 type="button"
                 role="menuitem"
+                variant="ghost"
                 onClick={handleLogoutClick}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 rounded-lg cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 rounded-lg justify-start h-auto font-normal hover:bg-red-50 dark:hover:bg-red-950/30"
               >
                 <LogOut size={14} aria-hidden="true" />
                 Log out
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -307,28 +316,21 @@ export function DashboardHeader() {
               }
             </NavButton>
 
-            <div className="relative">
-              <NavButton
-                aria-label="Notifications"
-                onClick={() => setShowNotifications((v) => !v)}
-              >
-                <Bell size={16} className="text-gray-500 dark:text-gray-400" aria-hidden="true" />
-              </NavButton>
-
-              {showNotifications && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-                  <div className="absolute top-full right-0 mt-2 bg-background dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-4 z-50 w-64 dropdown-enter-right">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-[#1C1C1E] dark:text-white mb-3">
-                      Notifications
-                    </p>
-                    <p className="text-sm text-[#8C8C8C] dark:text-neutral-400">
-                      No notifications yet.
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <NavButton aria-label="Notifications">
+                  <Bell size={16} className="text-gray-500 dark:text-gray-400" aria-hidden="true" />
+                </NavButton>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-64">
+                <p className="text-xs font-semibold uppercase tracking-widest text-[#1C1C1E] dark:text-white mb-3">
+                  Notifications
+                </p>
+                <p className="text-sm text-[#8C8C8C] dark:text-neutral-400">
+                  No notifications yet.
+                </p>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Mobile: hamburger (hidden on sm+) */}
@@ -347,18 +349,19 @@ export function DashboardHeader() {
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowMobileMenu(false)} />
                 <div className="absolute top-full right-0 mt-2 bg-background dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-1 z-50 w-52 dropdown-enter-right">
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
                     onClick={() => { toggleTheme(); setShowMobileMenu(false); }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200 rounded-lg justify-start h-auto font-normal"
                   >
                     {theme === "dark"
                       ? <Sun size={15} className="text-neutral-500 dark:text-neutral-400 shrink-0" aria-hidden="true" />
                       : <Moon size={15} className="text-neutral-500 shrink-0" aria-hidden="true" />
                     }
                     {theme === "dark" ? "Light mode" : "Dark mode"}
-                  </button>
-                  <div className="my-1 h-px bg-gray-100 dark:bg-neutral-700" />
+                  </Button>
+                  <Separator className="my-1 bg-gray-100 dark:bg-neutral-700" />
                   <div className="px-3 py-2.5">
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400 mb-2 flex items-center gap-2">
                       <Bell size={13} aria-hidden="true" />

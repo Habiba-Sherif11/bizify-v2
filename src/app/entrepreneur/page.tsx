@@ -178,18 +178,6 @@ export default function EntrepreneurDashboard() {
           </div>
         </section>
 
-        {/* Recent activity */}
-        <section data-tour="recent-activity">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base sm:text-lg font-semibold text-neutral-900 dark:text-white tracking-tight">
-              Recent activity
-            </h2>
-          </div>
-          <RecentActivity
-            items={activityItems}
-            onViewAll={activityItems.length > 0 ? () => router.push("/entrepreneur/ideas") : undefined}
-          />
-        </section>
 
       </main>
     </div>
