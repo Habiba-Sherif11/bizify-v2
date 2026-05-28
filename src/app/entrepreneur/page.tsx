@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Lightbulb, Bot, Users, Store, FileText, Plus } from "lucide-react";
+import { Lightbulb, Bot, Users, Store, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { useIdeas } from "@/features/entrepreneur/hooks/useIdeas";
@@ -10,7 +10,7 @@ import { DashboardHeader } from "@/features/entrepreneur/components/DashboardHea
 import { GuidanceTour } from "@/features/guidance/components/GuidanceTour";
 import { FeatureCard } from "@/features/entrepreneur/components/FeatureCard";
 import { RecentActivity, type ActivityItem } from "@/features/entrepreneur/components/RecentActivity";
-import { Button } from "@/components/ui/button";
+import { AiSearchBar } from "@/features/entrepreneur/components/AiSearchBar";
 import type { Idea } from "@/features/entrepreneur/types/idea";
 
 function formatToday() {
@@ -81,7 +81,6 @@ export default function EntrepreneurDashboard() {
       .catch(() => setGroupCount(0));
   }, []);
 
-  const activeCount = ideas.filter((i) => i.status === "active").length;
   const activityItems = deriveActivity(ideas);
 
   const FEATURE_CARDS = [
@@ -91,7 +90,7 @@ export default function EntrepreneurDashboard() {
       title: "My ideas",
       description: "Develop and validate your business ideas with AI-assisted analysis.",
       count: ideasLoading ? undefined : String(ideas.length),
-      countNote: ideasLoading ? undefined : `ideas · ${activeCount} active`,
+      countNote: ideasLoading ? undefined : "ideas",
       route: "/entrepreneur/ideas",
       aiSurface: false,
     },
@@ -132,45 +131,31 @@ export default function EntrepreneurDashboard() {
       <DashboardHeader />
       <GuidanceTour />
 
-      <main className="max-w-280 mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-16 flex flex-col gap-8 sm:gap-10">
+      <main className="max-w-280 mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-8 flex flex-col gap-5 sm:gap-6">
 
         {/* Hero */}
-        <section data-tour="ai-search" className="flex flex-col gap-6">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-6">
+        <section data-tour="ai-search" className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 sm:gap-6">
             <div>
-              <h1 className="text-2xl sm:text-[32px] lg:text-[36px] font-bold text-neutral-900 dark:text-white leading-tight tracking-tight">
+              <h1 className="text-xl sm:text-2xl lg:text-[28px] font-bold text-neutral-900 dark:text-white leading-tight tracking-tight">
                 Welcome back,{" "}
                 <span className="text-amber-500">{firstName}</span>
               </h1>
-              <p className="mt-1.5 text-sm sm:text-base text-neutral-500 dark:text-neutral-400">
+              <p className="mt-1 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
                 What would you like to work on today?
               </p>
             </div>
             <div className="text-[11px] sm:text-[12px] font-medium tracking-[0.04em] uppercase text-neutral-400 dark:text-neutral-500 whitespace-nowrap shrink-0 tabular-nums">
               {formatToday()}
-              {!ideasLoading && ideas.length > 0 && (
-                <>
-                  <span className="mx-2 text-neutral-300 dark:text-neutral-600">·</span>
-                  {activeCount} active {activeCount === 1 ? "idea" : "ideas"}
-                </>
-              )}
             </div>
           </div>
 
-          <Button
-            variant="primary-gradient"
-            size="lg"
-            className="self-start gap-2"
-            onClick={() => router.push("/entrepreneur/ideas")}
-          >
-            <Plus size={16} />
-            New idea
-          </Button>
+          <AiSearchBar />
         </section>
 
         {/* Feature cards */}
         <section data-tour="feature-cards">
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="text-base sm:text-lg font-semibold text-neutral-900 dark:text-white tracking-tight">
               Jump back in
             </h2>
@@ -195,7 +180,7 @@ export default function EntrepreneurDashboard() {
 
         {/* Recent activity */}
         <section data-tour="recent-activity">
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="text-base sm:text-lg font-semibold text-neutral-900 dark:text-white tracking-tight">
               Recent activity
             </h2>
