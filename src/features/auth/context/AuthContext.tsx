@@ -9,7 +9,7 @@ import {
   ReactNode,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { api } from "../lib/api";
 
 export type User = {

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Home, ChevronRight, Search, X } from "lucide-react";
 import Link from "next/link";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { api } from "@/features/auth/lib/api";
 import { TeamCard } from "@/features/entrepreneur/components/TeamCard";
 

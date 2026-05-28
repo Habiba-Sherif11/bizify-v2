@@ -5,6 +5,8 @@ import { Eye, EyeOff, Rocket, UserCheck, Factory, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { PasswordStrength } from "./PasswordStrength";
 import { cn } from "@/lib/utils";
 import { GoogleButton } from "./GoogleButton";
@@ -152,25 +154,26 @@ export function AccountStep({ onNext }: Props) {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {ROLE_CARDS.map(({ role, icon: Icon, title, subtitle }) => (
-            <button
+            <Button
               key={role}
               type="button"
+              variant="outline"
               onClick={() => setSelectedRole(role)}
-              className="flex items-start gap-3 p-4 rounded-xl border border-gray-200 bg-white text-left hover:border-cyan-400 hover:bg-cyan-50/40 transition-all"
+              className="flex items-start gap-3 p-4 h-auto rounded-xl border-gray-200 bg-white text-left hover:border-cyan-400 hover:bg-cyan-50/40 justify-start whitespace-normal"
             >
               <Icon className="w-5 h-5 mt-0.5 shrink-0 text-gray-400" />
               <div>
                 <p className="text-sm font-semibold text-gray-800">{title}</p>
                 <p className="text-xs text-gray-500 mt-0.5 leading-snug">{subtitle}</p>
               </div>
-            </button>
+            </Button>
           ))}
         </div>
 
         <div className="relative flex items-center gap-3">
-          <div className="flex-1 h-px bg-gray-200" />
+          <Separator className="flex-1 bg-gray-200" />
           <span className="text-xs text-gray-400">or</span>
-          <div className="flex-1 h-px bg-gray-200" />
+          <Separator className="flex-1 bg-gray-200" />
         </div>
 
         <GoogleButton label="Continue with Google" />
@@ -189,13 +192,15 @@ export function AccountStep({ onNext }: Props) {
           <selectedCard.icon className="w-4 h-4 text-cyan-600" />
           <span className="text-sm font-medium text-cyan-700">{selectedCard.title}</span>
         </div>
-        <button
+        <Button
           type="button"
+          variant="link"
+          size="sm"
           onClick={() => setSelectedRole(null)}
-          className="text-xs text-gray-400 hover:text-gray-600 underline"
+          className="text-xs text-gray-400 hover:text-gray-600 h-auto p-0"
         >
           Change role
-        </button>
+        </Button>
       </div>
 
       {/* Name row */}
@@ -333,14 +338,13 @@ export function AccountStep({ onNext }: Props) {
             <Label htmlFor="description" className="text-xs text-gray-500">
               Description <span className="text-gray-400">(optional)</span>
             </Label>
-            <textarea
+            <Textarea
               id="description"
               placeholder="Brief description of your business"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={isSubmitting}
               rows={2}
-              className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/20 focus-visible:border-cyan-500 disabled:opacity-50 transition-colors resize-none"
             />
           </div>
 
@@ -348,7 +352,7 @@ export function AccountStep({ onNext }: Props) {
             <Label htmlFor="services" className="text-xs text-gray-500">
               Services Offered <span className="text-gray-400">(optional)</span>
             </Label>
-            <textarea
+            <Textarea
               id="services"
               placeholder="List the services your company provides (e.g. CNC machining, logistics, mentoring sessions)"
               value={services}
@@ -356,7 +360,6 @@ export function AccountStep({ onNext }: Props) {
               onBlur={() => setTouched((t) => ({ ...t, services: true }))}
               disabled={isSubmitting}
               rows={2}
-              className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/20 focus-visible:border-cyan-500 disabled:opacity-50 transition-colors resize-none"
             />
           </div>
 
@@ -364,7 +367,7 @@ export function AccountStep({ onNext }: Props) {
             <Label htmlFor="experience" className="text-xs text-gray-500">
               Industry Experience <span className="text-gray-400">(optional)</span>
             </Label>
-            <textarea
+            <Textarea
               id="experience"
               placeholder="Describe your experience and background (e.g. 10 years in textile manufacturing, worked with 50+ startups)"
               value={experience}
@@ -372,7 +375,6 @@ export function AccountStep({ onNext }: Props) {
               onBlur={() => setTouched((t) => ({ ...t, experience: true }))}
               disabled={isSubmitting}
               rows={2}
-              className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/20 focus-visible:border-cyan-500 disabled:opacity-50 transition-colors resize-none"
             />
           </div>
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { api } from "../lib/api";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 

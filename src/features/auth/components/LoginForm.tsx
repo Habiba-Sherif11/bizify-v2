@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useLogin } from "@/features/auth/hooks/useLogin";
 import { GoogleButton } from "./GoogleButton";
@@ -49,9 +50,9 @@ export function LoginForm() {
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Google error */}
       {googleError && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2.5">
-          <p className="text-sm text-red-700">{googleError}</p>
-        </div>
+        <Alert className="bg-red-50 border-red-200">
+          <AlertDescription className="text-red-700">{googleError}</AlertDescription>
+        </Alert>
       )}
 
       {/* Email */}
@@ -100,15 +101,17 @@ export function LoginForm() {
               !isPasswordError && passwordTouched && password.length > 0 && "border-cyan-500",
             )}
           />
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-sm"
             onClick={() => setShowPassword((v) => !v)}
             aria-label={showPassword ? "Hide password" : "Show password"}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 hover:bg-transparent"
             tabIndex={-1}
           >
             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
+          </Button>
         </div>
         {isPasswordError && (
           <p className="text-xs text-red-500">Password is required</p>

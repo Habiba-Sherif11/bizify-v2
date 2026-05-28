@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, Mail } from "lucide-react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
 import { api } from "../lib/api";
 
 interface Props {
@@ -123,11 +124,13 @@ export function OTPVerification({ onVerify, email }: Props) {
             Resend in {countdown}s
           </span>
         ) : (
-          <button
+          <Button
             type="button"
+            variant="link"
+            size="sm"
             onClick={handleResend}
             disabled={isResending}
-            className="text-cyan-600 font-medium disabled:opacity-50 cursor-pointer"
+            className="text-cyan-600 font-medium h-auto p-0"
           >
             {isResending ? (
               <span className="inline-flex items-center gap-1">
@@ -137,7 +140,7 @@ export function OTPVerification({ onVerify, email }: Props) {
             ) : (
               "Resend"
             )}
-          </button>
+          </Button>
         )}
       </p>
     </div>

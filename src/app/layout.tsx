@@ -1,5 +1,4 @@
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
 
 // Fonts
@@ -61,17 +60,8 @@ export default function RootLayout({
             <AuthProvider>
               <AnimationProvider>
                 {children}
-                <ToastContainer
-                  position="top-center"
-                  autoClose={4000}
-                  hideProgressBar={false}
-                  newestOnTop
-                  closeOnClick
-                  pauseOnFocusLoss={false}
-                  pauseOnHover
-                  style={{ zIndex: 99999 }}
-                />
               </AnimationProvider>
+              <Toaster />
             </AuthProvider>
           </ThemeProvider>
         </ReactQueryProvider>

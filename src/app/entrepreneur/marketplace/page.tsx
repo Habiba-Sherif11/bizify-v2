@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Home, ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import {
   PartnerCard,
   type PartnerCardProps,

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Mail } from "lucide-react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { useSearchParams, useRouter } from "next/navigation";
 import { resetSchema } from "../lib/validations";
 import { Button } from "@/components/ui/button";
@@ -164,11 +164,13 @@ export function ResetPasswordForm() {
         {countdown > 0 ? (
           <span className="text-[#8C8C8C] tabular-nums">Resend in {countdown}s</span>
         ) : (
-          <button
+          <Button
             type="button"
+            variant="link"
+            size="sm"
             onClick={handleResend}
             disabled={isResending}
-            className="text-cyan-600 font-medium hover:underline disabled:opacity-50 cursor-pointer"
+            className="text-cyan-600 font-medium h-auto p-0"
           >
             {isResending ? (
               <span className="inline-flex items-center gap-1">
@@ -178,7 +180,7 @@ export function ResetPasswordForm() {
             ) : (
               "Resend"
             )}
-          </button>
+          </Button>
         )}
       </p>
     </div>
