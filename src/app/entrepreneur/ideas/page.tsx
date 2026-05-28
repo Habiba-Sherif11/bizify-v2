@@ -138,6 +138,14 @@ export default function IdeasPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort, budget, feasibility]);
 
+  // Reload when a new idea is created via the AI chat or popup
+  useEffect(() => {
+    const reload = () => fetchIdeas({});
+    window.addEventListener("bizify:idea_created", reload);
+    return () => window.removeEventListener("bizify:idea_created", reload);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Clear selection when leaving selection mode
   useEffect(() => {
     if (!isSelectionMode) setSelectedIds(new Set());

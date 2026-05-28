@@ -44,16 +44,6 @@ const SECTION_LABEL: Record<string, string> = {
   problems:         "Risk",
 };
 
-const CREATE_IDEA_PATTERN = /create.*idea|add.*idea|save.*idea|new.*idea|make.*idea/i;
-
-function extractIdeaTitle(text: string): string {
-  const quoted = text.match(/["']([^"']+)["']/);
-  if (quoted) return quoted[1];
-  const afterKw = text.match(/(?:create|add|save|make|new)\s+(?:an?\s+)?idea\s+(?:called|named|titled|about)?\s*(.+)/i);
-  if (afterKw) return afterKw[1].trim().replace(/[.!?]+$/, "").slice(0, 80);
-  return text.slice(0, 60);
-}
-
 function ts() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
@@ -324,27 +314,6 @@ function AiChatContent() {
         return;
       }
 
-      // General chat flow
-      if (CREATE_IDEA_PATTERN.test(text)) {
-        const title = extractIdeaTitle(text);
-        await api.post("/ideas", { title, description: text });
-        const assistantMsg: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          text: `Done! I've created a new idea titled "${title}". You can find and manage it in your Ideas section.`,
-          time: ts(),
-        };
-        updateSession(activeId, { messages: [...baseMessages, assistantMsg], title: newTitle });
-        // Save to DB
-        api.post(`/chat/sessions/${activeId}/messages`, {
-          messages: [
-            { role: "user", content: text },
-            { role: "assistant", content: assistantMsg.text },
-          ],
-        }).catch(() => {});
-        return;
-      }
-
       const { data } = await api.post("/ai/general-chat", { message: text, history: active.history });
       const replyText: string = data.reply ?? "No response received";
       const assistantMsg: Message = { id: (Date.now() + 1).toString(), role: "assistant", text: replyText, time: ts() };
@@ -366,6 +335,11 @@ function AiChatContent() {
           { role: "assistant", content: replyText },
         ],
       }).catch(() => {});
+
+      // Notify Ideas list to refresh when an idea was generated
+      if (data.action === "ran_sections" && (data.section === "idea" || data.section === "idea_intake")) {
+        window.dispatchEvent(new CustomEvent("bizify:idea_created"));
+      }
 
     } catch {
       const errorMsg: Message = {
