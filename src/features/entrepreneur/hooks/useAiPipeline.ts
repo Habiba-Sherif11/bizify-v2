@@ -97,8 +97,11 @@ function extractSectionText(key: SectionKey, data: unknown): string {
 export function useAiPipeline(ideaId?: string) {
   const [sections, setSections] = useState<PipelineSections>(emptyPipeline);
   const [isRunning, setIsRunning] = useState(false);
-  const [hasRun, setHasRun] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
+
+  // True whenever at least one section has data — works both on initial load
+  // (existing analysis fetched from DB) and after the pipeline runs in this session.
+  const hasRun = Object.values(sections).some((s) => s.data !== null);
 
   const setSection = useCallback((key: SectionKey, patch: Partial<SectionState>) => {
     setSections((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
@@ -167,7 +170,6 @@ export function useAiPipeline(ideaId?: string) {
       await api.post("/ai/run", ideaId ? { idea_id: ideaId } : {}, { timeout: 30_000 });
       // Poll status and incrementally fetch sections as they complete
       await pollUntilDone();
-      setHasRun(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Pipeline failed to start.";
       setRunError(msg);
