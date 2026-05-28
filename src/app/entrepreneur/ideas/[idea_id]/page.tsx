@@ -1990,8 +1990,12 @@ export default function IdeaDetailPage({
         `/ai/ideas/${idea_id}/suggest-name`, {}
       );
       setNameSuggestions(data.suggestions ?? []);
-    } catch {
-      setNameSuggestError("Could not generate name suggestions. Please try again.");
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { error?: string; detail?: string } } })?.response?.data?.error ||
+        (err as { response?: { data?: { error?: string; detail?: string } } })?.response?.data?.detail ||
+        "Could not generate name suggestions. Please try again.";
+      setNameSuggestError(msg);
     } finally {
       setNameSuggesting(false);
     }
