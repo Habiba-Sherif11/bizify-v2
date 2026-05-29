@@ -5,7 +5,7 @@ import {
   Upload, FileText, Loader2, CheckCircle2, AlertTriangle,
   XCircle, AlertCircle, ChevronDown, ChevronUp, Download,
   ExternalLink, ShieldCheck, Info, RefreshCw, Clock, History,
-  FileDown,
+  FileDown, GitCompare, Sparkles, Plus, Minus, ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -13,6 +13,7 @@ import {
   type ValidationMode,
   type ValidationResult,
   type FactIssue,
+  type ChangeLog,
   type ValidationHistoryItem,
 } from "@/features/entrepreneur/hooks/useValidation";
 
@@ -23,6 +24,7 @@ interface ValidationPanelProps {
   sectionLabel: string;
   ideaId: string;
   hasExistingAnalysis: boolean;
+  onSectionApplied?: () => void;
 }
 
 // ─── Overall score ring ───────────────────────────────────────────────────────
@@ -136,6 +138,7 @@ function FactIssueCard({ issue }: { issue: FactIssue }) {
   const cfg = STATUS_CFG[issue.status] ?? STATUS_CFG.unverified;
   const Icon = cfg.icon;
   const explain = STATUS_EXPLAIN[issue.status] ?? "";
+  const needsReplacement = issue.status === "incorrect" || issue.status === "outdated" || issue.status === "unverified";
 
   return (
     <div className={cn("rounded-lg border p-3 text-sm", cfg.cls)}>
@@ -145,34 +148,118 @@ function FactIssueCard({ issue }: { issue: FactIssue }) {
         <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-white/50 dark:bg-black/20">
           {issue.status}
         </span>
-        {(issue.evidence.length > 0 || explain) && (
+        {(issue.evidence.length > 0 || explain || issue.replacement_suggestion) && (
           open ? <ChevronUp size={13} className="shrink-0 mt-0.5" /> : <ChevronDown size={13} className="shrink-0 mt-0.5" />
         )}
       </div>
+
       {open && (
-        <div className="mt-2 ml-5 flex flex-col gap-1.5">
+        <div className="mt-2 ml-5 flex flex-col gap-2">
+          {/* Why this status */}
           {explain && (
             <p className="text-xs opacity-80 italic">{explain}</p>
           )}
-          {issue.evidence.map((ev, i) => (
-            <div key={i} className="flex items-center gap-1.5 text-xs opacity-80">
-              {ev.url ? (
-                <a href={ev.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline">
-                  <ExternalLink size={11} />
-                  {ev.source}
-                </a>
-              ) : (
-                <span>{ev.source}</span>
-              )}
-              {ev.date && <span className="opacity-60">({ev.date})</span>}
+
+          {/* Replacement recommendation for bad claims */}
+          {needsReplacement && issue.replacement_suggestion && (
+            <div className="rounded bg-white/60 dark:bg-black/20 px-2.5 py-2 flex flex-col gap-1">
+              <p className="text-[10px] font-semibold uppercase tracking-widest opacity-70">Recommended Replacement</p>
+              <p className="text-xs leading-relaxed">{issue.replacement_suggestion}</p>
             </div>
-          ))}
-          {issue.evidence.length === 0 && issue.status === "unverified" && (
-            <p className="text-xs opacity-70">No search results matched this claim.</p>
+          )}
+
+          {/* Sources */}
+          {issue.evidence.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] font-semibold uppercase tracking-widest opacity-60">Sources Checked</p>
+              {issue.evidence.map((ev, i) => (
+                <div key={i} className="flex items-center gap-1.5 text-xs opacity-80">
+                  {ev.url ? (
+                    <a href={ev.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline">
+                      <ExternalLink size={11} />
+                      {ev.source}
+                    </a>
+                  ) : (
+                    <span>{ev.source}</span>
+                  )}
+                  {ev.date && <span className="opacity-60">({ev.date})</span>}
+                </div>
+              ))}
+            </div>
+          )}
+          {issue.evidence.length === 0 && (
+            <p className="text-xs opacity-70">No web sources found for this claim.</p>
           )}
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Change log section ───────────────────────────────────────────────────────
+
+function ChangeLogSection({ changeLog }: { changeLog: ChangeLog }) {
+  const totalChanges = changeLog.added.length + changeLog.modified.length + changeLog.removed.length;
+  if (totalChanges === 0) return null;
+
+  return (
+    <CollapsibleSection title="Change Log" badge={totalChanges}>
+      <div className="flex flex-col gap-4">
+        {changeLog.added.length > 0 && (
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-1.5 flex items-center gap-1">
+              <Plus size={11} /> Added ({changeLog.added.length})
+            </p>
+            <ul className="flex flex-col gap-1.5">
+              {changeLog.added.map((item, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-foreground rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 px-2.5 py-1.5">
+                  <Plus size={12} className="shrink-0 mt-0.5 text-emerald-500" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {changeLog.modified.length > 0 && (
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-1.5 flex items-center gap-1">
+              <GitCompare size={11} /> Modified ({changeLog.modified.length})
+            </p>
+            <div className="flex flex-col gap-2">
+              {changeLog.modified.map((entry, i) => (
+                <div key={i} className="rounded-lg border border-amber-200 dark:border-amber-800 overflow-hidden text-xs">
+                  <div className="flex items-start gap-2 px-2.5 py-1.5 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400">
+                    <Minus size={11} className="shrink-0 mt-0.5" />
+                    <span className="line-through leading-relaxed">{entry.original}</span>
+                  </div>
+                  <div className="flex items-start gap-2 px-2.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300">
+                    <Plus size={11} className="shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">{entry.improved}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {changeLog.removed.length > 0 && (
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-red-500 mb-1.5 flex items-center gap-1">
+              <Minus size={11} /> Removed ({changeLog.removed.length})
+            </p>
+            <ul className="flex flex-col gap-1.5">
+              {changeLog.removed.map((item, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/50 px-2.5 py-1.5">
+                  <Minus size={12} className="shrink-0 mt-0.5 text-red-500" />
+                  <span className="line-through text-muted-foreground">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </CollapsibleSection>
   );
 }
 
@@ -339,21 +426,60 @@ function HistoryPanel({
 
 // ─── Mode results view ────────────────────────────────────────────────────────
 
+type ApplyState = "idle" | "confirming" | "applying" | "done" | "error";
+
 function ModeResults({
   result,
   sectionSlug,
+  sectionLabel,
   onDownloadPdf,
   onDownloadDocx,
   onRevalidate,
+  onApplyToSection,
 }: {
   result: ValidationResult;
   sectionSlug: string;
+  sectionLabel: string;
   onDownloadPdf: () => void;
   onDownloadDocx: () => void;
   onRevalidate: () => void;
+  onApplyToSection?: () => void;
 }) {
   const [showComparison, setShowComparison] = useState(false);
+  const [applyState, setApplyState] = useState<ApplyState>("idle");
+  const [applyError, setApplyError] = useState<string | null>(null);
   const scoreReasoning = (result.score_reasoning ?? {}) as unknown as Record<string, string>;
+
+  const handleApply = useCallback(async () => {
+    setApplyState("applying");
+    setApplyError(null);
+    try {
+      const improvements = result.improved_content?.key_improvements?.join("\n") ?? "";
+      const summary = result.improved_content?.summary ?? "";
+      const customPrompt =
+        `Regenerate this section using the following improvements identified from an expert review of the user's own document:\n\n` +
+        `SUMMARY OF CHANGES NEEDED:\n${summary}\n\n` +
+        `SPECIFIC IMPROVEMENTS TO APPLY:\n${improvements}\n\n` +
+        `Make the output specific to this business — use the actual names, numbers, and context from the existing analysis. Do not use generic templates.`;
+
+      const res = await fetch(`/api/ai/${sectionSlug}/regenerate-custom`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ custom_prompt: customPrompt }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error || "Failed to apply improvements");
+      }
+
+      setApplyState("done");
+      onApplyToSection?.();
+    } catch (err) {
+      setApplyError(err instanceof Error ? err.message : "Failed to apply improvements");
+      setApplyState("error");
+    }
+  }, [result, sectionSlug, onApplyToSection]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -517,27 +643,120 @@ function ModeResults({
         </CollapsibleSection>
       )}
 
-      {/* Download buttons */}
+      {/* Change log */}
+      {result.change_log && (
+        <ChangeLogSection changeLog={result.change_log} />
+      )}
+
+      {/* Download buttons — always visible, disabled when no data */}
       <div className="flex gap-2">
-        {result.improved_pdf_b64 && (
-          <button
-            onClick={onDownloadPdf}
-            className="flex items-center justify-center gap-2 flex-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 text-sm transition-colors"
-          >
-            <Download size={14} />
-            Download PDF
-          </button>
-        )}
-        {result.improved_docx_b64 && (
-          <button
-            onClick={onDownloadDocx}
-            className="flex items-center justify-center gap-2 flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 text-sm transition-colors"
-          >
-            <FileDown size={14} />
-            Download DOCX
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onDownloadPdf}
+          disabled={!result.improved_pdf_b64}
+          className={cn(
+            "flex items-center justify-center gap-2 flex-1 rounded-xl font-semibold py-2.5 text-sm transition-colors",
+            result.improved_pdf_b64
+              ? "bg-amber-500 hover:bg-amber-600 text-white"
+              : "bg-neutral-200 dark:bg-neutral-700 text-muted-foreground cursor-not-allowed"
+          )}
+        >
+          <Download size={14} />
+          Download PDF
+        </button>
+        <button
+          type="button"
+          onClick={onDownloadDocx}
+          disabled={!result.improved_docx_b64}
+          className={cn(
+            "flex items-center justify-center gap-2 flex-1 rounded-xl font-semibold py-2.5 text-sm transition-colors",
+            result.improved_docx_b64
+              ? "bg-blue-600 hover:bg-blue-700 text-white"
+              : "bg-neutral-200 dark:bg-neutral-700 text-muted-foreground cursor-not-allowed"
+          )}
+        >
+          <FileDown size={14} />
+          Download DOCX
+        </button>
       </div>
+
+      {/* Apply improvements to section */}
+      {onApplyToSection && applyState !== "done" && (
+        <div className="rounded-xl border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/20 p-4 flex flex-col gap-3">
+          <div className="flex items-start gap-2">
+            <Sparkles size={15} className="shrink-0 mt-0.5 text-violet-500" />
+            <div>
+              <p className="text-sm font-semibold text-violet-800 dark:text-violet-200">Apply Improvements to Section</p>
+              <p className="text-xs text-violet-600 dark:text-violet-400 mt-0.5">
+                Regenerate the <span className="font-medium">{sectionLabel}</span> section using the improvements identified in this validation.
+              </p>
+            </div>
+          </div>
+
+          {applyState === "idle" && (
+            <button
+              type="button"
+              onClick={() => setApplyState("confirming")}
+              className="self-start flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-semibold text-xs px-3 py-1.5 transition-colors"
+            >
+              <Sparkles size={12} />
+              Apply Improvements
+            </button>
+          )}
+
+          {applyState === "confirming" && (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-violet-700 dark:text-violet-300 leading-relaxed">
+                This will regenerate the section using the validated improvements as instructions. Your current Bizify analysis will be replaced.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleApply}
+                  className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-semibold text-xs px-3 py-1.5 transition-colors"
+                >
+                  <CheckCircle2 size={12} />
+                  Confirm &amp; Apply
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setApplyState("idle")}
+                  className="text-xs text-violet-600 dark:text-violet-400 underline"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {applyState === "applying" && (
+            <div className="flex items-center gap-2 text-xs text-violet-600 dark:text-violet-400">
+              <Loader2 size={13} className="animate-spin" />
+              Applying improvements… this may take 30–60 seconds.
+            </div>
+          )}
+
+          {applyState === "error" && (
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs text-red-600 dark:text-red-400">{applyError}</p>
+              <button
+                type="button"
+                onClick={() => setApplyState("idle")}
+                className="self-start text-xs text-violet-600 dark:text-violet-400 underline"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {applyState === "done" && (
+        <div className="flex items-center gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
+          <CheckCircle2 size={15} className="shrink-0 text-emerald-500" />
+          Improvements applied — section is being regenerated.
+        </div>
+      )}
     </div>
   );
 }
@@ -653,6 +872,7 @@ function ModePanelContent({
   onRevalidate,
   onDownloadPdf,
   onDownloadDocx,
+  onApplyToSection,
 }: {
   mode: ValidationMode;
   label: string;
@@ -666,6 +886,7 @@ function ModePanelContent({
   onRevalidate: () => void;
   onDownloadPdf: (b64: string) => void;
   onDownloadDocx: (b64: string) => void;
+  onApplyToSection?: () => void;
 }) {
   if (result?.section_mismatch) {
     return <MismatchBanner result={result} onReset={onRevalidate} />;
@@ -679,7 +900,7 @@ function ModePanelContent({
           <span className="font-semibold text-sm">No Bizify Analysis Yet</span>
         </div>
         <p className="text-sm text-amber-700 dark:text-amber-300">{result.message}</p>
-        <button onClick={onRevalidate} className="self-start text-xs text-amber-600 dark:text-amber-400 underline">
+        <button type="button" onClick={onRevalidate} className="self-start text-xs text-amber-600 dark:text-amber-400 underline">
           Switch to Industry Standards
         </button>
       </div>
@@ -691,9 +912,11 @@ function ModePanelContent({
       <ModeResults
         result={result}
         sectionSlug={sectionSlug}
-        onDownloadPdf={() => result.improved_pdf_b64 && onDownloadPdf(result.improved_pdf_b64)}
-        onDownloadDocx={() => result.improved_docx_b64 && onDownloadDocx(result.improved_docx_b64)}
+        sectionLabel={sectionLabel}
+        onDownloadPdf={() => onDownloadPdf(result.improved_pdf_b64 ?? "")}
+        onDownloadDocx={() => onDownloadDocx(result.improved_docx_b64 ?? "")}
         onRevalidate={onRevalidate}
+        onApplyToSection={onApplyToSection}
       />
     );
   }
@@ -717,6 +940,7 @@ export function ValidationPanel({
   sectionLabel,
   ideaId,
   hasExistingAnalysis,
+  onSectionApplied,
 }: ValidationPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeMode, setActiveMode] = useState<ValidationMode>("generic");
@@ -838,6 +1062,7 @@ export function ValidationPanel({
             onRevalidate={() => handleRevalidate(activeMode)}
             onDownloadPdf={(b64) => downloadPdf(b64, sectionSlug)}
             onDownloadDocx={(b64) => downloadDocx(b64, sectionSlug)}
+            onApplyToSection={onSectionApplied}
           />
 
           {/* History panel */}

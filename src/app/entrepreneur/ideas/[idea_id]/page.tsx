@@ -159,6 +159,7 @@ function TabContent({
   const validationSlug  = TAB_VALIDATION_SLUG[tab as Exclude<TabKey, "overview">];
   const validationLabel = TAB_VALIDATION_LABEL[tab as Exclude<TabKey, "overview">];
 
+  const sectionKeyForTab = TAB_SECTION_KEY[tab as Exclude<TabKey, "overview">];
   const validationPanel = validationSlug && validationLabel ? (
     <ValidationPanel
       key={validationSlug}
@@ -166,6 +167,7 @@ function TabContent({
       sectionLabel={validationLabel}
       ideaId={idea.id}
       hasExistingAnalysis={s.data != null}
+      onSectionApplied={sectionKeyForTab ? () => onRunSection(sectionKeyForTab) : undefined}
     />
   ) : null;
 

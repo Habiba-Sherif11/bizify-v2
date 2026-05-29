@@ -16,6 +16,7 @@ export interface FactIssue {
   claim: string;
   status: "supported" | "outdated" | "incorrect" | "unverified";
   evidence: FactEvidence[];
+  replacement_suggestion?: string;
 }
 
 export interface WeakPoint {
@@ -43,6 +44,17 @@ export interface ImprovedContent {
   full_analysis: string;
 }
 
+export interface ChangeLogEntry {
+  original: string;
+  improved: string;
+}
+
+export interface ChangeLog {
+  added: string[];
+  modified: ChangeLogEntry[];
+  removed: string[];
+}
+
 export interface ValidationResult {
   validation_id: string;
   section: string;
@@ -60,6 +72,7 @@ export interface ValidationResult {
   improved_content: ImprovedContent;
   improved_pdf_b64: string;
   improved_docx_b64: string;
+  change_log: ChangeLog | null;
   created_at: string;
   // special-case flags
   section_mismatch?: boolean;
