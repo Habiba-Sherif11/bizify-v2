@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, ChevronDown, LogOut, User, Settings, Moon, Sun, Menu, X, BookOpen } from "lucide-react";
+import { Bell, ChevronDown, LogOut, User, Settings, Moon, Sun, Menu, X, BookOpen, Zap } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -196,6 +196,11 @@ export function DashboardHeader() {
     router.push("/entrepreneur/concepts-guide");
   };
 
+  const handleUpgradePlanClick = () => {
+    setShowMenu(false);
+    router.push("/entrepreneur/upgrade-plan");
+  };
+
   return (
     <>
       <header className="sticky top-0 z-40 bg-[#FAFAFA]/90 dark:bg-neutral-900/90 backdrop-blur-md border-b border-[#E9E9E9] dark:border-neutral-800/80 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between header-enter">
@@ -285,6 +290,16 @@ export function DashboardHeader() {
               >
                 <BookOpen size={14} aria-hidden="true" />
                 Concepts Guide
+              </Button>
+              <Button
+                type="button"
+                role="menuitem"
+                variant="ghost"
+                onClick={handleUpgradePlanClick}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-amber-600 dark:text-amber-400 rounded-lg justify-start h-auto font-normal hover:bg-amber-50 dark:hover:bg-amber-950/30"
+              >
+                <Zap size={14} aria-hidden="true" />
+                Upgrade Plan
               </Button>
               <Separator className="my-1 bg-gray-100 dark:bg-neutral-700" />
               <Button
