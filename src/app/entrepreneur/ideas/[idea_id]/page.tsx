@@ -523,14 +523,14 @@ function SkillsAnalysis({ skills }: { skills: SkillsGap }) {
 
 // Which tabs should ideally be done before each tab, in display order
 const SECTION_PREREQS: Partial<Record<Exclude<TabKey, "overview">, { key: SectionKey; label: string }[]>> = {
-  competition:   [{ key: "customers",      label: "Customers" }],
-  market:        [{ key: "customers",      label: "Customers" }],
-  strategy:      [{ key: "customers",      label: "Customers" }, { key: "competition", label: "Competitor Analysis" }, { key: "marketPotential", label: "Market" }],
-  businessModel: [{ key: "ideaStrategy",   label: "Strategy" }],
-  functions:     [{ key: "businessModel",  label: "Business Model" }],
-  mvp:           [{ key: "functionsList",  label: "Functions" }],
-  financial:     [{ key: "businessModel",  label: "Business Model" }, { key: "mvpPlanning", label: "MVP" }],
-  goToMarket:    [{ key: "customers",      label: "Customers" }, { key: "marketPotential", label: "Market" }, { key: "ideaStrategy", label: "Strategy" }, { key: "businessModel", label: "Business Model" }],
+  competition:   [{ key: "customers",       label: "Customers" }],
+  market:        [{ key: "customers",       label: "Customers" },       { key: "competition",     label: "Competitor Analysis" }],
+  strategy:      [{ key: "customers",       label: "Customers" },       { key: "competition",     label: "Competitor Analysis" }, { key: "marketPotential", label: "Market" }],
+  businessModel: [{ key: "customers",       label: "Customers" },       { key: "competition",     label: "Competitor Analysis" }, { key: "marketPotential", label: "Market" },       { key: "ideaStrategy",    label: "Strategy" }],
+  functions:     [{ key: "customers",       label: "Customers" },       { key: "competition",     label: "Competitor Analysis" }, { key: "marketPotential", label: "Market" },       { key: "ideaStrategy",    label: "Strategy" },   { key: "businessModel",  label: "Business Model" }],
+  mvp:           [{ key: "customers",       label: "Customers" },       { key: "competition",     label: "Competitor Analysis" }, { key: "marketPotential", label: "Market" },       { key: "ideaStrategy",    label: "Strategy" },   { key: "businessModel",  label: "Business Model" }, { key: "functionsList", label: "Functions" }],
+  financial:     [{ key: "customers",       label: "Customers" },       { key: "marketPotential", label: "Market" },             { key: "ideaStrategy",    label: "Strategy" },     { key: "businessModel",   label: "Business Model" }, { key: "mvpPlanning",  label: "MVP" }],
+  goToMarket:    [{ key: "customers",       label: "Customers" },       { key: "competition",     label: "Competitor Analysis" }, { key: "marketPotential", label: "Market" },       { key: "ideaStrategy",    label: "Strategy" },   { key: "businessModel",  label: "Business Model" }, { key: "mvpPlanning",   label: "MVP" }, { key: "unitEconomics", label: "Financial" }],
 };
 
 function SectionCallToAction({
