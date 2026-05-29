@@ -100,9 +100,9 @@ function IdeaColumn({ idea, rank }: { idea: Idea; rank: number }) {
           <div>
             <div className="flex items-center gap-1.5 mb-1.5">
               <Zap size={12} className="text-amber-500" />
-              <span className="text-xs font-medium text-neutral-600 dark:text-neutral-300">AI Score</span>
+              <span className="text-xs font-medium text-neutral-600 dark:text-neutral-300">Problem Validation</span>
             </div>
-            <ScoreBar value={idea.ai_score} color="bg-amber-400" />
+            <ScoreBar value={idea.problem_validation_score} color="bg-amber-400" />
           </div>
 
           <div>
@@ -183,10 +183,10 @@ function CompareContent() {
 
   const validIdeas = ideas.filter((i): i is Idea => i !== null);
 
-  // Rank by ai_score then feasibility
+  // Rank by problem_validation_score then feasibility
   const ranked = [...validIdeas].sort((a, b) => {
-    const sa = (a.ai_score ?? 0) + (a.feasibility ?? 0);
-    const sb = (b.ai_score ?? 0) + (b.feasibility ?? 0);
+    const sa = (a.problem_validation_score ?? 0) + (a.feasibility ?? 0);
+    const sb = (b.problem_validation_score ?? 0) + (b.feasibility ?? 0);
     return sb - sa;
   });
 

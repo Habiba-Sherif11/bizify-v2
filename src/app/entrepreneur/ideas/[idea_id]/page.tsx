@@ -181,8 +181,8 @@ function OverviewSection({
               />
             : <MetaStat label="Feasibility" value="—" />
           }
-          {idea.ai_score != null
-            ? <ValidationScoreStat score={idea.ai_score} />
+          {idea.problem_validation_score != null
+            ? <ValidationScoreStat score={idea.problem_validation_score} evidence={idea.problem_evidence} />
             : <MetaStat label="Validation" value="—" />
           }
           <MetaStat
@@ -342,21 +342,22 @@ function FeasibilityMeter({ score, breakdown }: { score: number; breakdown?: Fea
   );
 }
 
-function ValidationScoreStat({ score }: { score: number }) {
+function ValidationScoreStat({ score, evidence }: { score: number; evidence?: import("@/features/entrepreneur/types/idea").ProblemEvidence | null }) {
   const [showTip, setShowTip] = useState(false);
   const pct = Math.min(Math.max((score / 100) * 100, 0), 100);
   const color = score >= 70 ? "bg-cyan-500" : score >= 45 ? "bg-amber-500" : "bg-red-500";
   const textColor = score >= 70 ? "text-cyan-600 dark:text-cyan-400" : score >= 45 ? "text-amber-600 dark:text-amber-400" : "text-red-500";
   const label = score >= 70 ? "Strong" : score >= 45 ? "Moderate" : "Weak";
+  const topProblem = evidence?.top_validated?.[0];
 
   return (
     <div className="flex flex-col gap-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800/50 px-3 py-3 border border-border/50">
       <div className="flex items-center gap-1">
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Validation</p>
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Problem Validation</p>
         <button
           type="button"
           onClick={() => setShowTip((v) => !v)}
-          aria-label="What is the Validation Score?"
+          aria-label="What is the Problem Validation Score?"
           className="text-muted-foreground/60 hover:text-muted-foreground transition-colors cursor-pointer"
         >
           <Info size={10} />
@@ -372,9 +373,14 @@ function ValidationScoreStat({ score }: { score: number }) {
         <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${pct}%` }} />
       </div>
       {showTip && (
-        <p className="text-[10px] text-muted-foreground leading-relaxed border-t border-border/50 pt-1.5 mt-0.5">
-          Confidence that the problem this idea solves is real — measured by how many independent web sources (Reddit, Quora, Trustpilot…) confirmed it. Max 85 from web sources.
-        </p>
+        <div className="text-[10px] text-muted-foreground leading-relaxed border-t border-border/50 pt-1.5 mt-0.5 flex flex-col gap-1">
+          <p>How confidently the AI verified that the core problem this idea solves is real — based on independent web sources (Reddit, Quora, Trustpilot…). Max 85 from web evidence.</p>
+          {topProblem && (
+            <p className="text-[10px] font-medium text-foreground/70">
+              Top validated problem: &ldquo;{topProblem.title}&rdquo; scored {topProblem.score}/100.
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

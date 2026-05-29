@@ -32,7 +32,7 @@ export interface Idea {
   title: string | null;
   description: string | null;
   status: "draft" | "active" | "archived";
-  ai_score: number | null;
+  problem_validation_score: number | null;
   budget: number | null;
   skills: SkillsGap | Record<string, unknown>[] | null;
   feasibility: number | null;
