@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { api } from "@/features/auth/lib/api";
 
 type State = "capturing" | "success" | "error";
 
-export default function BillingSuccessPage() {
+function BillingSuccessInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [state, setState] = useState<State>("capturing");
@@ -107,5 +107,19 @@ export default function BillingSuccessPage() {
         </Button>
       </div>
     </div>
+  );
+}
+
+export default function BillingSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
+          <Loader2 size={48} className="animate-spin text-amber-500" />
+        </div>
+      }
+    >
+      <BillingSuccessInner />
+    </Suspense>
   );
 }
