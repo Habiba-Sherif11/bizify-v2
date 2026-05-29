@@ -31,7 +31,7 @@ export interface Idea {
   business_id: string | null;
   title: string | null;
   description: string | null;
-  status: "draft" | "active" | "archived";
+  status: "DRAFT" | "VALIDATED" | "CONVERTED" | string;
   problem_validation_score: number | null;
   pipeline_complete: boolean | null;
   budget: number | null;

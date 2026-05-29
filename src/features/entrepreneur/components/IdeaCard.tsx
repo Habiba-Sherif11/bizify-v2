@@ -28,10 +28,9 @@ export interface IdeaCardProps {
 }
 
 const STATUS_MAP: Record<string, { label: string; bg: string; Icon: React.ElementType }> = {
-  DRAFT:    { label: "Draft",    bg: "bg-amber-500", Icon: Clock  },
-  ACTIVE:   { label: "Active",   bg: "bg-green-600", Icon: Check  },
-  VERIFIED: { label: "Verified", bg: "bg-green-600", Icon: Check  },
-  REJECTED: { label: "Rejected", bg: "bg-red-500",   Icon: X      },
+  DRAFT:     { label: "Draft",     bg: "bg-amber-500",  Icon: Clock  },
+  VALIDATED: { label: "Validated", bg: "bg-green-600",  Icon: Check  },
+  CONVERTED: { label: "Converted", bg: "bg-blue-600",   Icon: Check  },
 };
 const DEFAULT_STATUS = { label: "Draft", bg: "bg-amber-500", Icon: Clock };
 
@@ -117,6 +116,7 @@ export function IdeaCard({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
+                    aria-label={isFavorited ? "Remove from favourites" : "Add to favourites"}
                     onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(); }}
                     className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
                   >
@@ -142,6 +142,7 @@ export function IdeaCard({
                   <TooltipTrigger asChild>
                     <button
                       type="button"
+                      aria-label="More options"
                       onClick={() => setMenuOpen((v) => !v)}
                       className="w-7 h-7 flex items-center justify-center text-neutral-400 dark:text-neutral-500 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
                     >

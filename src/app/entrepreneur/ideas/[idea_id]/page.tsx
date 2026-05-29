@@ -2032,6 +2032,20 @@ export default function IdeaDetailPage({
   const [nameSuggesting, setNameSuggesting]     = useState(false);
   const [nameSuggestError, setNameSuggestError] = useState<string | null>(null);
 
+  const [converting, setConverting] = useState(false);
+  const handleConvert = useCallback(async () => {
+    if (!confirm("Ready to commit to building this idea? This will mark it as Converted.")) return;
+    setConverting(true);
+    try {
+      await api.post(`/ideas/${idea_id}/convert`);
+      router.refresh();
+    } catch {
+      alert("Failed to convert idea. Please try again.");
+    } finally {
+      setConverting(false);
+    }
+  }, [idea_id, router]);
+
   const handleSuggestName = useCallback(async () => {
     setNameSuggesting(true);
     setNameSuggestError(null);
@@ -2200,6 +2214,29 @@ export default function IdeaDetailPage({
             )}
             <div className="flex items-center gap-2">
               <p className="text-sm text-muted-foreground">{formatIdeaDate(idea.created_at)}</p>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={cn(
+                      "text-[10px] font-semibold px-2 py-0.5 rounded-full cursor-default",
+                      idea.status === "VALIDATED"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        : idea.status === "CONVERTED"
+                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-500"
+                    )}>
+                      {idea.status === "VALIDATED" ? "Validated" : idea.status === "CONVERTED" ? "Converted" : "Draft"}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[220px] text-xs text-center">
+                    {idea.status === "VALIDATED"
+                      ? "AI confirmed this idea has a real problem, strong validation score, and is feasible. Ready to launch."
+                      : idea.status === "CONVERTED"
+                      ? "You committed to building this idea — it's now an active business."
+                      : "Pipeline not complete yet, or scores didn't meet the validation bar (validation ≥ 60, feasibility ≥ 5)."}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               {!suggestNameOpen && (
                 <div className="flex items-center gap-1">
                   <button
@@ -2241,6 +2278,28 @@ export default function IdeaDetailPage({
               <span className="text-xs text-green-600 dark:text-green-400 font-medium">
                 ✓ Full analysis ready
               </span>
+            )}
+
+            {/* Launch CTA — only for validated ideas not yet converted */}
+            {idea.status === "VALIDATED" && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={handleConvert}
+                      disabled={converting}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors cursor-pointer disabled:opacity-60"
+                    >
+                      {converting ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                      Launch this idea
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[200px] text-xs text-center">
+                    Your idea is validated — commit to building it and mark it as Converted.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
 
             {/* Save as PDF + Share */}
