@@ -133,7 +133,7 @@ function TabContent({
   if (!s.data && !s.isLoading) {
     const sectionKey = TAB_SECTION_KEY[tab as Exclude<TabKey, "overview">];
     const handleRun = sectionKey ? () => onRunSection(sectionKey) : onRun;
-    return <SectionCallToAction onRun={handleRun} isRunning={isRunning} />;
+    return <SectionCallToAction tab={tab as Exclude<TabKey, "overview">} sections={sections} onRun={handleRun} isRunning={isRunning} />;
   }
 
   return <>{sectionMap[tab as Exclude<TabKey, "overview">]}</>;
@@ -473,7 +473,34 @@ function SkillsAnalysis({ skills }: { skills: SkillsGap }) {
   );
 }
 
-function SectionCallToAction({ onRun, isRunning }: { onRun: () => void; isRunning: boolean }) {
+// Which tabs should ideally be done before each tab, in display order
+const SECTION_PREREQS: Partial<Record<Exclude<TabKey, "overview">, { key: SectionKey; label: string }[]>> = {
+  competition:   [{ key: "customers",      label: "Customers" }],
+  market:        [{ key: "customers",      label: "Customers" }],
+  strategy:      [{ key: "customers",      label: "Customers" }, { key: "competition", label: "Competitor Analysis" }, { key: "marketPotential", label: "Market" }],
+  businessModel: [{ key: "ideaStrategy",   label: "Strategy" }],
+  functions:     [{ key: "businessModel",  label: "Business Model" }],
+  mvp:           [{ key: "functionsList",  label: "Functions" }],
+  financial:     [{ key: "businessModel",  label: "Business Model" }, { key: "mvpPlanning", label: "MVP" }],
+  goToMarket:    [{ key: "customers",      label: "Customers" }, { key: "marketPotential", label: "Market" }, { key: "ideaStrategy", label: "Strategy" }, { key: "businessModel", label: "Business Model" }],
+};
+
+function SectionCallToAction({
+  onRun,
+  isRunning,
+  tab,
+  sections,
+}: {
+  onRun: () => void;
+  isRunning: boolean;
+  tab?: Exclude<TabKey, "overview">;
+  sections?: ReturnType<typeof useAiPipeline>["sections"];
+}) {
+  const prereqs = tab ? (SECTION_PREREQS[tab] ?? []) : [];
+  const missingPrereqs = sections
+    ? prereqs.filter((p) => !sections[p.key]?.data)
+    : [];
+
   return (
     <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border bg-neutral-50/60 dark:bg-neutral-800/20 px-6 py-10">
       <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
@@ -496,6 +523,15 @@ function SectionCallToAction({ onRun, isRunning }: { onRun: () => void; isRunnin
         {isRunning ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
         {isRunning ? "Generating…" : "Generate section"}
       </button>
+      {missingPrereqs.length > 0 ? (
+        <p className="text-[11px] text-amber-600 dark:text-amber-400 text-center max-w-xs leading-relaxed">
+          💡 For best results, run <span className="font-semibold">{missingPrereqs.map((p) => p.label).join(" → ")}</span> first — this section uses their insights.
+        </p>
+      ) : (
+        <p className="text-[11px] text-muted-foreground text-center max-w-xs leading-relaxed">
+          💡 Each section builds on previous ones — running in order gives the richest results.
+        </p>
+      )}
     </div>
   );
 }
@@ -2201,7 +2237,7 @@ export default function IdeaDetailPage({
                 Running pipeline…
               </span>
             )}
-            {pipelineComplete && !isRunning && (
+            {(idea.pipeline_complete || pipelineComplete) && !isRunning && (
               <span className="text-xs text-green-600 dark:text-green-400 font-medium">
                 ✓ Full analysis ready
               </span>
