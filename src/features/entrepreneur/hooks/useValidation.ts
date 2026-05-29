@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -48,8 +48,10 @@ export interface ValidationResult {
   section: string;
   section_name: string;
   validation_mode: ValidationMode;
+  file_name: string;
   scores: ValidationScores;
   score_reasoning: ValidationScoreReasoning;
+  overall_score: number;
   missing_elements: string[];
   weak_points: WeakPoint[];
   fact_issues: FactIssue[];
@@ -57,6 +59,8 @@ export interface ValidationResult {
   missing_vs_bizify: string[];
   improved_content: ImprovedContent;
   improved_pdf_b64: string;
+  improved_docx_b64: string;
+  created_at: string;
   // special-case flags
   section_mismatch?: boolean;
   predicted_section?: string;
@@ -68,15 +72,30 @@ export interface ValidationHistoryItem {
   validation_id: string;
   section: string;
   validation_mode: ValidationMode;
+  file_name: string;
   scores: ValidationScores | null;
+  overall_score: number | null;
   section_mismatch: boolean;
   created_at: string;
 }
 
-interface ValidationState {
+// ─── Per-mode state ────────────────────────────────────────────────────────────
+
+interface ModeState {
   isLoading: boolean;
   error: string | null;
   result: ValidationResult | null;
+}
+
+const initialModeState = (): ModeState => ({
+  isLoading: false,
+  error: null,
+  result: null,
+});
+
+interface ValidationState {
+  generic: ModeState;
+  bizify: ModeState;
   history: ValidationHistoryItem[];
   historyLoading: boolean;
 }
@@ -85,16 +104,76 @@ interface ValidationState {
 
 export function useValidation(sectionSlug: string, ideaId: string) {
   const [state, setState] = useState<ValidationState>({
-    isLoading: false,
-    error: null,
-    result: null,
+    generic: initialModeState(),
+    bizify: initialModeState(),
     history: [],
     historyLoading: false,
   });
 
+  // Track whether we've loaded from DB on mount
+  const initialized = useRef(false);
+
+  // ── Persist results from DB on mount ────────────────────────────────────────
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
+    async function loadFromDb() {
+      setState((s) => ({ ...s, historyLoading: true }));
+      try {
+        const url = `/api/ai/${sectionSlug}/validate${ideaId ? `?idea_id=${ideaId}` : ""}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          setState((s) => ({ ...s, historyLoading: false }));
+          return;
+        }
+        const data = await res.json();
+        const items: ValidationHistoryItem[] = data.validations || [];
+
+        setState((s) => ({
+          ...s,
+          history: items,
+          historyLoading: false,
+        }));
+
+        // Load the latest result for each mode
+        for (const mode of ["generic", "bizify"] as ValidationMode[]) {
+          const latest = items.find(
+            (h) => h.validation_mode === mode && !h.section_mismatch
+          );
+          if (latest) {
+            try {
+              const rRes = await fetch(
+                `/api/ai/validate/result/${latest.validation_id}`
+              );
+              if (rRes.ok) {
+                const rData = await rRes.json();
+                setState((s) => ({
+                  ...s,
+                  [mode]: { ...s[mode], result: rData as ValidationResult },
+                }));
+              }
+            } catch {
+              // Non-fatal — if result can't be loaded, show empty state
+            }
+          }
+        }
+      } catch {
+        setState((s) => ({ ...s, historyLoading: false }));
+      }
+    }
+
+    loadFromDb();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sectionSlug, ideaId]);
+
+  // ── Validate (upload PDF) ─────────────────────────────────────────────────
   const validate = useCallback(
     async (file: File, mode: ValidationMode) => {
-      setState((s) => ({ ...s, isLoading: true, error: null, result: null }));
+      setState((s) => ({
+        ...s,
+        [mode]: { isLoading: true, error: null, result: null },
+      }));
 
       const formData = new FormData();
       formData.append("file", file);
@@ -113,49 +192,66 @@ export function useValidation(sectionSlug: string, ideaId: string) {
           throw new Error(data?.error || data?.detail || "Validation failed");
         }
 
-        setState((s) => ({ ...s, isLoading: false, result: data }));
-        return data as ValidationResult;
+        const result = data as ValidationResult;
+        setState((s) => ({
+          ...s,
+          [mode]: { isLoading: false, error: null, result },
+          // Prepend new history item
+          history: [
+            {
+              validation_id:   result.validation_id,
+              section:         result.section,
+              validation_mode: mode,
+              file_name:       result.file_name || file.name,
+              scores:          result.scores || null,
+              overall_score:   result.overall_score ?? null,
+              section_mismatch:!!result.section_mismatch,
+              created_at:      result.created_at || new Date().toISOString(),
+            },
+            ...s.history.filter((h) => h.validation_id !== result.validation_id),
+          ],
+        }));
+        return result;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Validation failed";
-        setState((s) => ({ ...s, isLoading: false, error: msg }));
+        setState((s) => ({
+          ...s,
+          [mode]: { isLoading: false, error: msg, result: null },
+        }));
         return null;
       }
     },
     [sectionSlug, ideaId]
   );
 
-  const fetchHistory = useCallback(async () => {
-    setState((s) => ({ ...s, historyLoading: true }));
-    try {
-      const url = `/api/ai/${sectionSlug}/validate${ideaId ? `?idea_id=${ideaId}` : ""}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        setState((s) => ({
-          ...s,
-          historyLoading: false,
-          history: data.validations || [],
-        }));
-      } else {
-        setState((s) => ({ ...s, historyLoading: false }));
+  // ── Load a specific historical result into a mode slot ─────────────────────
+  const fetchResult = useCallback(
+    async (validationId: string, mode: ValidationMode) => {
+      try {
+        const res = await fetch(`/api/ai/validate/result/${validationId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setState((s) => ({
+            ...s,
+            [mode]: { ...s[mode], result: data as ValidationResult },
+          }));
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      setState((s) => ({ ...s, historyLoading: false }));
-    }
-  }, [sectionSlug, ideaId]);
+    },
+    []
+  );
 
-  const fetchResult = useCallback(async (validationId: string) => {
-    try {
-      const res = await fetch(`/api/ai/validate/result/${validationId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setState((s) => ({ ...s, result: data }));
-      }
-    } catch {
-      // ignore
-    }
+  // ── Clear a single mode's result ──────────────────────────────────────────
+  const clearResult = useCallback((mode: ValidationMode) => {
+    setState((s) => ({
+      ...s,
+      [mode]: { ...s[mode], result: null, error: null },
+    }));
   }, []);
 
+  // ── Download helpers ──────────────────────────────────────────────────────
   const downloadPdf = useCallback((b64: string, sectionName: string) => {
     const binary = atob(b64);
     const bytes = new Uint8Array(binary.length);
@@ -169,16 +265,37 @@ export function useValidation(sectionSlug: string, ideaId: string) {
     URL.revokeObjectURL(url);
   }, []);
 
-  const clearResult = useCallback(() => {
-    setState((s) => ({ ...s, result: null, error: null }));
+  const downloadDocx = useCallback((b64: string, sectionName: string) => {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bizify-improved-${sectionName}-${Date.now()}.docx`;
+    a.click();
+    URL.revokeObjectURL(url);
   }, []);
 
   return {
-    ...state,
+    // Per-mode
+    genericResult:   state.generic.result,
+    genericLoading:  state.generic.isLoading,
+    genericError:    state.generic.error,
+    bizifyResult:    state.bizify.result,
+    bizifyLoading:   state.bizify.isLoading,
+    bizifyError:     state.bizify.error,
+    // History
+    history:         state.history,
+    historyLoading:  state.historyLoading,
+    // Actions
     validate,
-    fetchHistory,
     fetchResult,
-    downloadPdf,
     clearResult,
+    downloadPdf,
+    downloadDocx,
   };
 }

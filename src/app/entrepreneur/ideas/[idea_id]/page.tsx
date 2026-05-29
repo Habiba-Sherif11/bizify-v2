@@ -161,6 +161,7 @@ function TabContent({
 
   const validationPanel = validationSlug && validationLabel ? (
     <ValidationPanel
+      key={validationSlug}
       sectionSlug={validationSlug}
       sectionLabel={validationLabel}
       ideaId={idea.id}
