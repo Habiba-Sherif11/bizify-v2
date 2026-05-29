@@ -22,6 +22,8 @@ interface MarketplacePartner {
   services_json: unknown;
   experience_json: unknown;
   display_name: string;
+  category: string | null;
+  linkedin_url: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -65,6 +67,8 @@ function toCardProps(p: MarketplacePartner): PartnerCardProps {
     tags: parseTags(p.services_json),
     avatarColor: AVATAR_COLORS[type],
     phone: p.phone_number ?? undefined,
+    category: p.category ?? undefined,
+    linkedinUrl: p.linkedin_url ?? undefined,
   };
 }
 

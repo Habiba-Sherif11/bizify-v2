@@ -1,6 +1,6 @@
 "use client";
 
-import { Phone } from "lucide-react";
+import { Phone, Linkedin } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type PartnerType = "Supplier" | "Manufacturer" | "Mentor";
@@ -14,12 +14,20 @@ export interface PartnerCardProps {
   avatarColor: string;
   specialty?: string;
   phone?: string;
+  category?: string;
+  linkedinUrl?: string;
 }
 
 const TYPE_COLORS: Record<PartnerType, string> = {
   Supplier:     "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400",
   Manufacturer: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400",
   Mentor:       "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400",
+};
+
+const CATEGORY_COLORS: Record<PartnerType, string> = {
+  Supplier:     "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800",
+  Manufacturer: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800",
+  Mentor:       "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800",
 };
 
 export function PartnerCard({
@@ -30,6 +38,8 @@ export function PartnerCard({
   tags,
   avatarColor,
   phone,
+  category,
+  linkedinUrl,
 }: PartnerCardProps) {
   const initials = name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
@@ -55,6 +65,15 @@ export function PartnerCard({
               {type}
             </span>
           </div>
+          {/* Category badge */}
+          {category && (
+            <span className={cn(
+              "inline-block mt-1.5 px-2 py-0.5 rounded-full border text-[10px] font-medium",
+              CATEGORY_COLORS[type]
+            )}>
+              {category}
+            </span>
+          )}
         </div>
       </div>
 
@@ -77,21 +96,37 @@ export function PartnerCard({
         </div>
       )}
 
-      {/* Phone */}
-      {phone ? (
-        <a
-          href={`tel:${phone}`}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 text-sm text-gray-600 dark:text-gray-300 hover:border-cyan-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
-        >
-          <Phone size={13} className="shrink-0 text-cyan-500" />
-          <span className="truncate">{phone}</span>
-        </a>
-      ) : (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 text-sm text-gray-400 dark:text-gray-500">
-          <Phone size={13} className="shrink-0" />
-          <span>No phone provided</span>
-        </div>
-      )}
+      {/* Actions row */}
+      <div className="flex flex-col gap-2">
+        {/* Phone */}
+        {phone ? (
+          <a
+            href={`tel:${phone}`}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 text-sm text-gray-600 dark:text-gray-300 hover:border-cyan-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
+          >
+            <Phone size={13} className="shrink-0 text-cyan-500" />
+            <span className="truncate">{phone}</span>
+          </a>
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 text-sm text-gray-400 dark:text-gray-500">
+            <Phone size={13} className="shrink-0" />
+            <span>No phone provided</span>
+          </div>
+        )}
+
+        {/* LinkedIn — only shown for mentors when a URL is provided */}
+        {type === "Mentor" && linkedinUrl && (
+          <a
+            href={linkedinUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-200 dark:border-blue-800 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+          >
+            <Linkedin size={13} className="shrink-0" />
+            <span>View on LinkedIn</span>
+          </a>
+        )}
+      </div>
     </div>
   );
 }
