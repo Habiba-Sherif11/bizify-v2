@@ -223,7 +223,7 @@ function ValidationResults({
             key={key}
             scoreKey={key}
             value={val as number}
-            reasoning={(result.score_reasoning as Record<string, string>)?.[key] ?? ""}
+            reasoning={(result.score_reasoning as unknown as Record<string, string>)?.[key] ?? ""}
           />
         ))}
       </div>

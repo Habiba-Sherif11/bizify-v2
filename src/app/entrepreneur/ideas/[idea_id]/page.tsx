@@ -2007,6 +2007,7 @@ export default function IdeaDetailPage({
   params: Promise<{ idea_id: string }>;
 }) {
   const { idea_id } = use(params);
+  const router = useRouter();
   const [idea, setIdea]     = useState<Idea | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
