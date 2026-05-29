@@ -288,7 +288,7 @@ function UploadZone({ onFile, isLoading }: { onFile: (f: File) => void; isLoadin
         isLoading && "cursor-not-allowed opacity-60"
       )}
     >
-      <input ref={ref} type="file" accept="application/pdf" className="hidden" disabled={isLoading} onChange={(e) => handleFiles(e.target.files)} />
+      <input ref={ref} type="file" accept="application/pdf" title="Upload PDF file" aria-label="Upload PDF file" className="hidden" disabled={isLoading} onChange={(e) => handleFiles(e.target.files)} />
       <Upload size={22} className="mx-auto mb-1.5 text-amber-500" />
       <p className="text-sm font-medium text-foreground">
         Drop your PDF here or <span className="text-amber-600 dark:text-amber-400 underline">browse</span>
@@ -801,7 +801,7 @@ function ModeUploadForm({
             <span className="truncate">{selectedFile.name}</span>
             <span className="shrink-0 text-xs text-muted-foreground">({(selectedFile.size / 1024).toFixed(0)} KB)</span>
           </div>
-          <button onClick={() => setSelectedFile(null)} className="text-muted-foreground hover:text-foreground ml-2 shrink-0">
+          <button type="button" onClick={() => setSelectedFile(null)} title="Remove file" aria-label="Remove file" className="text-muted-foreground hover:text-foreground ml-2 shrink-0">
             <XCircle size={13} />
           </button>
         </div>
@@ -971,6 +971,7 @@ export function ValidationPanel({
     (id: string, mode: ValidationMode) => {
       setActiveMode(mode);
       setIsExpanded(true);
+      setRevalidating((r) => ({ ...r, [mode]: false }));
       fetchResult(id, mode);
     },
     [fetchResult]

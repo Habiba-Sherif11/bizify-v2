@@ -265,33 +265,39 @@ export function useValidation(sectionSlug: string, ideaId: string) {
   }, []);
 
   // ── Download helpers ──────────────────────────────────────────────────────
-  const downloadPdf = useCallback((b64: string, sectionName: string) => {
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    const blob = new Blob([bytes], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `bizify-improved-${sectionName}-${Date.now()}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const triggerDownload = useCallback((b64: string, filename: string, mimeType: string) => {
+    if (!b64) return;
+    try {
+      const clean = b64.replace(/\s/g, "");
+      const binary = atob(clean);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 200);
+    } catch (err) {
+      console.error("Download failed:", err);
+    }
   }, []);
 
+  const downloadPdf = useCallback((b64: string, sectionName: string) => {
+    triggerDownload(b64, `bizify-improved-${sectionName}-${Date.now()}.pdf`, "application/pdf");
+  }, [triggerDownload]);
+
   const downloadDocx = useCallback((b64: string, sectionName: string) => {
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    const blob = new Blob([bytes], {
-      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `bizify-improved-${sectionName}-${Date.now()}.docx`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, []);
+    triggerDownload(
+      b64,
+      `bizify-improved-${sectionName}-${Date.now()}.docx`,
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
+  }, [triggerDownload]);
 
   return {
     // Per-mode
