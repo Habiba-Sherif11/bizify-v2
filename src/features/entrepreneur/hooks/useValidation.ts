@@ -240,17 +240,23 @@ export function useValidation(sectionSlug: string, ideaId: string) {
   // ── Load a specific historical result into a mode slot ─────────────────────
   const fetchResult = useCallback(
     async (validationId: string, mode: ValidationMode) => {
+      setState((s) => ({ ...s, [mode]: { ...s[mode], isLoading: true, error: null } }));
       try {
         const res = await fetch(`/api/ai/validate/result/${validationId}`);
         if (res.ok) {
           const data = await res.json();
           setState((s) => ({
             ...s,
-            [mode]: { ...s[mode], result: data as ValidationResult },
+            [mode]: { isLoading: false, error: null, result: data as ValidationResult },
           }));
+        } else {
+          const err = await res.json().catch(() => ({}));
+          const msg = (err as { error?: string }).error || `Failed to load result (${res.status})`;
+          setState((s) => ({ ...s, [mode]: { ...s[mode], isLoading: false, error: msg } }));
         }
-      } catch {
-        // ignore
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Failed to load result";
+        setState((s) => ({ ...s, [mode]: { ...s[mode], isLoading: false, error: msg } }));
       }
     },
     []
