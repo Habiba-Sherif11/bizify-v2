@@ -29,6 +29,7 @@ import { ProblemsSection }        from "@/features/entrepreneur/components/analy
 import type { SkillsGap, FeasibilityBreakdown } from "@/features/entrepreneur/types/idea";
 import { ShareModal, type ShareItem } from "@/features/entrepreneur/components/ShareModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ValidationPanel } from "@/features/entrepreneur/components/analysis/ValidationPanel";
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
@@ -95,6 +96,32 @@ const TAB_STATE_KEY: Record<Exclude<TabKey, "overview">, SectionKey> = {
   goToMarket:    "goToMarket",
 };
 
+// Maps each tab to the validation section slug used in the AI pipeline API
+const TAB_VALIDATION_SLUG: Partial<Record<TabKey, string>> = {
+  customers:     "customers",
+  competition:   "competition",
+  market:        "market-potential",
+  strategy:      "idea-strategy",
+  businessModel: "business-model",
+  functions:     "functions-list",
+  mvp:           "mvp-planning",
+  financial:     "unit-economics",
+  goToMarket:    "go-to-market",
+};
+
+// Display label for each section used inside the ValidationPanel
+const TAB_VALIDATION_LABEL: Partial<Record<TabKey, string>> = {
+  customers:     "Customer Analysis",
+  competition:   "Competition Analysis",
+  market:        "Market Potential",
+  strategy:      "Idea Strategy",
+  businessModel: "Business Model",
+  functions:     "Functions List",
+  mvp:           "MVP Planning",
+  financial:     "Unit Economics",
+  goToMarket:    "Go-to-Market",
+};
+
 function TabContent({
   tab,
   idea,
@@ -127,16 +154,37 @@ function TabContent({
     goToMarket:    <GoToMarketSection      {...sections.goToMarket}      />,
   };
 
-  const stateKey = TAB_STATE_KEY[tab as Exclude<TabKey, "overview">];
-  const s = sections[stateKey] as SectionState;
+  const stateKey      = TAB_STATE_KEY[tab as Exclude<TabKey, "overview">];
+  const s             = sections[stateKey] as SectionState;
+  const validationSlug  = TAB_VALIDATION_SLUG[tab as Exclude<TabKey, "overview">];
+  const validationLabel = TAB_VALIDATION_LABEL[tab as Exclude<TabKey, "overview">];
+
+  const validationPanel = validationSlug && validationLabel ? (
+    <ValidationPanel
+      sectionSlug={validationSlug}
+      sectionLabel={validationLabel}
+      ideaId={idea.id}
+      hasExistingAnalysis={s.data != null}
+    />
+  ) : null;
 
   if (!s.data && !s.isLoading) {
     const sectionKey = TAB_SECTION_KEY[tab as Exclude<TabKey, "overview">];
     const handleRun = sectionKey ? () => onRunSection(sectionKey) : onRun;
-    return <SectionCallToAction tab={tab as Exclude<TabKey, "overview">} sections={sections} onRun={handleRun} isRunning={isRunning} />;
+    return (
+      <div className="flex flex-col gap-6">
+        <SectionCallToAction tab={tab as Exclude<TabKey, "overview">} sections={sections} onRun={handleRun} isRunning={isRunning} />
+        {validationPanel}
+      </div>
+    );
   }
 
-  return <>{sectionMap[tab as Exclude<TabKey, "overview">]}</>;
+  return (
+    <div className="flex flex-col gap-6">
+      {sectionMap[tab as Exclude<TabKey, "overview">]}
+      {validationPanel}
+    </div>
+  );
 }
 
 function OverviewSection({
