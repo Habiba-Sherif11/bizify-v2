@@ -9,10 +9,12 @@ export async function GET(req: NextRequest) {
 
   const params: Record<string, string> = {};
   const type = searchParams.get("type");
+  const categoryId = searchParams.get("category_id");
   const q = searchParams.get("q");
   const skip = searchParams.get("skip");
   const limit = searchParams.get("limit");
   if (type) params.type = type;
+  if (categoryId) params.category_id = categoryId;
   if (q) params.q = q;
   if (skip) params.skip = skip;
   if (limit) params.limit = limit;

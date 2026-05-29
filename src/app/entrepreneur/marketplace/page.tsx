@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Home, ChevronRight, Search, X } from "lucide-react";
+import { Home, ChevronRight, Search, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -10,7 +10,6 @@ import {
   type PartnerType,
 } from "@/features/marketplace/components/PartnerCard";
 import { api } from "@/features/auth/lib/api";
-import { cn } from "@/lib/utils";
 
 // ─── API types ────────────────────────────────────────────────────────────────
 
@@ -91,11 +90,6 @@ const BACKEND_TYPE: Record<PartnerType, string> = {
   Mentor: "MENTOR",
 };
 
-const CATEGORY_CHIP_COLORS: Record<PartnerType, string> = {
-  Supplier: "border-cyan-200 dark:border-cyan-800 text-cyan-700 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 data-[active=true]:bg-cyan-500 data-[active=true]:text-white data-[active=true]:border-cyan-500",
-  Manufacturer: "border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 data-[active=true]:bg-indigo-500 data-[active=true]:text-white data-[active=true]:border-indigo-500",
-  Mentor: "border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 data-[active=true]:bg-amber-500 data-[active=true]:text-white data-[active=true]:border-amber-500",
-};
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -148,6 +142,7 @@ export default function MarketplacePage() {
     ? categories
     : categories.filter((c) => c.partner_type === BACKEND_TYPE[activeFilter as PartnerType]);
 
+
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 transition-colors">
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
@@ -190,36 +185,22 @@ export default function MarketplacePage() {
           </div>
         </div>
 
-        {/* Category chips */}
+        {/* Category dropdown */}
         {visibleCategories.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2 items-center">
-            {visibleCategories.map((cat) => {
-              const partnerType = TYPE_MAP[cat.partner_type];
-              const isActive = activeCategoryId === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  data-active={isActive}
-                  onClick={() => setActiveCategoryId(isActive ? null : cat.id)}
-                  className={cn(
-                    "px-3 py-1 rounded-full border text-xs font-medium transition-colors cursor-pointer",
-                    CATEGORY_CHIP_COLORS[partnerType]
-                  )}
-                >
+          <div className="mt-4 relative w-56">
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <select
+              value={activeCategoryId ?? ""}
+              onChange={(e) => setActiveCategoryId(e.target.value || null)}
+              className="w-full appearance-none pl-3 pr-8 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-background dark:bg-neutral-800 text-gray-700 dark:text-gray-200 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-colors cursor-pointer"
+            >
+              <option value="">All Categories</option>
+              {visibleCategories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
                   {cat.name}
-                </button>
-              );
-            })}
-            {activeCategoryId && (
-              <button
-                type="button"
-                onClick={() => setActiveCategoryId(null)}
-                className="flex items-center gap-1 px-2 py-1 rounded-full text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-              >
-                <X size={11} /> Clear
-              </button>
-            )}
+                </option>
+              ))}
+            </select>
           </div>
         )}
 
