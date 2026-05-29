@@ -1942,7 +1942,7 @@ export default function IdeaDetailPage({
     handleTabChange(lastActiveInGroup[grp.label] ?? grp.keys[0]);
   }, [lastActiveInGroup, handleTabChange]);
 
-  const { sections, isRunning, hasRun, runError, runPipeline, runSection, regenerateSection, regenerateSectionCustom, fetchAll } = useAiPipeline(idea_id);
+  const { sections, isRunning, hasRun, pipelineComplete, runError, runPipeline, runSection, regenerateSection, regenerateSectionCustom, fetchAll } = useAiPipeline(idea_id);
 
   const [customPromptOpen, setCustomPromptOpen]       = useState(false);
   const [customPromptSection, setCustomPromptSection] = useState<SectionKey | null>(null);
@@ -2164,16 +2164,30 @@ export default function IdeaDetailPage({
             )}
             <div className="flex items-center gap-2">
               <p className="text-sm text-muted-foreground">{formatIdeaDate(idea.created_at)}</p>
-              {hasRun && !isRunning && !suggestNameOpen && (
-                <button
-                  type="button"
-                  onClick={handleSuggestName}
-                  disabled={nameSuggesting}
-                  className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 hover:underline cursor-pointer transition-colors"
-                >
-                  <Sparkles size={11} />
-                  {nameSuggesting ? "Thinking…" : "Suggest a catchier name"}
-                </button>
+              {!suggestNameOpen && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={handleSuggestName}
+                    disabled={nameSuggesting}
+                    className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 hover:underline cursor-pointer transition-colors disabled:opacity-50"
+                  >
+                    <Sparkles size={11} />
+                    {nameSuggesting ? "Thinking…" : "AI Name Ideas"}
+                  </button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-muted-foreground/50 hover:text-muted-foreground cursor-default transition-colors">
+                          <Info size={10} />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-[220px] text-xs text-center">
+                        AI suggests catchier brand names for your idea. Works at any stage — results improve after the full business pipeline is complete.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               )}
             </div>
           </div>
@@ -2187,9 +2201,9 @@ export default function IdeaDetailPage({
                 Running pipeline…
               </span>
             )}
-            {hasRun && !isRunning && (
+            {pipelineComplete && !isRunning && (
               <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                ✓ Pipeline complete
+                ✓ Full analysis ready
               </span>
             )}
 

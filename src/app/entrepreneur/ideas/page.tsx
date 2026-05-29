@@ -77,6 +77,7 @@ function toCardProps(idea: Idea): IdeaCardProps {
     description: idea.description ?? "",
     skills: flattenSkills(idea.skills),
     domain: idea.domain ?? null,
+    pipelineComplete: idea.pipeline_complete ?? false,
   };
 }
 

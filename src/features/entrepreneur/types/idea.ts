@@ -33,6 +33,7 @@ export interface Idea {
   description: string | null;
   status: "draft" | "active" | "archived";
   problem_validation_score: number | null;
+  pipeline_complete: boolean | null;
   budget: number | null;
   skills: SkillsGap | Record<string, unknown>[] | null;
   feasibility: number | null;

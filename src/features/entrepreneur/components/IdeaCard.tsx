@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Check, X, Clock, MoreHorizontal, Pencil, Archive, ExternalLink, Heart } from "lucide-react";
+import { Check, X, Clock, MoreHorizontal, Pencil, Archive, ExternalLink, Heart, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -20,6 +20,7 @@ export interface IdeaCardProps {
   onToggleFavorite?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  pipelineComplete?: boolean;
   // Selection mode (share / compare)
   isSelectable?: boolean;
   isSelected?: boolean;
@@ -41,6 +42,7 @@ export function IdeaCard({
   status,
   skills,
   domain,
+  pipelineComplete = false,
   isFavorited = false,
   onToggleFavorite,
   onEdit,
@@ -192,7 +194,7 @@ export function IdeaCard({
         </div>
       </div>
 
-      {/* Status badge + domain tag */}
+      {/* Status badge + domain tag + pipeline badge */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className={cn("flex items-center gap-1 px-2 py-0.5 rounded-lg", bg)}>
           <Icon size={11} className="text-white" />
@@ -202,6 +204,21 @@ export function IdeaCard({
           <span className="px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-xs font-medium text-amber-700 dark:text-amber-400">
             {domain}
           </span>
+        )}
+        {pipelineComplete && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 text-xs font-medium text-green-700 dark:text-green-400 cursor-default">
+                  <Sparkles size={10} />
+                  Full analysis
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                All business pipeline sections are complete for this idea.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
 

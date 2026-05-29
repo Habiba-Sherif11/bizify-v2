@@ -99,9 +99,10 @@ export function useAiPipeline(ideaId?: string) {
   const [isRunning, setIsRunning] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
 
-  // True whenever at least one section has data — works both on initial load
-  // (existing analysis fetched from DB) and after the pipeline runs in this session.
+  // True whenever at least one section has data.
   const hasRun = Object.values(sections).some((s) => s.data !== null);
+  // True only when every section has data (full business pipeline done this session).
+  const pipelineComplete = Object.values(sections).every((s) => s.data !== null);
 
   const setSection = useCallback((key: SectionKey, patch: Partial<SectionState>) => {
     setSections((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
@@ -242,6 +243,7 @@ export function useAiPipeline(ideaId?: string) {
     sections,
     isRunning,
     hasRun,
+    pipelineComplete,
     runError,
     runPipeline,
     runSection,
