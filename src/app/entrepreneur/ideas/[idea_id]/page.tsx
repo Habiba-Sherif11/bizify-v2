@@ -2237,7 +2237,7 @@ export default function IdeaDetailPage({
                 Running pipeline…
               </span>
             )}
-            {(idea.pipeline_complete || pipelineComplete) && !isRunning && (
+            {pipelineComplete && !isRunning && (
               <span className="text-xs text-green-600 dark:text-green-400 font-medium">
                 ✓ Full analysis ready
               </span>
