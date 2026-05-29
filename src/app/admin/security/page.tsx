@@ -20,23 +20,25 @@ type SecurityLog = {
   created_at: string;
 };
 
-const EVENT_SEVERITY: Record<string, { label: string; cls: string; dot: string }> = {
-  FAIL: { label: "HIGH RISK", cls: "bg-red-50 border-red-100", dot: "bg-red-500", label2: "bg-red-100 text-red-600" },
-  BREACH: { label: "HIGH RISK", cls: "bg-red-50 border-red-100", dot: "bg-red-500", label2: "bg-red-100 text-red-600" },
-  HIGH: { label: "HIGH RISK", cls: "bg-red-50 border-red-100", dot: "bg-red-500", label2: "bg-red-100 text-red-600" },
-  BLOCK: { label: "HIGH RISK", cls: "bg-red-50 border-red-100", dot: "bg-red-500", label2: "bg-red-100 text-red-600" },
-  WARN: { label: "MEDIUM", cls: "bg-amber-50 border-amber-100", dot: "bg-amber-500", label2: "bg-amber-100 text-amber-700" },
-  ANOMALY: { label: "MEDIUM", cls: "bg-amber-50 border-amber-100", dot: "bg-amber-500", label2: "bg-amber-100 text-amber-700" },
-  LOCK: { label: "MEDIUM", cls: "bg-amber-50 border-amber-100", dot: "bg-amber-500", label2: "bg-amber-100 text-amber-700" },
-  DELAY: { label: "MEDIUM", cls: "bg-amber-50 border-amber-100", dot: "bg-amber-500", label2: "bg-amber-100 text-amber-700" },
+type SeverityEntry = { label: string; cls: string; dot: string; badge: string };
+
+const EVENT_SEVERITY: Record<string, SeverityEntry> = {
+  FAIL:    { label: "HIGH RISK", cls: "bg-red-50 border-red-100",     dot: "bg-red-500",    badge: "bg-red-100 text-red-600" },
+  BREACH:  { label: "HIGH RISK", cls: "bg-red-50 border-red-100",     dot: "bg-red-500",    badge: "bg-red-100 text-red-600" },
+  HIGH:    { label: "HIGH RISK", cls: "bg-red-50 border-red-100",     dot: "bg-red-500",    badge: "bg-red-100 text-red-600" },
+  BLOCK:   { label: "HIGH RISK", cls: "bg-red-50 border-red-100",     dot: "bg-red-500",    badge: "bg-red-100 text-red-600" },
+  WARN:    { label: "MEDIUM",    cls: "bg-amber-50 border-amber-100", dot: "bg-amber-500",  badge: "bg-amber-100 text-amber-700" },
+  ANOMALY: { label: "MEDIUM",    cls: "bg-amber-50 border-amber-100", dot: "bg-amber-500",  badge: "bg-amber-100 text-amber-700" },
+  LOCK:    { label: "MEDIUM",    cls: "bg-amber-50 border-amber-100", dot: "bg-amber-500",  badge: "bg-amber-100 text-amber-700" },
+  DELAY:   { label: "MEDIUM",    cls: "bg-amber-50 border-amber-100", dot: "bg-amber-500",  badge: "bg-amber-100 text-amber-700" },
 };
 
-function getSeverity(eventType: string) {
+function getSeverity(eventType: string): SeverityEntry {
   const upper = eventType.toUpperCase();
   for (const [key, val] of Object.entries(EVENT_SEVERITY)) {
     if (upper.includes(key)) return val;
   }
-  return { label: "LOW", cls: "bg-white border-neutral-100", dot: "bg-neutral-300", label2: "bg-neutral-100 text-neutral-500" };
+  return { label: "LOW", cls: "bg-white border-neutral-100", dot: "bg-neutral-300", badge: "bg-neutral-100 text-neutral-500" };
 }
 
 function formatDate(iso: string) {
@@ -195,7 +197,7 @@ export default function SecurityPage() {
                           </p>
                         )}
                       </div>
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${sev.label2}`}>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${sev.badge}`}>
                         {sev.label}
                       </span>
                     </div>

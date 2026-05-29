@@ -42,7 +42,6 @@ function formatDate(iso: string) {
 }
 
 export default function UsersPage() {
-  const searchParams = useSearchParams();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
