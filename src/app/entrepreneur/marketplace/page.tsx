@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Home, ChevronRight, Search } from "lucide-react";
+import { Home, ChevronRight, Search, X } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -10,8 +10,15 @@ import {
   type PartnerType,
 } from "@/features/marketplace/components/PartnerCard";
 import { api } from "@/features/auth/lib/api";
+import { cn } from "@/lib/utils";
 
 // ─── API types ────────────────────────────────────────────────────────────────
+
+interface PartnerCategory {
+  id: string;
+  name: string;
+  partner_type: "MENTOR" | "SUPPLIER" | "MANUFACTURER";
+}
 
 interface MarketplacePartner {
   id: string;
@@ -22,7 +29,8 @@ interface MarketplacePartner {
   services_json: unknown;
   experience_json: unknown;
   display_name: string;
-  category: string | null;
+  category_id: string | null;
+  category_name: string | null;
   linkedin_url: string | null;
 }
 
@@ -67,7 +75,7 @@ function toCardProps(p: MarketplacePartner): PartnerCardProps {
     tags: parseTags(p.services_json),
     avatarColor: AVATAR_COLORS[type],
     phone: p.phone_number ?? undefined,
-    category: p.category ?? undefined,
+    category: p.category_name ?? undefined,
     linkedinUrl: p.linkedin_url ?? undefined,
   };
 }
@@ -83,19 +91,41 @@ const BACKEND_TYPE: Record<PartnerType, string> = {
   Mentor: "MENTOR",
 };
 
+const CATEGORY_CHIP_COLORS: Record<PartnerType, string> = {
+  Supplier: "border-cyan-200 dark:border-cyan-800 text-cyan-700 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 data-[active=true]:bg-cyan-500 data-[active=true]:text-white data-[active=true]:border-cyan-500",
+  Manufacturer: "border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 data-[active=true]:bg-indigo-500 data-[active=true]:text-white data-[active=true]:border-indigo-500",
+  Mentor: "border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 data-[active=true]:bg-amber-500 data-[active=true]:text-white data-[active=true]:border-amber-500",
+};
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MarketplacePage() {
   const [activeFilter, setActiveFilter] = useState<FilterTab>("All");
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [categories, setCategories] = useState<PartnerCategory[]>([]);
   const [search, setSearch] = useState("");
   const [partners, setPartners] = useState<PartnerCardProps[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Fetch categories whenever the type tab changes
+  useEffect(() => {
+    const params: Record<string, string> = {};
+    if (activeFilter !== "All") params.type = BACKEND_TYPE[activeFilter as PartnerType];
+
+    api.get<PartnerCategory[]>("/marketplace/categories", { params })
+      .then(({ data }) => setCategories(data))
+      .catch(() => setCategories([]));
+
+    // Reset selected category when type changes
+    setActiveCategoryId(null);
+  }, [activeFilter]);
 
   const fetchPartners = useCallback(async () => {
     setLoading(true);
     try {
       const params: Record<string, string> = {};
-      if (activeFilter !== "All") params.type = BACKEND_TYPE[activeFilter];
+      if (activeFilter !== "All") params.type = BACKEND_TYPE[activeFilter as PartnerType];
+      if (activeCategoryId) params.category_id = activeCategoryId;
       if (search.trim()) params.q = search.trim();
 
       const { data } = await api.get<MarketplacePartner[]>("/marketplace/partners", { params });
@@ -107,12 +137,16 @@ export default function MarketplacePage() {
     } finally {
       setLoading(false);
     }
-  }, [activeFilter, search]);
+  }, [activeFilter, activeCategoryId, search]);
 
   useEffect(() => {
     const timer = setTimeout(fetchPartners, search ? 400 : 0);
     return () => clearTimeout(timer);
   }, [fetchPartners, search]);
+
+  const visibleCategories = activeFilter === "All"
+    ? categories
+    : categories.filter((c) => c.partner_type === BACKEND_TYPE[activeFilter as PartnerType]);
 
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 transition-colors">
@@ -137,7 +171,7 @@ export default function MarketplacePage() {
             </p>
           </div>
 
-          {/* Filter tabs */}
+          {/* Type filter tabs */}
           <div className="flex items-center gap-1 bg-background dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-1 self-start sm:self-auto">
             {FILTER_TABS.map((tab) => (
               <button
@@ -156,8 +190,41 @@ export default function MarketplacePage() {
           </div>
         </div>
 
+        {/* Category chips */}
+        {visibleCategories.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2 items-center">
+            {visibleCategories.map((cat) => {
+              const partnerType = TYPE_MAP[cat.partner_type];
+              const isActive = activeCategoryId === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  data-active={isActive}
+                  onClick={() => setActiveCategoryId(isActive ? null : cat.id)}
+                  className={cn(
+                    "px-3 py-1 rounded-full border text-xs font-medium transition-colors cursor-pointer",
+                    CATEGORY_CHIP_COLORS[partnerType]
+                  )}
+                >
+                  {cat.name}
+                </button>
+              );
+            })}
+            {activeCategoryId && (
+              <button
+                type="button"
+                onClick={() => setActiveCategoryId(null)}
+                className="flex items-center gap-1 px-2 py-1 rounded-full text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              >
+                <X size={11} /> Clear
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Search */}
-        <div className="mt-6 relative w-full sm:w-80">
+        <div className="mt-4 relative w-full sm:w-80">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           <input
             type="text"
@@ -181,10 +248,7 @@ export default function MarketplacePage() {
         ) : partners.length > 0 ? (
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {partners.map((p) => (
-              <PartnerCard
-                key={p.id}
-                {...p}
-              />
+              <PartnerCard key={p.id} {...p} />
             ))}
           </div>
         ) : (
