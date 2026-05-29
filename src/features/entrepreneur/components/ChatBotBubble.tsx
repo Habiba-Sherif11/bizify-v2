@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { X, Send, Bot, Minimize2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useGeneralChat } from "@/features/entrepreneur/hooks/useGeneralChat";
 
@@ -45,17 +46,21 @@ export function ChatBotBubble() {
   return (
     <>
       {/* Chat panel */}
+      <AnimatePresence>
       {open && (
-        <div
+        <motion.div
           className={cn(
             "fixed bottom-20 inset-s-6 z-50",
             "w-[calc(100vw-3rem)] max-w-80 sm:max-w-90",
             "bg-white dark:bg-neutral-800",
             "rounded-2xl border border-neutral-200 dark:border-neutral-700",
-            "shadow-2xl flex flex-col overflow-hidden",
-            "animate-in slide-in-from-bottom-4 fade-in duration-200"
+            "shadow-2xl flex flex-col overflow-hidden"
           )}
           style={{ height: 440 }}
+          initial={{ opacity: 0, y: 16, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 16, scale: 0.97 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 shrink-0">
@@ -98,9 +103,11 @@ export function ChatBotBubble() {
                 <AiAvatar size="xs" />
                 <div className="px-3 py-2 rounded-2xl rounded-tl-sm bg-white dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 shadow-sm flex gap-1 items-center">
                   {[0, 1, 2].map((i) => (
-                    <span
+                    <motion.span
                       key={i}
-                      className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-500 typing-dot"
+                      className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-500 block"
+                      animate={{ opacity: [0.25, 1, 0.25], scale: [0.75, 1.1, 0.75] }}
+                      transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.22, ease: "easeInOut" }}
                     />
                   ))}
                 </div>
@@ -131,11 +138,12 @@ export function ChatBotBubble() {
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Floating trigger */}
-      <button
+      <motion.button
         type="button"
         onClick={() => setOpen((v) => !v)}
         title="Chat with Bizify AI"
@@ -143,15 +151,22 @@ export function ChatBotBubble() {
           "fixed bottom-6 inset-s-6 z-50",
           "w-12 h-12 rounded-full",
           "flex items-center justify-center text-white",
-          "cursor-pointer transition-[transform,background-color] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]",
-          "hover:scale-105 active:scale-95 shadow-lg",
+          "cursor-pointer shadow-lg",
           open
             ? "bg-neutral-700 dark:bg-neutral-600"
             : "bg-gradient-to-br from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600"
         )}
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.93 }}
+        transition={{ type: "spring", stiffness: 400, damping: 20 }}
       >
-        {open ? <X size={20} /> : <Bot size={20} />}
-      </button>
+        <AnimatePresence mode="wait" initial={false}>
+          {open
+            ? <motion.span key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}><X size={20} /></motion.span>
+            : <motion.span key="bot" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}><Bot size={20} /></motion.span>
+          }
+        </AnimatePresence>
+      </motion.button>
     </>
   );
 }

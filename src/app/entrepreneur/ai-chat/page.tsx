@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { api } from "@/features/auth/lib/api";
 
@@ -514,7 +515,12 @@ function AiChatContent() {
                 </div>
                 <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-sm flex items-center gap-1">
                   {[0, 1, 2].map((i) => (
-                    <span key={i} className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-500 typing-dot" />
+                    <motion.span
+                      key={i}
+                      className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-500 block"
+                      animate={{ opacity: [0.25, 1, 0.25], scale: [0.75, 1.1, 0.75] }}
+                      transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.22, ease: "easeInOut" }}
+                    />
                   ))}
                 </div>
               </div>

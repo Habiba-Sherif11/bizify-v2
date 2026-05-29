@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Check, Minus, ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
 // Feature and plan data
@@ -53,7 +54,13 @@ export function PricingSection() {
 
       <div className="relative z-10 max-w-5xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
+        <motion.div
+          className="text-center mb-12"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
           <div className="inline-block px-4 py-1.5 mb-6 bg-white border border-amber-500 rounded-full">
             <span className="text-xs font-semibold text-amber-500 uppercase tracking-wide">Pricing</span>
           </div>
@@ -99,10 +106,16 @@ export function PricingSection() {
               </span>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Desktop Comparison Table */}
-        <div className="hidden lg:block overflow-x-auto -mx-4 px-4">
+        <motion.div
+          className="hidden lg:block overflow-x-auto -mx-4 px-4"
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+        >
           <table className="w-full border-collapse" style={{ minWidth: 720 }}>
             <thead>
               <tr>
@@ -190,10 +203,16 @@ export function PricingSection() {
               ))}
             </tbody>
           </table>
-        </div>
+        </motion.div>
 
         {/* Mobile & Tablet Cards */}
-        <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        <motion.div
+          className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-6 mb-12"
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+        >
           {PLANS.map((plan) => (
             <div
               key={plan.key}
@@ -242,14 +261,14 @@ export function PricingSection() {
                       <Check
                         size={16}
                         strokeWidth={2.5}
-                        className="mt-0.5 flex-shrink-0"
+                        className="mt-0.5 shrink-0"
                         style={{ color: plan.color }}
                       />
                     ) : (
                       <Minus
                         size={14}
                         strokeWidth={1.5}
-                        className="text-neutral-300 mt-0.5 flex-shrink-0"
+                        className="text-neutral-300 mt-0.5 shrink-0"
                       />
                     )}
                     <span
@@ -264,10 +283,16 @@ export function PricingSection() {
               </div>
             </div>
           ))}
-        </div>
+        </motion.div>
 
         {/* Bottom CTA */}
-        <div className="mt-10 relative">
+        <motion.div
+          className="mt-10 relative"
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+        >
           <div
             className="rounded-2xl p-6 sm:p-8 text-center relative overflow-hidden bg-white/60 backdrop-blur-md border border-white/80"
             style={{
@@ -313,7 +338,7 @@ export function PricingSection() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
