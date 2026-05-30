@@ -23,14 +23,18 @@ import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tier = "freemium" | "pay-per-feature" | "enterprise";
+type Tier = "freemium" | "pay-per-feature" | "premium";
 
 interface UIPlan {
   tier: Tier;
   label: string;
   subtitle: string;
-  monthlyPrice: number;
-  yearlyPrice: number;
+  /** Display string for the price, e.g. "0", "120 – 150", "350" */
+  priceDisplay: string;
+  /** Unit label shown beside the price, e.g. "EGP / feature" */
+  priceUnit: string;
+  /** Fallback token count when backend features_json.ai_tokens is absent */
+  defaultTokens: number;
   dotBg: string;
   badgeBg: string;
   badgeText: string;
@@ -79,8 +83,9 @@ const UI_PLANS: UIPlan[] = [
     tier: "freemium",
     label: "Free",
     subtitle: "Freemium",
-    monthlyPrice: 0,
-    yearlyPrice: 0,
+    priceDisplay: "0",
+    priceUnit: "EGP",
+    defaultTokens: 20_000,
     dotBg: "bg-[#8ECAE6]",
     badgeBg: "bg-[#8ECAE6]/10",
     badgeText: "text-[#8ECAE6]",
@@ -92,10 +97,11 @@ const UI_PLANS: UIPlan[] = [
   },
   {
     tier: "pay-per-feature",
-    label: "Pro",
-    subtitle: "Pay-Per-Feature",
-    monthlyPrice: 9.99,
-    yearlyPrice: 7.99,
+    label: "Pay-Per-Feature",
+    subtitle: "Pay only for what you use",
+    priceDisplay: "120 – 150",
+    priceUnit: "EGP / feature",
+    defaultTokens: 500_000,
     dotBg: "bg-[#FB8500]",
     badgeBg: "bg-[#FB8500]/10",
     badgeText: "text-[#FB8500]",
@@ -106,11 +112,12 @@ const UI_PLANS: UIPlan[] = [
     priceHint: 9.99,
   },
   {
-    tier: "enterprise",
-    label: "Enterprise",
+    tier: "premium",
+    label: "Premium",
     subtitle: "Everything, unlimited",
-    monthlyPrice: 29.99,
-    yearlyPrice: 23.99,
+    priceDisplay: "350",
+    priceUnit: "EGP / month",
+    defaultTokens: -1,
     dotBg: "bg-[#126782]",
     badgeBg: "bg-[#126782]/10",
     badgeText: "text-[#126782]",
@@ -121,28 +128,26 @@ const UI_PLANS: UIPlan[] = [
   },
 ];
 
-// Features keyed by tier — derived from backend features_json
-const FEATURES: { name: string; freemium: boolean; pay: boolean; enterprise: boolean }[] = [
-  { name: "AI idea brainstorming",      freemium: true,  pay: true,  enterprise: true  },
-  { name: "Market research overview",   freemium: true,  pay: true,  enterprise: true  },
-  { name: "5 ideas / month",            freemium: true,  pay: false, enterprise: false },
-  { name: "50 ideas / month",           freemium: false, pay: true,  enterprise: false },
-  { name: "Unlimited ideas",            freemium: false, pay: false, enterprise: true  },
-  { name: "Competitor analysis",        freemium: false, pay: true,  enterprise: true  },
-  { name: "Business plan builder",      freemium: false, pay: true,  enterprise: true  },
-  { name: "AI mentor chat",             freemium: false, pay: true,  enterprise: true  },
-  { name: "Export reports",             freemium: false, pay: true,  enterprise: true  },
-  { name: "Financial projections",      freemium: false, pay: false, enterprise: true  },
-  { name: "Pitch deck generator",       freemium: false, pay: false, enterprise: true  },
-  { name: "Priority support",           freemium: false, pay: false, enterprise: true  },
-  { name: "Advanced AI models",         freemium: false, pay: false, enterprise: true  },
-  { name: "Unlimited businesses",       freemium: false, pay: false, enterprise: true  },
+const FEATURES: { name: string; freemium: boolean; pay: boolean; premium: boolean }[] = [
+  { name: "AI idea brainstorming",    freemium: true,  pay: true,  premium: true  },
+  { name: "Market research overview", freemium: true,  pay: true,  premium: true  },
+  { name: "5 ideas / month",          freemium: true,  pay: false, premium: false },
+  { name: "50 ideas / month",         freemium: false, pay: true,  premium: false },
+  { name: "Unlimited ideas",          freemium: false, pay: false, premium: true  },
+  { name: "Competitor analysis",      freemium: false, pay: true,  premium: true  },
+  { name: "Business plan builder",    freemium: false, pay: true,  premium: true  },
+  { name: "AI mentor chat",           freemium: false, pay: true,  premium: true  },
+  { name: "Export reports",           freemium: false, pay: true,  premium: true  },
+  { name: "Financial projections",    freemium: false, pay: false, premium: true  },
+  { name: "Pitch deck generator",     freemium: false, pay: false, premium: true  },
+  { name: "Priority support",         freemium: false, pay: false, premium: true  },
+  { name: "Advanced AI models",       freemium: false, pay: false, premium: true  },
+  { name: "Unlimited businesses",     freemium: false, pay: false, premium: true  },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatTokens(n: number | undefined): string {
-  if (n === undefined || n === null) return "—";
+function formatTokens(n: number): string {
   if (n === -1) return "Unlimited";
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
@@ -226,7 +231,6 @@ function UsageSummary({ usage }: { usage: UsageData }) {
 
 function PaymentModal({
   uiPlan,
-  billing,
   onClose,
   onPayPal,
   onCard,
@@ -234,15 +238,12 @@ function PaymentModal({
   iframeUrl,
 }: {
   uiPlan: UIPlan;
-  billing: "monthly" | "yearly";
   onClose: () => void;
   onPayPal: () => void;
   onCard: () => void;
   processing: boolean;
   iframeUrl: string | null;
 }) {
-  const price = billing === "yearly" ? uiPlan.yearlyPrice : uiPlan.monthlyPrice;
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
@@ -257,12 +258,12 @@ function PaymentModal({
             <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400 mb-0.5">
               Subscribe to
             </p>
-            <div className="flex items-center gap-2">
-              <div className={cn("w-2.5 h-2.5 rounded-full", uiPlan.dotBg)} />
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", uiPlan.dotBg)} />
               <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">{uiPlan.label}</h2>
-              <span className="text-lg font-bold text-neutral-900 dark:text-white">
-                ${price}
-                <span className="text-sm font-normal text-neutral-400">/mo</span>
+              <span className="text-base font-bold text-neutral-900 dark:text-white">
+                {uiPlan.priceDisplay}
+                <span className="text-sm font-normal text-neutral-400 ml-1">{uiPlan.priceUnit}</span>
               </span>
             </div>
           </div>
@@ -345,22 +346,20 @@ function PaymentModal({
 function PlanCard({
   uiPlan,
   backendPlan,
-  billing,
   isCurrent,
   onSelect,
 }: {
   uiPlan: UIPlan;
   backendPlan: BackendPlan | null;
-  billing: "monthly" | "yearly";
   isCurrent: boolean;
   onSelect: () => void;
 }) {
-  const price = billing === "yearly" ? uiPlan.yearlyPrice : uiPlan.monthlyPrice;
   const featureKey = uiPlan.tier === "freemium" ? "freemium"
     : uiPlan.tier === "pay-per-feature" ? "pay"
-    : "enterprise";
+    : "premium";
 
-  const tokenCount = backendPlan?.features_json?.ai_tokens;
+  // Use backend token count if available, otherwise fall back to the UI default
+  const tokenCount = backendPlan?.features_json?.ai_tokens ?? uiPlan.defaultTokens;
   const isUnlimited = tokenCount === -1;
   const tokenLabel = isUnlimited ? "Unlimited tokens" : `${formatTokens(tokenCount)} tokens`;
   const canUpgrade = !uiPlan.isFree && !isCurrent && !!backendPlan;
@@ -395,29 +394,28 @@ function PlanCard({
       <p className="text-xs text-neutral-400 dark:text-neutral-500 mb-3 ml-[18px]">{uiPlan.subtitle}</p>
 
       {/* Token badge */}
-      {backendPlan && (
-        <div className={cn(
-          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg mb-4 w-fit text-xs font-semibold",
-          uiPlan.badgeBg,
-          uiPlan.badgeText
-        )}>
-          {isUnlimited
-            ? <InfinityIcon size={12} strokeWidth={2.5} />
-            : <Coins size={12} strokeWidth={2.5} />}
-          {tokenLabel}
-        </div>
-      )}
+      <div className={cn(
+        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg mb-4 w-fit text-xs font-semibold",
+        uiPlan.badgeBg,
+        uiPlan.badgeText
+      )}>
+        {isUnlimited
+          ? <InfinityIcon size={12} strokeWidth={2.5} />
+          : <Coins size={12} strokeWidth={2.5} />}
+        {tokenLabel}
+      </div>
 
       {/* Price */}
-      <div className="flex items-baseline gap-1 mb-5">
-        <span className="text-4xl font-bold text-neutral-900 dark:text-white">
-          {uiPlan.isFree ? "Free" : `$${price}`}
-        </span>
-        {!uiPlan.isFree && <span className="text-sm text-neutral-400">/mo</span>}
-        {billing === "yearly" && !uiPlan.isFree && (
-          <span className="ml-1.5 text-xs text-green-600 dark:text-green-400 font-semibold bg-green-50 dark:bg-green-950/40 px-1.5 py-0.5 rounded-full">
-            Save 20%
-          </span>
+      <div className="mb-5">
+        {uiPlan.isFree ? (
+          <span className="text-4xl font-bold text-neutral-900 dark:text-white">Free</span>
+        ) : (
+          <>
+            <span className="text-3xl font-bold text-neutral-900 dark:text-white">
+              {uiPlan.priceDisplay}
+            </span>
+            <span className="ml-1.5 text-sm text-neutral-400">{uiPlan.priceUnit}</span>
+          </>
         )}
       </div>
 
@@ -480,7 +478,6 @@ export default function UpgradePlanPage() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
 
   const [selectedUiPlan, setSelectedUiPlan] = useState<UIPlan | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -599,7 +596,7 @@ export default function UpgradePlanPage() {
               Choose the right plan for you
             </h1>
             <p className="text-neutral-500 dark:text-neutral-400 max-w-xl mx-auto">
-              Start free, pay only for features you use, or go unlimited with Enterprise.
+              Start free, pay only for features you use, or go unlimited with Premium.
             </p>
 
             {currentUiTier && (
@@ -615,32 +612,6 @@ export default function UpgradePlanPage() {
           {/* Token usage summary */}
           {usage && <UsageSummary usage={usage} />}
 
-          {/* Billing toggle */}
-          <div className="flex items-center justify-center gap-3 mb-10">
-            <div className="inline-flex rounded-full p-0.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
-              {(["monthly", "yearly"] as const).map((b) => (
-                <button
-                  key={b}
-                  type="button"
-                  onClick={() => setBilling(b)}
-                  className={cn(
-                    "px-5 py-1.5 rounded-full text-sm font-medium transition-all duration-200 capitalize",
-                    billing === b
-                      ? "bg-amber-500 text-white shadow-sm"
-                      : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
-                  )}
-                >
-                  {b}
-                </button>
-              ))}
-            </div>
-            {billing === "yearly" && (
-              <span className="px-2.5 py-0.5 rounded-full bg-green-100 dark:bg-green-950/50 text-green-600 dark:text-green-400 text-xs font-semibold">
-                Save 20%
-              </span>
-            )}
-          </div>
-
           {/* 3 plan cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {UI_PLANS.map((uiPlan) => {
@@ -650,7 +621,6 @@ export default function UpgradePlanPage() {
                   key={uiPlan.tier}
                   uiPlan={uiPlan}
                   backendPlan={backend}
-                  billing={billing}
                   isCurrent={currentUiTier === uiPlan.tier}
                   onSelect={() => {
                     setSelectedUiPlan(uiPlan);
@@ -661,7 +631,7 @@ export default function UpgradePlanPage() {
             })}
           </div>
 
-          {/* Cancel link */}
+          {/* Cancel subscription */}
           {subscription && (
             <div className="mt-12 text-center">
               <button
@@ -688,7 +658,6 @@ export default function UpgradePlanPage() {
       {selectedUiPlan && (
         <PaymentModal
           uiPlan={selectedUiPlan}
-          billing={billing}
           onClose={() => { if (!processing) { setSelectedUiPlan(null); setIframeUrl(null); } }}
           onPayPal={handlePayPal}
           onCard={handleCard}
