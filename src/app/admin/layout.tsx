@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -10,6 +11,7 @@ import {
   Settings,
   LogOut,
   ChevronRight,
+  RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { cn } from "@/lib/utils";
@@ -24,7 +26,24 @@ const NAV_ITEMS = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const router = useRouter();
+  const { user, loading, logout } = useAuth();
+
+  useEffect(() => {
+    if (!loading && (!user || user.role !== "admin")) {
+      router.replace("/login");
+    }
+  }, [loading, user, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+        <RefreshCw size={20} className="animate-spin text-neutral-400" />
+      </div>
+    );
+  }
+
+  if (!user || user.role !== "admin") return null;
 
   return (
     <div className="flex min-h-screen bg-neutral-100">

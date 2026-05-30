@@ -223,8 +223,10 @@ export default function AdminDashboardPage() {
   }, []);
 
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    if (user?.role === "admin") {
+      fetchStats();
+    }
+  }, [fetchStats, user]);
 
   const handleSuspend = async (userId: string, isActive: boolean) => {
     setSuspending(userId);
