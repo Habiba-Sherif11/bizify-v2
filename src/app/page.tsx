@@ -7,6 +7,7 @@ import { Hero } from "@/components/sections/hero";
 import { ProblemsSection } from "@/components/sections/problems";
 import { Solutions } from "@/components/sections/solutions";
 import { HowItWorks } from "@/components/sections/how-it-works-new";
+import { SocialProof } from "@/components/sections/social-proof";
 import { AiStartupMentorSection } from "@/components/sections/ai-startup-mentor";
 import { PricingSection } from "@/components/sections/pricing";
 import { Footer } from "@/components/sections/footer";
@@ -55,6 +56,9 @@ export default function Home() {
           </div>
           <HowItWorks />
         </section>
+
+        {/* Social Proof */}
+        <SocialProof />
 
         {/* AI Mentor CTA */}
         <AiStartupMentorSection />

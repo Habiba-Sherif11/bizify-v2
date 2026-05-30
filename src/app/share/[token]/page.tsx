@@ -108,7 +108,7 @@ export default async function SharedIdeaPage({
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <SVGComponent className="h-6 w-auto" />
-            <span className="font-bold text-neutral-900 dark:text-white text-lg tracking-tight"
+            <span className="font-bold text-neutral-900 dark:text-white text-[1.5rem] leading-none tracking-tight"
               style={{ fontFamily: "var(--font-cormorant-sc)" }}>
               Bizify
             </span>

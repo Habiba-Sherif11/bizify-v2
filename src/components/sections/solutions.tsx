@@ -1,13 +1,66 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Zap, Target, BarChart3, TrendingUp } from "lucide-react";
 
-const cardShadow = "0 2px 8px -2px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.06)";
+const cardShadow      = "0 2px 8px -2px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.06)";
 const cardHoverShadow = "0 16px 28px -8px rgba(0,0,0,0.13), 0 0 1px rgba(0,0,0,0.06)";
-const amberCardShadow = "0 2px 8px -2px rgba(245,158,11,0.10)";
-const amberCardHoverShadow = "0 16px 28px -8px rgba(245,158,11,0.18)";
 
+// ── Inline AI chat preview ────────────────────────────────────────────────────
+function AIChatPreview() {
+  return (
+    <div
+      className="mt-6 rounded-xl border border-neutral-100 bg-neutral-50 overflow-hidden text-left"
+      aria-label="Example AI research output"
+    >
+      {/* User prompt */}
+      <div className="px-4 pt-4 pb-3 flex items-start gap-3">
+        <span
+          className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-amber-700"
+          aria-hidden="true"
+          style={{ fontSize: "0.6rem", fontWeight: 700 }}
+        >
+          You
+        </span>
+        <p className="text-sm text-neutral-600 leading-snug">
+          Who are the main competitors for a student meal-planning app in Egypt?
+        </p>
+      </div>
+
+      {/* AI response */}
+      <div className="border-t border-neutral-100 px-4 py-4 flex items-start gap-3">
+        <span
+          className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center"
+          aria-hidden="true"
+          style={{ fontSize: "0.55rem", fontWeight: 700, color: "#fff" }}
+        >
+          AI
+        </span>
+        <div className="space-y-2.5 flex-1">
+          <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
+            3 direct competitors found
+          </p>
+          {[
+            { name: "Elmenus", insight: "Restaurant discovery focus, no meal-planning or budgeting tools." },
+            { name: "Otlob",   insight: "Delivery-led; no student pricing or dietary customisation." },
+            { name: "Talabat", insight: "Dominant in delivery; gap in affordable weekly planning." },
+          ].map(({ name, insight }) => (
+            <div key={name} className="flex gap-2 items-start">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" aria-hidden="true" />
+              <p className="text-sm text-neutral-700 leading-snug">
+                <strong className="font-semibold text-neutral-900">{name}</strong>
+                {" — "}
+                {insight}
+              </p>
+            </div>
+          ))}
+          <p className="text-xs text-neutral-400 pt-1">Sources cited · Updated today</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 export function Solutions() {
   return (
     <section id="features" className="relative py-16 px-4 sm:px-6 lg:px-8">
@@ -27,11 +80,11 @@ export function Solutions() {
           </p>
         </motion.div>
 
-        {/* Bento grid — row 1: large + small, row 2: small + large */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Card 1: AI Research — 2 cols wide */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+          {/* Flagship: AI Research — 2 cols, full product preview */}
           <motion.div
-            className="sm:col-span-2 rounded-xl border border-neutral-200/80 bg-background p-6 cursor-default"
+            className="lg:col-span-2 rounded-xl border border-neutral-200/80 bg-background p-6 cursor-default"
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-60px" }}
@@ -39,38 +92,22 @@ export function Solutions() {
             whileHover={{ y: -4, boxShadow: cardHoverShadow }}
             style={{ boxShadow: cardShadow }}
           >
-            <div className="flex items-center gap-2.5 mb-5">
-              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
-                <Zap className="w-4 h-4 text-amber-600" />
-              </div>
-              <span className="text-xs font-semibold text-amber-600 uppercase tracking-wide">
-                Flagship
-              </span>
-            </div>
-            <h3 className="text-xl font-semibold text-neutral-950 mb-3 leading-snug">
-              AI research that takes days — done in seconds.
+            <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-3">
+              AI Research
+            </p>
+            <h3 className="text-xl font-semibold text-neutral-950 leading-snug mb-1">
+              Days of research — done in seconds.
             </h3>
             <p className="text-sm text-neutral-500 leading-relaxed max-w-lg">
-              Ask about your market. Get competitor analysis, audience insights, and trend signals — all cited, all current. No tab switching.
+              Ask about your market. Get competitor analysis, audience insights, and trend
+              signals — all cited, all current. No tab switching.
             </p>
-
-            <ul className="mt-5 pt-5 border-t border-neutral-100 space-y-2">
-              {[
-                "Competitor analysis in under a minute",
-                "Real-time trend signals, not stale reports",
-                "Every answer cited so you can verify it",
-              ].map((item) => (
-                <li key={item} className="flex items-center gap-2.5 text-sm text-neutral-600">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
+            <AIChatPreview />
           </motion.div>
 
-          {/* Card 2: Validate Fast — 1 col */}
+          {/* Validate */}
           <motion.div
-            className="rounded-xl border border-neutral-200/80 bg-background p-6 cursor-default"
+            className="rounded-xl border border-neutral-200/80 bg-background p-6 cursor-default flex flex-col justify-between"
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-60px" }}
@@ -78,18 +115,38 @@ export function Solutions() {
             whileHover={{ y: -4, boxShadow: cardHoverShadow }}
             style={{ boxShadow: cardShadow }}
           >
-            <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center mb-5">
-              <Target className="w-4 h-4 text-cyan-700" />
+            <div>
+              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-3">
+                Idea Validation
+              </p>
+              <h3 className="text-base font-semibold text-neutral-950 mb-2.5 leading-snug">
+                Know if your idea has legs — before you commit.
+              </h3>
+              <p className="text-sm text-neutral-500 leading-relaxed">
+                Structured frameworks that score your idea against real market signals, not gut feel.
+              </p>
             </div>
-            <h3 className="text-base font-semibold text-neutral-950 mb-2.5 leading-snug">
-              Validate before you commit.
-            </h3>
-            <p className="text-sm text-neutral-500 leading-relaxed">
-              Structured frameworks that tell you if your idea has legs — before you spend a single dollar.
-            </p>
+            {/* Visual: simple score bar */}
+            <div className="mt-6 space-y-2" aria-hidden="true">
+              {[
+                { label: "Market size", w: "72%" },
+                { label: "Competition",  w: "45%" },
+                { label: "Demand signal", w: "88%" },
+              ].map(({ label, w }) => (
+                <div key={label}>
+                  <div className="flex justify-between mb-0.5">
+                    <span className="text-xs text-neutral-400">{label}</span>
+                    <span className="text-xs font-medium text-neutral-600">{w}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-neutral-100 overflow-hidden">
+                    <div className="h-full rounded-full bg-amber-400" style={{ width: w }} />
+                  </div>
+                </div>
+              ))}
+            </div>
           </motion.div>
 
-          {/* Card 3: All Tools — 1 col */}
+          {/* All in one */}
           <motion.div
             className="rounded-xl border border-neutral-200/80 bg-background p-6 cursor-default"
             initial={{ opacity: 0, y: 24 }}
@@ -99,30 +156,30 @@ export function Solutions() {
             whileHover={{ y: -4, boxShadow: cardHoverShadow }}
             style={{ boxShadow: cardShadow }}
           >
-            <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center mb-5">
-              <BarChart3 className="w-4 h-4 text-neutral-600" />
-            </div>
+            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-3">
+              One Platform
+            </p>
             <h3 className="text-base font-semibold text-neutral-950 mb-2.5 leading-snug">
-              One platform. No more juggling.
+              No more juggling six tools to find one answer.
             </h3>
             <p className="text-sm text-neutral-500 leading-relaxed">
-              Plans, research, competitor tracking, and milestones — all where you already are.
+              Plans, research, competitor tracking, and milestones — all in the same place you already are.
             </p>
           </motion.div>
 
-          {/* Card 4: Expert Guidance — 2 cols wide, amber tint */}
+          {/* Expert Guidance — amber tint, 2 cols */}
           <motion.div
-            className="sm:col-span-2 lg:col-start-2 rounded-xl border border-amber-200/60 bg-amber-50/60 p-6 cursor-default"
+            className="lg:col-span-2 rounded-xl border border-amber-200/60 bg-amber-50/60 p-6 cursor-default"
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-            whileHover={{ y: -4, boxShadow: amberCardHoverShadow }}
-            style={{ boxShadow: amberCardShadow }}
+            whileHover={{ y: -4, boxShadow: "0 16px 28px -8px rgba(245,158,11,0.18)" }}
+            style={{ boxShadow: "0 2px 8px -2px rgba(245,158,11,0.10)" }}
           >
-            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center mb-5">
-              <TrendingUp className="w-4 h-4 text-amber-600" />
-            </div>
+            <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-3">
+              AI Advisor
+            </p>
             <h3 className="text-base sm:text-lg font-semibold text-neutral-950 mb-2.5 leading-snug">
               An advisor in your pocket — without the six-figure fee.
             </h3>
@@ -130,6 +187,7 @@ export function Solutions() {
               Personalized guidance tailored to your idea, your market, and your next step. Not generic advice. Yours.
             </p>
           </motion.div>
+
         </div>
       </div>
     </section>

@@ -61,14 +61,12 @@ export function PricingSection() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
-          <div className="inline-block px-4 py-1.5 mb-6 bg-white border border-amber-500 rounded-full">
-            <span className="text-xs font-semibold text-amber-500 uppercase tracking-wide">Pricing</span>
-          </div>
+          
           <h2 className="text-3xl sm:text-4xl font-bold text-neutral-950 mb-4">
-            We&apos;ll support you from the beginning.
+            Start free. Grow when you&apos;re ready.
           </h2>
           <p className="text-base sm:text-lg text-neutral-600 max-w-2xl mx-auto mb-6">
-            Choose the plan that&apos;s right for your startup.
+            Every plan includes a free trial — no credit card required.
           </p>
 
           {/* Billing toggle */}
@@ -310,10 +308,10 @@ export function PricingSection() {
 
             <div className="relative z-10">
               <h2 className="text-neutral-900 mb-2 text-xl sm:text-2xl" style={{ fontWeight: 600 }}>
-                Still not sure which plan is right for you?
+                Every plan includes a free trial.
               </h2>
               <p className="text-neutral-600 mb-6 max-w-md mx-auto text-sm sm:text-base">
-                Our team is here to help. Get a personalized recommendation based on your business needs.
+                Start for free, upgrade when you&apos;re ready. No credit card required.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Button
@@ -323,7 +321,7 @@ export function PricingSection() {
                   className="w-full sm:w-auto justify-center"
                 >
                   <Link href="/signup">
-                    Talk to sales
+                    Start free
                     <ArrowRight size={15} />
                   </Link>
                 </Button>

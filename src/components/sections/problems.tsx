@@ -7,19 +7,19 @@ const PROBLEMS = [
     number: "01",
     title: "Manual Market Research",
     description:
-      "Hours spent digging through reports and data that quickly becomes outdated — before you've even started.",
+      "Hours lost digging through reports that go stale before you finish reading them — and you haven't even started yet.",
   },
   {
     number: "02",
     title: "Scattered Tools, No Clear Direction",
     description:
-      "Juggling spreadsheets, docs, and a dozen open tabs just to piece together a plan. It shouldn't take this long.",
+      "Spreadsheets, docs, a dozen open tabs. Piecing together a plan takes longer than building the thing.",
   },
   {
     number: "03",
     title: "No Way to Know If Your Idea Works",
     description:
-      "No structured way to test whether your idea has real potential before investing time, money, and confidence.",
+      "No structured way to test whether your idea has real potential before you invest your time, money, and confidence in it.",
   },
   {
     number: "04",

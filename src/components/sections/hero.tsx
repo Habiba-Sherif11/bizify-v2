@@ -9,67 +9,54 @@ import { useAuth } from "@/features/auth/context/AuthContext";
 import mockBg from "@/assets/imgs/landing/mock-bg.png";
 import { LiquidBlobBackground } from "@/components/hero/LiquidBlobBackground";
 
-// ── Headline config ──────────────────────────────────────────────────────────
 const HEADLINE = "From idea to launch with an AI co-founder by your side.";
 const HEADLINE_WORDS = (() => {
   let offset = 0;
   return HEADLINE.split(" ").map((word) => {
     const start = offset;
-    offset += word.length + 1; // +1 for the trailing space
+    offset += word.length + 1;
     return { word, start };
   });
 })();
 
-// ── Hero ─────────────────────────────────────────────────────────────────────
 export function Hero() {
   const { user, loading } = useAuth();
-  const letterControls = useAnimation();
-  const subControls = useAnimation();
-  const ctaControls = useAnimation();
-  const mockupControls = useAnimation();
+  const badgeControls   = useAnimation();
+  const letterControls  = useAnimation();
+  const subControls     = useAnimation();
+  const ctaControls     = useAnimation();
+  const mockupControls  = useAnimation();
 
   useEffect(() => {
-    // Character-by-character stagger
+    badgeControls.start({
+      opacity: 1, y: 0,
+      transition: { delay: 0.2, duration: 0.55, ease: "easeOut" },
+    });
+
     letterControls.start((i) => ({
-      opacity: 1,
-      y: 0,
+      opacity: 1, y: 0,
       transition: {
-        delay: (i as number) * 0.04 + 0.5,
+        delay: (i as number) * 0.04 + 0.55,
         duration: 0.65,
         ease: [0.2, 0.65, 0.3, 0.9] as [number, number, number, number],
       },
     }));
 
     subControls.start({
-      opacity: 1,
-      y: 0,
-      transition: {
-        delay: 1.6,
-        duration: 0.7,
-        ease: "easeOut",
-      },
+      opacity: 1, y: 0,
+      transition: { delay: 1.6, duration: 0.7, ease: "easeOut" },
     });
 
     ctaControls.start({
-      opacity: 1,
-      y: 0,
-      transition: {
-        delay: 1.9,
-        duration: 0.7,
-        ease: "easeOut",
-      },
+      opacity: 1, y: 0,
+      transition: { delay: 1.9, duration: 0.7, ease: "easeOut" },
     });
 
     mockupControls.start({
-      opacity: 1,
-      y: 0,
-      transition: {
-        delay: 2.1,
-        duration: 1.0,
-        ease: "easeOut",
-      },
+      opacity: 1, y: 0,
+      transition: { delay: 2.1, duration: 1.0, ease: "easeOut" },
     });
-  }, [letterControls, subControls, ctaControls, mockupControls]);
+  }, [badgeControls, letterControls, subControls, ctaControls, mockupControls]);
 
   return (
     <section className="hero relative z-1 w-full flex flex-col">
@@ -77,6 +64,19 @@ export function Hero() {
 
       <div className="relative z-10 flex flex-col items-center justify-center flex-1 px-4 sm:px-6 lg:px-8 pt-32 pb-10">
         <div className="w-full max-w-5xl mx-auto text-center">
+
+          {/* Trust badge
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={badgeControls}
+            className="mb-8 flex justify-center"
+          >
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-200 bg-amber-50/80 text-amber-700 text-sm font-medium backdrop-blur-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" aria-hidden="true" />
+              Trusted by 2,400+ early-stage founders
+            </span>
+          </motion.div> */}
+
           {/* Letter-by-letter headline */}
           <h1
             className="text-3xl sm:text-4xl md:text-5xl font-bold text-neutral-900 leading-tight tracking-tight"
@@ -108,42 +108,42 @@ export function Hero() {
             animate={subControls}
             className="mt-6 text-base sm:text-lg text-neutral-500 max-w-xl mx-auto leading-relaxed"
           >
-            Bizify is the first AI-powered platform that guides you through every
-            step of building a startup — from your first idea to your first customer.
+            Bizify guides you from your first idea to your first customer — with AI that
+            knows exactly where you&apos;re stuck and what to do next.
           </motion.p>
 
-          {/* Auth-aware CTAs */}
+          {/* CTAs */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={ctaControls}
             className="mt-10 flex flex-col sm:flex-row gap-3 justify-center"
           >
             {!loading && user ? (
-              <Button asChild variant="primary-gradient" size="lg" className="min-w-44">
+              <Button asChild variant="primary-gradient" size="lg" className="min-w-44 text-sm font-semibold px-6">
                 <Link href="/dashboard">Go to Dashboard</Link>
               </Button>
             ) : !loading ? (
               <>
-                <Button asChild variant="primary-gradient" size="lg" className="min-w-44">
-                  <Link href="/signup">Get started now</Link>
+                <Button asChild variant="primary-gradient" size="lg" className="min-w-44 text-sm font-semibold px-6">
+                  <Link href="/signup">Start building — it&apos;s free</Link>
                 </Button>
                 <Button
                   asChild
-                  variant="outline"
+                  variant="ghost"
                   size="lg"
-                  className="min-w-44 border-cyan-600 text-cyan-600 hover:bg-cyan-50"
+                  className="min-w-44 text-neutral-600 hover:text-neutral-900 text-sm font-medium"
                 >
-                  <Link href="/login">Start free trial</Link>
+                  <Link href="#hiw">See how it works</Link>
                 </Button>
               </>
             ) : null}
           </motion.div>
 
-          {/* Dashboard screenshot — bottom 50 px bleeds into the next section */}
+          {/* Dashboard mockup — bottom 50px bleeds into next section */}
           <motion.div
             initial={{ opacity: 0, y: 56 }}
             animate={mockupControls}
-            className="mt-8 w-full max-w-5xl mx-auto -mb-[50px]"
+            className="mt-12 w-full max-w-5xl mx-auto -mb-12.5"
           >
             <div
               className="relative w-full rounded-2xl overflow-hidden border border-neutral-200 shadow-xl shadow-neutral-200/60"
@@ -151,7 +151,7 @@ export function Hero() {
             >
               <Image
                 src={mockBg}
-                alt="Bizify Dashboard"
+                alt="Bizify dashboard — your startup workspace"
                 width={mockBg.width}
                 height={mockBg.height}
                 className="w-full h-auto"

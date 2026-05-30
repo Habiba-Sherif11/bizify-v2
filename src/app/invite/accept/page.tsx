@@ -60,7 +60,7 @@ function InviteAcceptContent() {
       <Link href="/" className="flex items-center gap-2 mb-10">
         <SVGComponent className="h-7 w-auto" />
         <span
-          className="text-lg font-semibold text-neutral-900 dark:text-white"
+          className="text-[1.75rem] font-semibold leading-none text-neutral-900 dark:text-white"
           style={{ fontFamily: "var(--font-cormorant-sc)" }}
         >
           Bizify

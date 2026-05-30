@@ -10,7 +10,7 @@ export default function SignupPage() {
           <Link href="/" className="flex items-center gap-2">
             <SVGComponent className="h-7 w-auto" />
             <span
-              className="text-lg font-semibold text-[#1C1C1E]"
+              className="text-[1.75rem] font-semibold leading-none text-[#1C1C1E]"
               style={{ fontFamily: "var(--font-cormorant-sc)" }}
             >
               Bizify
