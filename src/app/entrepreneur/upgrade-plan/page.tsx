@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Check,
-  Minus,
   Zap,
   CreditCard,
   X,
@@ -13,6 +12,9 @@ import {
   Star,
   Coins,
   Infinity as InfinityIcon,
+  ShoppingCart,
+  Plus,
+  Minus,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -23,243 +25,231 @@ import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tier = "freemium" | "pay-per-feature" | "premium";
+type Tier = "free" | "ppf" | "pro" | "premium";
 
 interface UIPlan {
-  tier: Tier;
-  label: string;
-  subtitle: string;
-  /** Display string for the price, e.g. "0", "120 – 150", "350" */
-  priceDisplay: string;
-  /** Unit label shown beside the price, e.g. "EGP / feature" */
-  priceUnit: string;
-  /** Fallback token count when backend features_json.ai_tokens is absent */
-  defaultTokens: number;
-  dotBg: string;
-  badgeBg: string;
-  badgeText: string;
-  checkBg: string;
-  checkText: string;
-  popular?: boolean;
-  isFree?: boolean;
-  nameHints: string[];
-  priceHint: number;
+  tier:          Tier;
+  label:         string;
+  subtitle:      string;
+  priceDisplay:  string;
+  priceUnit:     string;
+  tokens:        string;
+  tokenNote:     string;
+  dotColor:      string;
+  accentBg:      string;
+  accentText:    string;
+  popular?:      boolean;
+  isFree?:       boolean;
+  isPPF?:        boolean;
+  nameHints:     string[];
+  priceHint:     number;
 }
 
 interface BackendPlan {
-  id: string;
-  name: string;
-  price: number;
-  features_json: {
-    ai_tokens?: number;
-    ideas?: number;
-    businesses?: number;
-    export?: boolean;
-    priority_support?: boolean;
-  } | null;
-  is_active: boolean;
+  id:            string;
+  name:          string;
+  price:         number;
+  features_json: Record<string, unknown> | null;
+  is_active:     boolean;
 }
 
 interface Subscription {
-  id: string;
+  id:      string;
   plan_id: string;
-  status: string;
-  plan?: BackendPlan;
+  status:  string;
+  plan?:   BackendPlan;
 }
 
 interface UsageData {
-  used: number;
-  limit: number;
-  remaining: number;
-  percentage: number;
-  unlimited: boolean;
-  plan_name: string;
+  used:          number;
+  limit:         number;
+  remaining:     number;
+  percentage:    number;
+  unlimited:     boolean;
+  plan_name:     string;
+  is_ppf:        boolean;
+  ppf_purchased: number;
+  ppf_used:      number;
+  ppf_remaining: number;
 }
 
-// ─── Static plan tiers ────────────────────────────────────────────────────────
+// ─── All features — same for every plan ───────────────────────────────────────
+
+const ALL_FEATURES = [
+  "AI idea brainstorming",
+  "Market research reports",
+  "Competitor analysis",
+  "Business plan builder",
+  "AI mentor chat",
+  "Financial projections",
+  "Pitch deck generator",
+  "Export reports (PDF)",
+  "Priority support",
+  "Custom branding on reports",
+  "Advanced AI models",
+  "Team collaboration",
+  "Dedicated AI advisor",
+  "White-label reports",
+];
+
+// ─── Static plan definitions ──────────────────────────────────────────────────
 
 const UI_PLANS: UIPlan[] = [
   {
-    tier: "freemium",
-    label: "Free",
-    subtitle: "Freemium",
+    tier:         "free",
+    label:        "Free",
+    subtitle:     "Try everything, no card needed",
     priceDisplay: "0",
-    priceUnit: "EGP",
-    defaultTokens: 20_000,
-    dotBg: "bg-[#8ECAE6]",
-    badgeBg: "bg-[#8ECAE6]/10",
-    badgeText: "text-[#8ECAE6]",
-    checkBg: "bg-[#8ECAE6]/15",
-    checkText: "text-[#8ECAE6]",
-    isFree: true,
-    nameHints: ["free"],
-    priceHint: 0,
+    priceUnit:    "",
+    tokens:       "15K",
+    tokenNote:    "≈ 1 full analysis",
+    dotColor:     "#8ECAE6",
+    accentBg:     "bg-[#8ECAE6]/10",
+    accentText:   "text-[#8ECAE6]",
+    isFree:       true,
+    nameHints:    ["free"],
+    priceHint:    0,
   },
   {
-    tier: "pay-per-feature",
-    label: "Pay-Per-Feature",
-    subtitle: "Pay only for what you use",
-    priceDisplay: "120 – 150",
-    priceUnit: "EGP / feature",
-    defaultTokens: 500_000,
-    dotBg: "bg-[#FB8500]",
-    badgeBg: "bg-[#FB8500]/10",
-    badgeText: "text-[#FB8500]",
-    checkBg: "bg-[#FB8500]/15",
-    checkText: "text-[#FB8500]",
-    popular: true,
-    nameHints: ["pro", "pay", "starter", "basic"],
-    priceHint: 9.99,
+    tier:         "ppf",
+    label:        "Pay-Per-Feature",
+    subtitle:     "Pay only for what you use",
+    priceDisplay: "135",
+    priceUnit:    "EGP / section",
+    tokens:       "3K",
+    tokenNote:    "per section purchased",
+    dotColor:     "#FB8500",
+    accentBg:     "bg-[#FB8500]/10",
+    accentText:   "text-[#FB8500]",
+    popular:      true,
+    isPPF:        true,
+    nameHints:    ["pay-per-feature", "pay", "ppf"],
+    priceHint:    135,
   },
   {
-    tier: "premium",
-    label: "Premium",
-    subtitle: "Everything, unlimited",
+    tier:         "pro",
+    label:        "Pro",
+    subtitle:     "For active founders",
     priceDisplay: "350",
-    priceUnit: "EGP / month",
-    defaultTokens: -1,
-    dotBg: "bg-[#126782]",
-    badgeBg: "bg-[#126782]/10",
-    badgeText: "text-[#126782]",
-    checkBg: "bg-[#126782]/15",
-    checkText: "text-[#126782]",
-    nameHints: ["enterprise", "premium", "business", "growth"],
-    priceHint: 29.99,
+    priceUnit:    "EGP / month",
+    tokens:       "150K",
+    tokenNote:    "≈ 10 full analyses / mo",
+    dotColor:     "#219EBC",
+    accentBg:     "bg-[#219EBC]/10",
+    accentText:   "text-[#219EBC]",
+    nameHints:    ["pro"],
+    priceHint:    350,
   },
-];
-
-const FEATURES: { name: string; freemium: boolean; pay: boolean; premium: boolean }[] = [
-  { name: "AI idea brainstorming",    freemium: true,  pay: true,  premium: true  },
-  { name: "Market research overview", freemium: true,  pay: true,  premium: true  },
-  { name: "5 ideas / month",          freemium: true,  pay: false, premium: false },
-  { name: "50 ideas / month",         freemium: false, pay: true,  premium: false },
-  { name: "Unlimited ideas",          freemium: false, pay: false, premium: true  },
-  { name: "Competitor analysis",      freemium: false, pay: true,  premium: true  },
-  { name: "Business plan builder",    freemium: false, pay: true,  premium: true  },
-  { name: "AI mentor chat",           freemium: false, pay: true,  premium: true  },
-  { name: "Export reports",           freemium: false, pay: true,  premium: true  },
-  { name: "Financial projections",    freemium: false, pay: false, premium: true  },
-  { name: "Pitch deck generator",     freemium: false, pay: false, premium: true  },
-  { name: "Priority support",         freemium: false, pay: false, premium: true  },
-  { name: "Advanced AI models",       freemium: false, pay: false, premium: true  },
-  { name: "Unlimited businesses",     freemium: false, pay: false, premium: true  },
+  {
+    tier:         "premium",
+    label:        "Premium",
+    subtitle:     "Everything, unlimited",
+    priceDisplay: "600",
+    priceUnit:    "EGP / month",
+    tokens:       "∞",
+    tokenNote:    "Unlimited analyses",
+    dotColor:     "#126782",
+    accentBg:     "bg-[#126782]/10",
+    accentText:   "text-[#126782]",
+    nameHints:    ["premium", "enterprise"],
+    priceHint:    600,
+  },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatTokens(n: number): string {
-  if (n === -1) return "Unlimited";
+  if (n === -1) return "∞";
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
   return String(n);
 }
 
-function matchBackendPlan(uiPlan: UIPlan, backendPlans: BackendPlan[]): BackendPlan | null {
-  if (!backendPlans.length) return null;
+function matchBackendPlan(uiPlan: UIPlan, plans: BackendPlan[]): BackendPlan | null {
+  if (!plans.length) return null;
   for (const hint of uiPlan.nameHints) {
-    const match = backendPlans.find((p) =>
-      p.name.toLowerCase().includes(hint.toLowerCase())
-    );
+    const match = plans.find((p) => p.name.toLowerCase().includes(hint.toLowerCase()));
     if (match) return match;
   }
-  return backendPlans.reduce((best, p) =>
+  return plans.reduce((best, p) =>
     Math.abs(p.price - uiPlan.priceHint) < Math.abs(best.price - uiPlan.priceHint) ? p : best
   );
 }
 
-function usageColorClass(pct: number): string {
-  if (pct >= 90) return "text-red-500";
-  if (pct >= 70) return "text-orange-500";
-  return "text-blue-500";
-}
-
-function usageBgClass(pct: number): string {
-  if (pct >= 90) return "bg-red-500";
-  if (pct >= 70) return "bg-orange-500";
-  return "bg-blue-500";
-}
-
-// ─── Usage Bar ────────────────────────────────────────────────────────────────
+// ─── Usage summary bar ────────────────────────────────────────────────────────
 
 function UsageSummary({ usage }: { usage: UsageData }) {
   const pct = usage.unlimited ? 0 : Math.min(Math.round(usage.percentage), 100);
-  const isWarn = !usage.unlimited && pct >= 70;
+
+  if (usage.is_ppf) {
+    return (
+      <div className="max-w-xl mx-auto mb-8 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl px-5 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShoppingCart size={15} className="text-amber-500" />
+            <span className="text-sm font-medium text-neutral-700 dark:text-neutral-200">PPF Credits</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 font-medium">
+              Pay-Per-Feature
+            </span>
+          </div>
+          <span className="text-sm font-semibold text-amber-600">
+            {usage.ppf_remaining} remaining / {usage.ppf_purchased} purchased
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-xl mx-auto mb-8 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl px-5 py-4">
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2">
           <Coins size={15} className="text-neutral-400" />
-          <span className="text-sm font-medium text-neutral-700 dark:text-neutral-200">
-            AI Token Usage
-          </span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium">
+          <span className="text-sm font-medium text-neutral-700 dark:text-neutral-200">AI Token Usage</span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
             {usage.plan_name}
           </span>
         </div>
-        <span className={cn(
-          "text-sm font-semibold tabular-nums",
-          usage.unlimited ? "text-blue-500" : usageColorClass(pct)
+        <span className={cn("text-sm font-semibold tabular-nums",
+          usage.unlimited ? "text-green-600" : pct >= 90 ? "text-red-500" : pct >= 70 ? "text-orange-500" : "text-blue-500"
         )}>
-          {usage.unlimited
-            ? "∞ Unlimited"
-            : `${formatTokens(usage.used)} / ${formatTokens(usage.limit)}`}
+          {usage.unlimited ? "∞ Unlimited" : `${formatTokens(usage.used)} / ${formatTokens(usage.limit)}`}
         </span>
       </div>
       {!usage.unlimited && (
-        <>
-          <div className="w-full h-2 rounded-full bg-neutral-100 dark:bg-neutral-700 overflow-hidden">
-            <div
-              className={cn("h-full rounded-full transition-all duration-500", usageBgClass(pct))}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          {isWarn && (
-            <p className="mt-1.5 text-xs text-orange-500 dark:text-orange-400">
-              {pct >= 100
-                ? "Token limit reached — upgrade to continue using AI features."
-                : `${pct}% used — consider upgrading for more tokens.`}
-            </p>
-          )}
-        </>
+        <div className="w-full h-2 rounded-full bg-neutral-100 dark:bg-neutral-700 overflow-hidden">
+          <div
+            className={cn("h-full rounded-full transition-all duration-500",
+              pct >= 90 ? "bg-red-500 w-full" : pct >= 70 ? "bg-orange-500" : "bg-blue-500"
+            )}
+            style={{ width: pct < 90 ? `${pct}%` : undefined }}
+          />
+        </div>
       )}
     </div>
   );
 }
 
-// ─── Payment Modal ────────────────────────────────────────────────────────────
+// ─── Payment modal (subscription plans) ──────────────────────────────────────
 
 function PaymentModal({
-  uiPlan,
-  onClose,
-  onPayPal,
-  onCard,
-  processing,
-  iframeUrl,
+  uiPlan, onClose, onPayPal, onCard, processing, iframeUrl,
 }: {
-  uiPlan: UIPlan;
-  onClose: () => void;
-  onPayPal: () => void;
-  onCard: () => void;
+  uiPlan:     UIPlan;
+  onClose:    () => void;
+  onPayPal:   () => void;
+  onCard:     () => void;
   processing: boolean;
-  iframeUrl: string | null;
+  iframeUrl:  string | null;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b border-neutral-100 dark:border-neutral-800">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400 mb-0.5">
-              Subscribe to
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400 mb-0.5">Subscribe to</p>
             <div className="flex items-center gap-2 flex-wrap">
-              <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", uiPlan.dotBg)} />
+              <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", uiPlan.accentBg)} />
               <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">{uiPlan.label}</h2>
               <span className="text-base font-bold text-neutral-900 dark:text-white">
                 {uiPlan.priceDisplay}
@@ -267,38 +257,23 @@ function PaymentModal({
               </span>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={processing}
-            aria-label="Close"
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-          >
-            <X size={18} aria-hidden="true" />
+          <button type="button" onClick={onClose} disabled={processing} aria-label="Close"
+            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors">
+            <X size={18} />
           </button>
         </div>
 
         {iframeUrl ? (
           <div className="p-4">
             <p className="text-sm text-neutral-500 mb-3 text-center">Enter your card details below</p>
-            <iframe
-              src={iframeUrl}
-              className="w-full h-[420px] rounded-xl border border-neutral-200 dark:border-neutral-700"
-              title="Card payment"
-            />
+            <iframe src={iframeUrl} className="w-full h-[420px] rounded-xl border border-neutral-200" title="Card payment" />
           </div>
         ) : (
           <div className="p-5 space-y-3">
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
-              Choose your payment method
-            </p>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">Choose your payment method</p>
 
-            <button
-              type="button"
-              onClick={onPayPal}
-              disabled={processing}
-              className="w-full flex items-center justify-between gap-3 p-4 rounded-xl border-2 border-neutral-200 dark:border-neutral-700 hover:border-amber-400 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <button type="button" onClick={onPayPal} disabled={processing}
+              className="w-full flex items-center justify-between gap-3 p-4 rounded-xl border-2 border-neutral-200 hover:border-amber-400 hover:bg-amber-50/50 transition-all group disabled:opacity-50">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-[#003087] flex items-center justify-center shrink-0">
                   <span className="text-white font-bold text-sm">P</span>
@@ -308,17 +283,11 @@ function PaymentModal({
                   <p className="text-xs text-neutral-400">Pay securely with your PayPal account</p>
                 </div>
               </div>
-              {processing
-                ? <Loader2 size={16} className="text-amber-500 animate-spin shrink-0" />
-                : <Zap size={16} className="text-neutral-300 group-hover:text-amber-400 transition-colors shrink-0" />}
+              {processing ? <Loader2 size={16} className="text-amber-500 animate-spin" /> : <Zap size={16} className="text-neutral-300 group-hover:text-amber-400 transition-colors" />}
             </button>
 
-            <button
-              type="button"
-              onClick={onCard}
-              disabled={processing}
-              className="w-full flex items-center justify-between gap-3 p-4 rounded-xl border-2 border-neutral-200 dark:border-neutral-700 hover:border-cyan-400 hover:bg-cyan-50/50 dark:hover:bg-cyan-950/20 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <button type="button" onClick={onCard} disabled={processing}
+              className="w-full flex items-center justify-between gap-3 p-4 rounded-xl border-2 border-neutral-200 hover:border-cyan-400 hover:bg-cyan-50/50 transition-all group disabled:opacity-50">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-700 flex items-center justify-center shrink-0">
                   <CreditCard size={18} className="text-white" />
@@ -328,9 +297,7 @@ function PaymentModal({
                   <p className="text-xs text-neutral-400">Visa, Mastercard — powered by Paymob</p>
                 </div>
               </div>
-              {processing
-                ? <Loader2 size={16} className="text-cyan-500 animate-spin shrink-0" />
-                : <CreditCard size={16} className="text-neutral-300 group-hover:text-cyan-400 transition-colors shrink-0" />}
+              {processing ? <Loader2 size={16} className="text-cyan-500 animate-spin" /> : <CreditCard size={16} className="text-neutral-300 group-hover:text-cyan-400 transition-colors" />}
             </button>
 
             <p className="text-xs text-center text-neutral-400 pt-1">Payments are secure and encrypted</p>
@@ -341,131 +308,236 @@ function PaymentModal({
   );
 }
 
-// ─── Plan Card ────────────────────────────────────────────────────────────────
+// ─── PPF buy modal (quantity selector) ───────────────────────────────────────
 
-function PlanCard({
-  uiPlan,
-  backendPlan,
-  isCurrent,
-  onSelect,
+function PPFModal({
+  onClose, onPayPal, onCard, processing, iframeUrl, quantity, setQuantity,
 }: {
-  uiPlan: UIPlan;
-  backendPlan: BackendPlan | null;
-  isCurrent: boolean;
-  onSelect: () => void;
+  onClose:     () => void;
+  onPayPal:    () => void;
+  onCard:      () => void;
+  processing:  boolean;
+  iframeUrl:   string | null;
+  quantity:    number;
+  setQuantity: (n: number) => void;
 }) {
-  const featureKey = uiPlan.tier === "freemium" ? "freemium"
-    : uiPlan.tier === "pay-per-feature" ? "pay"
-    : "premium";
-
-  // Use backend token count if available, otherwise fall back to the UI default
-  const tokenCount = backendPlan?.features_json?.ai_tokens ?? uiPlan.defaultTokens;
-  const isUnlimited = tokenCount === -1;
-  const tokenLabel = isUnlimited ? "Unlimited tokens" : `${formatTokens(tokenCount)} tokens`;
-  const canUpgrade = !uiPlan.isFree && !isCurrent && !!backendPlan;
+  const pricePerSection = 135;
+  const discount = quantity >= 3 ? 0.15 : 0;
+  const total = Math.round(pricePerSection * quantity * (1 - discount));
 
   return (
-    <div
-      className={cn(
-        "relative rounded-2xl p-6 flex flex-col",
-        uiPlan.popular
-          ? "ring-2 ring-amber-400 dark:ring-amber-500 bg-white dark:bg-neutral-800 shadow-xl"
-          : "border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80",
-        isCurrent && "ring-2 ring-green-400 dark:ring-green-500"
-      )}
-    >
-      {/* Badges */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-neutral-100 dark:border-neutral-800">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400 mb-0.5">Buy section credits</p>
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
+              <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">Pay-Per-Feature</h2>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} disabled={processing} aria-label="Close"
+            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        {iframeUrl ? (
+          <div className="p-4">
+            <p className="text-sm text-neutral-500 mb-3 text-center">Enter your card details below</p>
+            <iframe src={iframeUrl} className="w-full h-[420px] rounded-xl border border-neutral-200" title="Card payment" />
+          </div>
+        ) : (
+          <div className="p-5">
+            {/* Quantity selector */}
+            <div className="bg-neutral-50 dark:bg-neutral-800 rounded-xl p-4 mb-5">
+              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-200 mb-3">How many sections?</p>
+              <div className="flex items-center justify-between gap-4">
+                <button type="button" aria-label="Decrease quantity"
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="w-9 h-9 rounded-lg border border-neutral-200 flex items-center justify-center hover:bg-neutral-100 transition-colors disabled:opacity-40"
+                  disabled={quantity <= 1}>
+                  <Minus size={16} className="text-neutral-600" aria-hidden="true" />
+                </button>
+                <div className="text-center flex-1">
+                  <span className="text-3xl font-bold text-neutral-900 dark:text-white">{quantity}</span>
+                  <p className="text-xs text-neutral-400 mt-0.5">section{quantity !== 1 ? "s" : ""}</p>
+                </div>
+                <button type="button" aria-label="Increase quantity"
+                  onClick={() => setQuantity(Math.min(10, quantity + 1))}
+                  className="w-9 h-9 rounded-lg border border-neutral-200 flex items-center justify-center hover:bg-neutral-100 transition-colors disabled:opacity-40"
+                  disabled={quantity >= 10}>
+                  <Plus size={16} className="text-neutral-600" aria-hidden="true" />
+                </button>
+              </div>
+
+              {/* Price breakdown */}
+              <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-neutral-700 space-y-1">
+                <div className="flex justify-between text-sm text-neutral-500">
+                  <span>{quantity} × 135 EGP</span>
+                  <span>{pricePerSection * quantity} EGP</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-sm text-green-600 font-medium">
+                    <span>Bundle discount (15%)</span>
+                    <span>−{Math.round(pricePerSection * quantity * discount)} EGP</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-base font-bold text-neutral-900 dark:text-white pt-1">
+                  <span>Total</span>
+                  <span>{total} EGP</span>
+                </div>
+              </div>
+              {quantity >= 3 && (
+                <p className="mt-2 text-xs text-amber-600 font-medium text-center">
+                  🎉 15% bundle discount applied!
+                </p>
+              )}
+              {quantity < 3 && (
+                <p className="mt-2 text-xs text-neutral-400 text-center">
+                  Buy 3+ sections to get a 15% discount
+                </p>
+              )}
+            </div>
+
+            {/* Payment buttons */}
+            <div className="space-y-3">
+              <button type="button" onClick={onPayPal} disabled={processing}
+                className="w-full flex items-center justify-between gap-3 p-4 rounded-xl border-2 border-neutral-200 hover:border-amber-400 hover:bg-amber-50/50 transition-all group disabled:opacity-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-[#003087] flex items-center justify-center shrink-0">
+                    <span className="text-white font-bold text-sm">P</span>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-neutral-900 dark:text-white">PayPal</p>
+                    <p className="text-xs text-neutral-400">Pay {total} EGP via PayPal</p>
+                  </div>
+                </div>
+                {processing ? <Loader2 size={16} className="text-amber-500 animate-spin" /> : <Zap size={16} className="text-neutral-300 group-hover:text-amber-400 transition-colors" />}
+              </button>
+
+              <button type="button" onClick={onCard} disabled={processing}
+                className="w-full flex items-center justify-between gap-3 p-4 rounded-xl border-2 border-neutral-200 hover:border-cyan-400 hover:bg-cyan-50/50 transition-all group disabled:opacity-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-700 flex items-center justify-center shrink-0">
+                    <CreditCard size={18} className="text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-neutral-900 dark:text-white">Credit / Debit Card</p>
+                    <p className="text-xs text-neutral-400">Pay {total} EGP via Paymob</p>
+                  </div>
+                </div>
+                {processing ? <Loader2 size={16} className="text-cyan-500 animate-spin" /> : <CreditCard size={16} className="text-neutral-300 group-hover:text-cyan-400 transition-colors" />}
+              </button>
+
+              <p className="text-xs text-center text-neutral-400 pt-1">Payments are secure and encrypted</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Plan card ────────────────────────────────────────────────────────────────
+
+function PlanCard({
+  uiPlan, isCurrent, onSelect,
+}: {
+  uiPlan:   UIPlan;
+  isCurrent: boolean;
+  onSelect:  () => void;
+}) {
+  const isUnlimited = uiPlan.tokens === "∞";
+
+  return (
+    <div className={cn(
+      "relative rounded-2xl p-6 flex flex-col bg-white dark:bg-neutral-800",
+      uiPlan.popular && !isCurrent
+        ? "ring-2 ring-amber-400 shadow-xl shadow-amber-100/40"
+        : isCurrent
+        ? "ring-2 ring-green-400 dark:ring-green-500"
+        : "border border-neutral-200 dark:border-neutral-700"
+    )}>
+      {/* Top badge */}
       {uiPlan.popular && !isCurrent && (
-        <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-3 py-0.5 rounded-full bg-amber-500 text-white text-[0.65rem] font-bold uppercase tracking-wide">
+        <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-3 py-0.5 rounded-full bg-amber-500 text-white text-[0.62rem] font-bold uppercase tracking-wide whitespace-nowrap">
           <Star size={9} fill="currentColor" /> Most Popular
         </span>
       )}
       {isCurrent && (
-        <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-3 py-0.5 rounded-full bg-green-500 text-white text-[0.65rem] font-bold uppercase tracking-wide">
+        <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-3 py-0.5 rounded-full bg-green-500 text-white text-[0.62rem] font-bold uppercase tracking-wide whitespace-nowrap">
           <CheckCircle2 size={9} /> Current Plan
         </span>
       )}
 
-      {/* Name */}
+      {/* Name + subtitle */}
       <div className="flex items-center gap-2 mb-0.5">
-        <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", uiPlan.dotBg)} />
+        <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", uiPlan.accentBg)} />
         <h3 className="font-bold text-base text-neutral-900 dark:text-white">{uiPlan.label}</h3>
       </div>
-      <p className="text-xs text-neutral-400 dark:text-neutral-500 mb-3 ml-[18px]">{uiPlan.subtitle}</p>
+      <p className="text-xs text-neutral-400 mb-3 ml-[18px]">{uiPlan.subtitle}</p>
 
       {/* Token badge */}
-      <div className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg mb-4 w-fit text-xs font-semibold",
-        uiPlan.badgeBg,
-        uiPlan.badgeText
-      )}>
+      <div className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg mb-4 w-fit text-xs font-semibold", uiPlan.accentBg, uiPlan.accentText)}>
         {isUnlimited
           ? <InfinityIcon size={12} strokeWidth={2.5} />
+          : uiPlan.isPPF
+          ? <ShoppingCart size={12} strokeWidth={2.5} />
           : <Coins size={12} strokeWidth={2.5} />}
-        {tokenLabel}
+        {uiPlan.tokens} tokens
+        <span className="font-normal text-[0.65rem] opacity-70">{uiPlan.isPPF ? "/ section" : ""}</span>
       </div>
 
       {/* Price */}
-      <div className="mb-5">
-        {uiPlan.isFree ? (
-          <span className="text-4xl font-bold text-neutral-900 dark:text-white">Free</span>
-        ) : (
-          <>
-            <span className="text-3xl font-bold text-neutral-900 dark:text-white">
-              {uiPlan.priceDisplay}
-            </span>
-            <span className="ml-1.5 text-sm text-neutral-400">{uiPlan.priceUnit}</span>
-          </>
-        )}
+      <div className="mb-2">
+        {uiPlan.isFree
+          ? <span className="text-4xl font-bold text-neutral-900 dark:text-white">Free</span>
+          : <>
+              <span className="text-3xl font-bold text-neutral-900 dark:text-white">{uiPlan.priceDisplay}</span>
+              <span className="ml-1.5 text-sm text-neutral-400">{uiPlan.priceUnit}</span>
+            </>}
       </div>
+      <p className="text-[0.7rem] text-neutral-400 mb-5">{uiPlan.tokenNote}</p>
 
       {/* CTA */}
       <Button
-        onClick={canUpgrade ? onSelect : undefined}
-        disabled={uiPlan.isFree || (isCurrent ? false : !backendPlan)}
+        type="button"
+        onClick={!uiPlan.isFree && !isCurrent ? onSelect : undefined}
+        disabled={uiPlan.isFree || isCurrent}
         className={cn(
           "w-full mb-6 font-semibold",
           uiPlan.popular && !isCurrent
             ? "bg-amber-500 hover:bg-amber-600 text-white border-0"
             : isCurrent
-            ? "bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 cursor-default"
+            ? "bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-400 border-green-200 cursor-default"
             : uiPlan.isFree
-            ? "bg-neutral-100 dark:bg-neutral-700/60 text-neutral-400 border-0 cursor-default"
-            : "border-2 border-neutral-300 dark:border-neutral-600 text-neutral-700 dark:text-neutral-200 hover:border-neutral-900 dark:hover:border-neutral-300 bg-transparent"
+            ? "bg-neutral-100 text-neutral-400 border-0 cursor-default"
+            : "border-2 border-neutral-300 text-neutral-700 hover:border-neutral-900 bg-transparent"
         )}
       >
-        {isCurrent ? "Current Plan" : uiPlan.isFree ? "Free forever" : `Upgrade to ${uiPlan.label}`}
+        {isCurrent
+          ? "Current Plan"
+          : uiPlan.isFree
+          ? "Free forever"
+          : uiPlan.isPPF
+          ? "Buy sections"
+          : `Upgrade to ${uiPlan.label}`}
       </Button>
 
-      {/* Features */}
+      {/* Features — all ticked for every plan */}
       <div className="space-y-2.5 border-t border-neutral-100 dark:border-neutral-700 pt-5 flex-1">
-        {FEATURES.map((feature) => {
-          const included = feature[featureKey as keyof typeof feature] as boolean;
-          return (
-            <div key={feature.name} className="flex items-start gap-2.5">
-              {included ? (
-                <div className={cn(
-                  "w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5",
-                  uiPlan.checkBg
-                )}>
-                  <Check size={10} strokeWidth={3} className={uiPlan.checkText} />
-                </div>
-              ) : (
-                <div className="w-4 h-4 flex items-center justify-center shrink-0 mt-0.5">
-                  <Minus size={12} strokeWidth={1.5} className="text-neutral-300 dark:text-neutral-600" />
-                </div>
-              )}
-              <span className={cn(
-                "text-sm leading-snug",
-                included
-                  ? "text-neutral-700 dark:text-neutral-200"
-                  : "text-neutral-400 dark:text-neutral-500"
-              )}>
-                {feature.name}
-              </span>
+        <p className="text-[0.7rem] font-semibold text-neutral-400 uppercase tracking-wider mb-3">
+          All features included
+        </p>
+        {ALL_FEATURES.map((f) => (
+          <div key={f} className="flex items-start gap-2.5">
+            <div className={cn("w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5", uiPlan.accentBg)}>
+              <Check size={10} strokeWidth={3} className={uiPlan.accentText} />
             </div>
-          );
-        })}
+            <span className="text-sm text-neutral-700 dark:text-neutral-200 leading-snug">{f}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -479,9 +551,16 @@ export default function UpgradePlanPage() {
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [selectedUiPlan, setSelectedUiPlan] = useState<UIPlan | null>(null);
-  const [processing, setProcessing] = useState(false);
-  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
+  // Subscription plan modal state
+  const [selectedSubPlan, setSelectedSubPlan] = useState<UIPlan | null>(null);
+  const [subProcessing, setSubProcessing] = useState(false);
+  const [subIframeUrl, setSubIframeUrl] = useState<string | null>(null);
+
+  // PPF modal state
+  const [ppfOpen, setPpfOpen] = useState(false);
+  const [ppfQuantity, setPpfQuantity] = useState(1);
+  const [ppfProcessing, setPpfProcessing] = useState(false);
+  const [ppfIframeUrl, setPpfIframeUrl] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -501,55 +580,69 @@ export default function UpgradePlanPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const getBackendPlan = useCallback(
-    (uiPlan: UIPlan) => matchBackendPlan(uiPlan, backendPlans),
-    [backendPlans]
-  );
-
-  const currentUiTier: Tier | null = (() => {
+  const currentTier: Tier | null = (() => {
     if (!subscription?.plan_id || !backendPlans.length) return null;
-    const activePlan = backendPlans.find((p) => p.id === subscription.plan_id);
-    if (!activePlan) return null;
+    const active = backendPlans.find((p) => p.id === subscription.plan_id);
+    if (!active) return null;
     for (const ui of UI_PLANS) {
-      if (getBackendPlan(ui)?.id === activePlan.id) return ui.tier;
+      if (matchBackendPlan(ui, backendPlans)?.id === active.id) return ui.tier;
     }
     return null;
   })();
 
-  const handlePayPal = async () => {
-    if (!selectedUiPlan) return;
-    const backend = getBackendPlan(selectedUiPlan);
+  // Subscription handlers
+  const handleSubPayPal = async () => {
+    if (!selectedSubPlan) return;
+    const backend = matchBackendPlan(selectedSubPlan, backendPlans);
     if (!backend) return;
-    setProcessing(true);
+    setSubProcessing(true);
     try {
       const { data } = await api.post("/billing/paypal/subscribe", { plan_id: backend.id });
       sessionStorage.setItem("paypal_plan_id", backend.id);
-      sessionStorage.setItem("paypal_plan_name", selectedUiPlan.label);
       window.location.href = data.approval_url;
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-        "Failed to initiate PayPal payment. Please try again.";
-      toast.error(msg);
-      setProcessing(false);
+    } catch {
+      toast.error("Failed to initiate PayPal payment. Please try again.");
+      setSubProcessing(false);
     }
   };
 
-  const handleCard = async () => {
-    if (!selectedUiPlan) return;
-    const backend = getBackendPlan(selectedUiPlan);
+  const handleSubCard = async () => {
+    if (!selectedSubPlan) return;
+    const backend = matchBackendPlan(selectedSubPlan, backendPlans);
     if (!backend) return;
-    setProcessing(true);
+    setSubProcessing(true);
     try {
       const { data } = await api.post("/billing/paymob/subscribe", { plan_id: backend.id });
-      setIframeUrl(data.iframe_url);
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-        "Failed to initiate card payment. Please try again.";
-      toast.error(msg);
+      setSubIframeUrl(data.iframe_url);
+    } catch {
+      toast.error("Failed to initiate card payment. Please try again.");
     } finally {
-      setProcessing(false);
+      setSubProcessing(false);
+    }
+  };
+
+  // PPF handlers
+  const handlePpfPayPal = async () => {
+    setPpfProcessing(true);
+    try {
+      const { data } = await api.post("/billing/ppf/paypal", { quantity: ppfQuantity });
+      sessionStorage.setItem("ppf_order_id", data.order_id);
+      window.location.href = data.approval_url;
+    } catch {
+      toast.error("Failed to initiate PayPal payment. Please try again.");
+      setPpfProcessing(false);
+    }
+  };
+
+  const handlePpfCard = async () => {
+    setPpfProcessing(true);
+    try {
+      const { data } = await api.post("/billing/ppf/paymob", { quantity: ppfQuantity });
+      setPpfIframeUrl(data.iframe_url);
+    } catch {
+      toast.error("Failed to initiate card payment. Please try again.");
+    } finally {
+      setPpfProcessing(false);
     }
   };
 
@@ -569,73 +662,73 @@ export default function UpgradePlanPage() {
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
         <DashboardHeader />
 
-        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 mb-8">
-            <Link
-              href="/entrepreneur"
-              className="flex items-center gap-1.5 text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors"
-            >
-              <ArrowLeft size={15} />
-              Dashboard
+            <Link href="/entrepreneur"
+              className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-700 transition-colors">
+              <ArrowLeft size={15} /> Dashboard
             </Link>
-            <span className="text-neutral-300 dark:text-neutral-600">/</span>
+            <span className="text-neutral-300">/</span>
             <span className="text-sm text-neutral-900 dark:text-white font-medium">Upgrade Plan</span>
           </div>
 
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-full">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-4 bg-amber-50 border border-amber-200 rounded-full">
               <Zap size={13} className="text-amber-500" />
-              <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
-                Subscription Plans
-              </span>
+              <span className="text-xs font-semibold text-amber-600 uppercase tracking-wide">Plans</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-neutral-900 dark:text-white mb-3">
-              Choose the right plan for you
+              All features. Every plan.
             </h1>
-            <p className="text-neutral-500 dark:text-neutral-400 max-w-xl mx-auto">
-              Start free, pay only for features you use, or go unlimited with Premium.
+            <p className="text-neutral-500 max-w-xl mx-auto text-sm">
+              Every plan unlocks every feature — the only difference is your token budget.
             </p>
-
-            {currentUiTier && (
-              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-full">
+            {currentTier && (
+              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
                 <CheckCircle2 size={13} className="text-green-500" />
-                <span className="text-sm text-green-700 dark:text-green-400">
-                  You&apos;re on the <strong>{UI_PLANS.find((p) => p.tier === currentUiTier)?.label}</strong> plan
+                <span className="text-sm text-green-700">
+                  You&apos;re on the <strong>{UI_PLANS.find((p) => p.tier === currentTier)?.label}</strong> plan
                 </span>
               </div>
             )}
           </div>
 
-          {/* Token usage summary */}
+          {/* Usage bar */}
           {usage && <UsageSummary usage={usage} />}
 
-          {/* 3 plan cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {UI_PLANS.map((uiPlan) => {
-              const backend = getBackendPlan(uiPlan);
-              return (
-                <PlanCard
-                  key={uiPlan.tier}
-                  uiPlan={uiPlan}
-                  backendPlan={backend}
-                  isCurrent={currentUiTier === uiPlan.tier}
-                  onSelect={() => {
-                    setSelectedUiPlan(uiPlan);
-                    setIframeUrl(null);
-                  }}
-                />
-              );
-            })}
+          {/* 4 plan cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {UI_PLANS.map((uiPlan) => (
+              <PlanCard
+                key={uiPlan.tier}
+                uiPlan={uiPlan}
+                isCurrent={currentTier === uiPlan.tier}
+                onSelect={() => {
+                  if (uiPlan.isPPF) {
+                    setPpfOpen(true);
+                    setPpfIframeUrl(null);
+                    setPpfQuantity(1);
+                  } else {
+                    setSelectedSubPlan(uiPlan);
+                    setSubIframeUrl(null);
+                  }
+                }}
+              />
+            ))}
           </div>
 
-          {/* Cancel subscription */}
+          {/* Token comparison note */}
+          <p className="mt-8 text-center text-xs text-neutral-400">
+            Buying 3 Pay-Per-Feature sections (≈ 405 EGP) costs more than a Pro plan (350 EGP/mo) — subscribe for better value if you use Bizify regularly.
+          </p>
+
+          {/* Cancel */}
           {subscription && (
             <div className="mt-12 text-center">
-              <button
-                type="button"
+              <button type="button"
                 onClick={async () => {
                   if (!confirm("Are you sure you want to cancel your subscription?")) return;
                   try {
@@ -646,8 +739,7 @@ export default function UpgradePlanPage() {
                     toast.error("Failed to cancel subscription. Please try again.");
                   }
                 }}
-                className="text-sm text-neutral-400 dark:text-neutral-500 hover:text-red-500 dark:hover:text-red-400 transition-colors underline underline-offset-4"
-              >
+                className="text-sm text-neutral-400 hover:text-red-500 transition-colors underline underline-offset-4">
                 Cancel current subscription
               </button>
             </div>
@@ -655,14 +747,28 @@ export default function UpgradePlanPage() {
         </main>
       </div>
 
-      {selectedUiPlan && (
+      {/* Subscription payment modal */}
+      {selectedSubPlan && !selectedSubPlan.isPPF && (
         <PaymentModal
-          uiPlan={selectedUiPlan}
-          onClose={() => { if (!processing) { setSelectedUiPlan(null); setIframeUrl(null); } }}
-          onPayPal={handlePayPal}
-          onCard={handleCard}
-          processing={processing}
-          iframeUrl={iframeUrl}
+          uiPlan={selectedSubPlan}
+          onClose={() => { if (!subProcessing) { setSelectedSubPlan(null); setSubIframeUrl(null); } }}
+          onPayPal={handleSubPayPal}
+          onCard={handleSubCard}
+          processing={subProcessing}
+          iframeUrl={subIframeUrl}
+        />
+      )}
+
+      {/* PPF buy modal */}
+      {ppfOpen && (
+        <PPFModal
+          onClose={() => { if (!ppfProcessing) { setPpfOpen(false); setPpfIframeUrl(null); } }}
+          onPayPal={handlePpfPayPal}
+          onCard={handlePpfCard}
+          processing={ppfProcessing}
+          iframeUrl={ppfIframeUrl}
+          quantity={ppfQuantity}
+          setQuantity={setPpfQuantity}
         />
       )}
     </>
