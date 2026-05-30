@@ -44,7 +44,7 @@ export function ProblemsSection() {
             Starting a business is harder than it should be.
           </h2>
           <p className="mt-4 text-base text-neutral-500 max-w-sm">
-            You have the idea. What you&apos;re missing is the map.
+            Bizify gives you the structure, the research, and the guidance that used to cost a consultant's fee.
           </p>
         </motion.div>
 

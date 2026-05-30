@@ -9,7 +9,7 @@ import { useAuth } from "@/features/auth/context/AuthContext";
 import mockBg from "@/assets/imgs/landing/mock-bg.png";
 import { LiquidBlobBackground } from "@/components/hero/LiquidBlobBackground";
 
-const HEADLINE = "From idea to launch with an AI co-founder by your side.";
+const HEADLINE = "Your first business deserves more than a blank page.";
 const HEADLINE_WORDS = (() => {
   let offset = 0;
   return HEADLINE.split(" ").map((word) => {
@@ -65,19 +65,6 @@ export function Hero() {
       <div className="relative z-10 flex flex-col items-center justify-center flex-1 px-4 sm:px-6 lg:px-8 pt-32 pb-10">
         <div className="w-full max-w-5xl mx-auto text-center">
 
-          {/* Trust badge
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={badgeControls}
-            className="mb-8 flex justify-center"
-          >
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-200 bg-amber-50/80 text-amber-700 text-sm font-medium backdrop-blur-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" aria-hidden="true" />
-              Trusted by 2,400+ early-stage founders
-            </span>
-          </motion.div> */}
-
-          {/* Letter-by-letter headline */}
           <h1
             className="text-3xl sm:text-4xl md:text-5xl font-bold text-neutral-900 leading-tight tracking-tight"
             aria-label={HEADLINE}
@@ -108,8 +95,7 @@ export function Hero() {
             animate={subControls}
             className="mt-6 text-base sm:text-lg text-neutral-500 max-w-xl mx-auto leading-relaxed"
           >
-            Bizify guides you from your first idea to your first customer — with AI that
-            knows exactly where you&apos;re stuck and what to do next.
+           Starting a business shouldn't feel like wandering in the dark. Bizify gives you the map, the tools, and the clarity to turn your "what if" into a "what's next."
           </motion.p>
 
           {/* CTAs */}
@@ -125,7 +111,7 @@ export function Hero() {
             ) : !loading ? (
               <>
                 <Button asChild variant="primary-gradient" size="lg" className="min-w-44 text-sm font-semibold px-6">
-                  <Link href="/signup">Start building — it&apos;s free</Link>
+                  <Link href="/signup">Start Building Now </Link>
                 </Button>
                 <Button
                   asChild
