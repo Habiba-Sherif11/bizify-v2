@@ -5,6 +5,7 @@ const PARTNER_ROLES = new Set(["manufacturer", "mentor", "supplier"]);
 
 function resolveRedirect(role: string, approvalStatus?: string): string {
   const r = role.toLowerCase();
+  if (r === "admin") return "/admin";
   if (r === "entrepreneur") return "/entrepreneur";
   if (PARTNER_ROLES.has(r)) {
     return approvalStatus === "APPROVED" ? `/${r}` : "/partner-pending";

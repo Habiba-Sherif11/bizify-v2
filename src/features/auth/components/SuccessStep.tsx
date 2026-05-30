@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { CheckCircle2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "@/components/ui/button";
 
@@ -14,11 +14,13 @@ const roleRoutes: Record<string, string> = {
   admin: "/admin",
 };
 
-export function SuccessStep() {
+function SuccessStepContent() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl");
 
-  const destination = user?.role ? (roleRoutes[user.role] ?? "/") : "/";
+  const destination = callbackUrl ?? (user?.role ? (roleRoutes[user.role] ?? "/") : "/");
 
   useEffect(() => {
     const timer = setTimeout(() => router.push(destination), 4000);
@@ -44,12 +46,20 @@ export function SuccessStep() {
         className="w-full max-w-xs"
         onClick={() => router.push(destination)}
       >
-        Go to dashboard
+        {callbackUrl ? "Accept Invitation" : "Go to dashboard"}
       </Button>
 
       <p className="text-xs text-gray-400">
         Redirecting automatically in a few seconds…
       </p>
     </div>
+  );
+}
+
+export function SuccessStep() {
+  return (
+    <Suspense fallback={null}>
+      <SuccessStepContent />
+    </Suspense>
   );
 }

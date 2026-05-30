@@ -9,6 +9,7 @@ import {
   type PartnerCardProps,
   type PartnerType,
 } from "@/features/marketplace/components/PartnerCard";
+import { PartnerDetailModal, type PartnerDetail } from "@/features/marketplace/components/PartnerDetailModal";
 import { api } from "@/features/auth/lib/api";
 
 // ─── API types ────────────────────────────────────────────────────────────────
@@ -31,6 +32,11 @@ interface MarketplacePartner {
   category_id: string | null;
   category_name: string | null;
   linkedin_url: string | null;
+  headline: string | null;
+  about_summary: string | null;
+  skills_json: unknown;
+  country: string | null;
+  documents_json: unknown;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -64,6 +70,22 @@ function parseTags(raw: unknown): string[] {
   }
 }
 
+function parseExperience(raw: unknown): MentorDetail["experience"] {
+  if (!raw) return [];
+  const arr = Array.isArray(raw) ? raw : (typeof raw === "object" ? Object.values(raw as Record<string, unknown>) : []);
+  return arr.filter(Boolean).map((item) => {
+    if (typeof item === "object" && item !== null) return item as MentorDetail["experience"][number];
+    return { role: String(item) };
+  });
+}
+
+function parseCertificates(raw: unknown): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
+  if (typeof raw === "object") return Object.values(raw as Record<string, unknown>).map(String).filter(Boolean);
+  return [];
+}
+
 function toCardProps(p: MarketplacePartner): PartnerCardProps {
   const type = TYPE_MAP[p.partner_type] ?? "Supplier";
   return {
@@ -71,11 +93,31 @@ function toCardProps(p: MarketplacePartner): PartnerCardProps {
     name: p.display_name || p.company_name,
     type,
     description: p.description,
-    tags: parseTags(p.services_json),
+    tags: parseTags(p.services_json || p.skills_json),
     avatarColor: AVATAR_COLORS[type],
     phone: p.phone_number ?? undefined,
     category: p.category_name ?? undefined,
     linkedinUrl: p.linkedin_url ?? undefined,
+    headline: p.headline ?? undefined,
+    country: p.country ?? undefined,
+  };
+}
+
+function toPartnerDetail(p: MarketplacePartner): PartnerDetail {
+  return {
+    id: p.id,
+    partnerType: TYPE_MAP[p.partner_type] ?? "Supplier",
+    name: p.display_name || p.company_name,
+    headline: p.headline ?? undefined,
+    about_summary: p.about_summary ?? undefined,
+    description: p.description,
+    category: p.category_name ?? undefined,
+    country: p.country ?? undefined,
+    phone: p.phone_number ?? undefined,
+    linkedinUrl: p.linkedin_url ?? undefined,
+    skills: parseTags(p.skills_json || p.services_json),
+    experience: parseExperience(p.experience_json),
+    certificates: parseCertificates(p.documents_json),
   };
 }
 
@@ -98,10 +140,10 @@ export default function MarketplacePage() {
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [categories, setCategories] = useState<PartnerCategory[]>([]);
   const [search, setSearch] = useState("");
-  const [partners, setPartners] = useState<PartnerCardProps[]>([]);
+  const [partners, setPartners] = useState<MarketplacePartner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPartner, setSelectedPartner] = useState<PartnerDetail | null>(null);
 
-  // Fetch categories whenever the type tab changes
   useEffect(() => {
     const params: Record<string, string> = {};
     if (activeFilter !== "All") params.type = BACKEND_TYPE[activeFilter as PartnerType];
@@ -110,7 +152,6 @@ export default function MarketplacePage() {
       .then(({ data }) => setCategories(data))
       .catch(() => setCategories([]));
 
-    // Reset selected category when type changes
     setActiveCategoryId(null);
   }, [activeFilter]);
 
@@ -123,7 +164,7 @@ export default function MarketplacePage() {
       if (search.trim()) params.q = search.trim();
 
       const { data } = await api.get<MarketplacePartner[]>("/marketplace/partners", { params });
-      setPartners(data.map(toCardProps));
+      setPartners(data);
     } catch (err: unknown) {
       const e = err as { response?: { status?: number; data?: unknown }; message?: string; code?: string };
       console.error("[Marketplace] fetch error", { status: e?.response?.status, data: e?.response?.data, message: e?.message, code: e?.code });
@@ -141,7 +182,6 @@ export default function MarketplacePage() {
   const visibleCategories = activeFilter === "All"
     ? categories
     : categories.filter((c) => c.partner_type === BACKEND_TYPE[activeFilter as PartnerType]);
-
 
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 transition-colors">
@@ -190,6 +230,7 @@ export default function MarketplacePage() {
           <div className="mt-4 relative w-56">
             <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <select
+              aria-label="Filter by category"
               value={activeCategoryId ?? ""}
               onChange={(e) => setActiveCategoryId(e.target.value || null)}
               className="w-full appearance-none pl-3 pr-8 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-background dark:bg-neutral-800 text-gray-700 dark:text-gray-200 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-colors cursor-pointer"
@@ -229,7 +270,14 @@ export default function MarketplacePage() {
         ) : partners.length > 0 ? (
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {partners.map((p) => (
-              <PartnerCard key={p.id} {...p} />
+              <PartnerCard
+                key={p.id}
+                {...toCardProps(p)}
+                onClick={() => {
+                  setSelectedPartner(toPartnerDetail(p));
+                  api.post(`/marketplace/partners/${p.id}/views`).catch(() => {});
+                }}
+              />
             ))}
           </div>
         ) : (
@@ -242,6 +290,11 @@ export default function MarketplacePage() {
           </div>
         )}
       </main>
+
+      <PartnerDetailModal
+        partner={selectedPartner}
+        onClose={() => setSelectedPartner(null)}
+      />
     </div>
   );
 }

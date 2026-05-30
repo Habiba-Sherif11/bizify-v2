@@ -27,12 +27,12 @@ export function useLogin(options?: { redirect?: boolean }) {
     onSuccess: async () => {
       toast.success("Logged in successfully");
       if (options?.redirect !== false) {
+        // Always fetch user after login so AuthContext is populated before navigation
+        const user = await fetchUser();
         if (callbackUrl) {
           router.push(callbackUrl);
           return;
         }
-        // Fetch user immediately after login to get role for direct redirect
-        const user = await fetchUser();
         const destination = user?.role && roleRoutes[user.role]
           ? roleRoutes[user.role]
           : "/dashboard";

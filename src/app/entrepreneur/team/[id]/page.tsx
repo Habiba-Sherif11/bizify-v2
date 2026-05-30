@@ -10,6 +10,7 @@ import { parseBackendError } from "@/lib/backend-error";
 import { TeamMembersCard } from "@/features/entrepreneur/components/TeamMembersCard";
 import { InviteTeamMemberModal } from "@/features/entrepreneur/components/InviteTeamMemberModal";
 import { TeamSettingsModal } from "@/features/entrepreneur/components/TeamSettingsModal";
+import { useAuth } from "@/features/auth/context/AuthContext";
 
 interface GroupResponse {
   id: string;
@@ -29,7 +30,7 @@ interface MemberResponse {
   email: string;
   role: "OWNER" | "EDITOR" | "VIEWER";
   status: string;
-  accessible_ideas: string[];
+  accessible_ideas: { id: string; title: string }[];
   joined_at: string;
 }
 
@@ -40,6 +41,7 @@ export default function TeamDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { user } = useAuth();
   const [group, setGroup] = useState<GroupResponse | null>(null);
   const [members, setMembers] = useState<MemberResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,6 +120,15 @@ export default function TeamDetailPage({
 
   if (!group) return null;
 
+  async function handleMemberUpdated() {
+    try {
+      const membersRes = await api.get<MemberResponse[]>(`/groups/${id}/members`);
+      setMembers(Array.isArray(membersRes.data) ? membersRes.data : []);
+    } catch {
+      toast.error("Failed to refresh members");
+    }
+  }
+
   const teamForCard = {
     id: group.id,
     name: group.name,
@@ -127,9 +138,6 @@ export default function TeamDetailPage({
     created_at: group.created_at,
     members: members.map((m) => {
       const upperStatus = m.status?.toUpperCase();
-      if (upperStatus !== "ACTIVE" && upperStatus !== "PENDING") {
-        console.warn(`Unknown member status: ${m.status}`);
-      }
       return {
         id: m.id,
         user_id: m.user_id,
@@ -138,6 +146,7 @@ export default function TeamDetailPage({
         role: m.role,
         status: (upperStatus === "ACTIVE" ? "ACTIVE" : "PENDING") as "ACTIVE" | "PENDING",
         joined_at: m.joined_at,
+        accessible_ideas: m.accessible_ideas,
       };
     }),
   };
@@ -198,7 +207,12 @@ export default function TeamDetailPage({
 
         {/* Members */}
         <div className="mt-8">
-          <TeamMembersCard team={teamForCard} />
+          <TeamMembersCard
+            team={teamForCard}
+            groupId={id}
+            currentUserEmail={user?.email ?? ""}
+            onMemberUpdated={handleMemberUpdated}
+          />
         </div>
       </main>
 

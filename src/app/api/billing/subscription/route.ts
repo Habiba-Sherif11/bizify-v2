@@ -15,6 +15,11 @@ export async function GET(req: NextRequest) {
     );
     return NextResponse.json(data);
   } catch (error: unknown) {
+    // 404 means the user has no paid subscription (free tier) — that's normal, not an error
+    const axiosErr = error as { response?: { status?: number } };
+    if (axiosErr?.response?.status === 404) {
+      return NextResponse.json(null, { status: 200 });
+    }
     const { message, status } = handleBackendError(error, "Failed to fetch subscription");
     return NextResponse.json({ error: message }, { status });
   }

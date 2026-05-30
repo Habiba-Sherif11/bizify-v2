@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, ChevronDown, LogOut, User, Settings, Moon, Sun, Menu, X, BookOpen, Zap } from "lucide-react";
+import { TokenUsageCircle } from "./TokenUsageCircle";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -332,7 +333,7 @@ export function DashboardHeader() {
         {/* ── Right: action buttons ── */}
         <div className="flex items-center gap-2 sm:gap-3">
 
-          {/* Desktop: theme + notifications (hidden on mobile) */}
+          {/* Desktop: theme + token usage + notifications (hidden on mobile) */}
           <div className="hidden sm:flex items-center gap-3">
             <NavButton
               onClick={toggleTheme}
@@ -343,6 +344,8 @@ export function DashboardHeader() {
                 : <Moon size={16} className="text-neutral-500" aria-hidden="true" />
               }
             </NavButton>
+
+            <TokenUsageCircle />
 
             <Popover>
               <PopoverTrigger asChild>
