@@ -9,7 +9,7 @@ import {
   type PartnerCardProps,
   type PartnerType,
 } from "@/features/marketplace/components/PartnerCard";
-import { PartnerDetailModal, type PartnerDetail } from "@/features/marketplace/components/PartnerDetailModal";
+import { PartnerDetailModal, type PartnerDetail, type MentorDetail } from "@/features/marketplace/components/PartnerDetailModal";
 import { api } from "@/features/auth/lib/api";
 
 // ─── API types ────────────────────────────────────────────────────────────────
