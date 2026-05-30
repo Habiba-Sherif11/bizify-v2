@@ -61,6 +61,11 @@ type Stats = {
     team_creations: number;
     ai_requests: number;
   }>;
+  module_usage: Array<{
+    name: string;
+    pct: number;
+    color: string;
+  }>;
   recent_users: Array<{
     id: string;
     full_name: string;
@@ -131,13 +136,13 @@ const ROLE_COLORS: Record<string, string> = {
   USER: "bg-neutral-100 text-neutral-600",
 };
 
-const MODULE_USAGE = [
-  { name: "AI Chat", pct: 88, color: "#F97316" },
-  { name: "Marketplace", pct: 72, color: "#3B82F6" },
-  { name: "Teams", pct: 64, color: "#8B5CF6" },
-  { name: "My Ideas", pct: 58, color: "#F59E0B" },
-  { name: "Business Validation Tools", pct: 46, color: "#10B981" },
-];
+const MODULE_COLORS: Record<string, string> = {
+  "AI Chat": "#F97316",
+  "Marketplace": "#3B82F6",
+  "Teams": "#8B5CF6",
+  "My Ideas": "#F59E0B",
+  "Business Validation Tools": "#10B981",
+};
 
 const ALERT_SEVERITY: Record<string, { label: string; cls: string }> = {
   HIGH: { label: "RISK", cls: "bg-red-100 text-red-600" },
@@ -469,7 +474,7 @@ export default function AdminDashboardPage() {
               <button className="text-xs text-amber-500 hover:underline font-medium">Details</button>
             </div>
             <div className="space-y-3.5">
-              {MODULE_USAGE.map(({ name, pct, color }) => (
+              {(s?.module_usage ?? []).map(({ name, pct, color }) => (
                 <div key={name}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-neutral-700 font-medium">{name}</span>
@@ -478,7 +483,7 @@ export default function AdminDashboardPage() {
                   <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, backgroundColor: color }}
+                      style={{ width: `${pct}%`, backgroundColor: color ?? MODULE_COLORS[name] ?? "#94A3B8" }}
                     />
                   </div>
                 </div>

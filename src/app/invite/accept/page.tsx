@@ -179,16 +179,12 @@ function InviteAcceptContent() {
                 Log In to Accept
               </Link>
               <Link
-                href="/signup"
+                href={`/signup?callbackUrl=${encodeURIComponent(inviteUrl)}`}
                 className="w-full py-2.5 rounded-lg text-sm font-semibold text-gray-700 dark:text-gray-200 border border-neutral-200 dark:border-neutral-600 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors text-center"
               >
                 Create an Account
               </Link>
             </div>
-
-            <p className="text-xs text-gray-400 dark:text-gray-500">
-              After signing up, return to this invitation link to join the team.
-            </p>
           </>
         )}
       </div>
