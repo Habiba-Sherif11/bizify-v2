@@ -9,7 +9,7 @@ import {
   type PartnerCardProps,
   type PartnerType,
 } from "@/features/marketplace/components/PartnerCard";
-import { MentorDetailModal, type MentorDetail } from "@/features/marketplace/components/MentorDetailModal";
+import { PartnerDetailModal, type PartnerDetail } from "@/features/marketplace/components/PartnerDetailModal";
 import { api } from "@/features/auth/lib/api";
 
 // ─── API types ────────────────────────────────────────────────────────────────
@@ -103,9 +103,10 @@ function toCardProps(p: MarketplacePartner): PartnerCardProps {
   };
 }
 
-function toMentorDetail(p: MarketplacePartner): MentorDetail {
+function toPartnerDetail(p: MarketplacePartner): PartnerDetail {
   return {
     id: p.id,
+    partnerType: TYPE_MAP[p.partner_type] ?? "Supplier",
     name: p.display_name || p.company_name,
     headline: p.headline ?? undefined,
     about_summary: p.about_summary ?? undefined,
@@ -141,7 +142,7 @@ export default function MarketplacePage() {
   const [search, setSearch] = useState("");
   const [partners, setPartners] = useState<MarketplacePartner[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMentor, setSelectedMentor] = useState<MentorDetail | null>(null);
+  const [selectedPartner, setSelectedPartner] = useState<PartnerDetail | null>(null);
 
   useEffect(() => {
     const params: Record<string, string> = {};
@@ -229,6 +230,7 @@ export default function MarketplacePage() {
           <div className="mt-4 relative w-56">
             <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <select
+              aria-label="Filter by category"
               value={activeCategoryId ?? ""}
               onChange={(e) => setActiveCategoryId(e.target.value || null)}
               className="w-full appearance-none pl-3 pr-8 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-background dark:bg-neutral-800 text-gray-700 dark:text-gray-200 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-colors cursor-pointer"
@@ -267,16 +269,16 @@ export default function MarketplacePage() {
           </div>
         ) : partners.length > 0 ? (
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {partners.map((p) => {
-              const isMentor = p.partner_type === "MENTOR";
-              return (
-                <PartnerCard
-                  key={p.id}
-                  {...toCardProps(p)}
-                  onClick={isMentor ? () => setSelectedMentor(toMentorDetail(p)) : undefined}
-                />
-              );
-            })}
+            {partners.map((p) => (
+              <PartnerCard
+                key={p.id}
+                {...toCardProps(p)}
+                onClick={() => {
+                  setSelectedPartner(toPartnerDetail(p));
+                  api.post(`/marketplace/partners/${p.id}/views`).catch(() => {});
+                }}
+              />
+            ))}
           </div>
         ) : (
           <div className="mt-24 flex flex-col items-center gap-3 text-center">
@@ -289,10 +291,9 @@ export default function MarketplacePage() {
         )}
       </main>
 
-      {/* Mentor detail modal */}
-      <MentorDetailModal
-        mentor={selectedMentor}
-        onClose={() => setSelectedMentor(null)}
+      <PartnerDetailModal
+        partner={selectedPartner}
+        onClose={() => setSelectedPartner(null)}
       />
     </div>
   );
