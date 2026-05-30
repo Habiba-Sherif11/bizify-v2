@@ -6,13 +6,11 @@ import { Inter, Cormorant_SC, Geist } from "next/font/google";
 
 // Styles
 import "@/styles/globals.css";
-import "@/styles/animations.css";
 
 // Utilities
 import { cn } from "@/lib/utils";
 
 // Providers
-import { AnimationProvider } from "@/components/providers/AnimationProvider";
 import { AuthProvider } from "@/features/auth/context/AuthContext";
 import { ReactQueryProvider } from "@/components/providers/ReactQueryProvider";
 import { ThemeProvider } from "@/features/dashboard/context/ThemeContext";
@@ -58,9 +56,7 @@ export default function RootLayout({
         <ReactQueryProvider>
           <ThemeProvider>
             <AuthProvider>
-              <AnimationProvider>
-                {children}
-              </AnimationProvider>
+              {children}
               <Toaster />
             </AuthProvider>
           </ThemeProvider>

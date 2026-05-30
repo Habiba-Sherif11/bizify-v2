@@ -3,6 +3,7 @@
 import { Bell, ChevronDown, LogOut, User, Settings, Moon, Sun, Menu, X, BookOpen, Zap } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { useTheme } from "@/features/dashboard/context/ThemeContext";
@@ -203,7 +204,12 @@ export function DashboardHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-[#FAFAFA]/90 dark:bg-neutral-900/90 backdrop-blur-md border-b border-[#E9E9E9] dark:border-neutral-800/80 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between header-enter">
+      <motion.header
+        className="sticky top-0 z-40 bg-[#FAFAFA]/90 dark:bg-neutral-900/90 backdrop-blur-md border-b border-[#E9E9E9] dark:border-neutral-800/80 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between"
+        initial={{ opacity: 0, y: -100 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+      >
 
         {/* ── Center: brand ── */}
         <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none hidden sm:block">
@@ -253,13 +259,19 @@ export function DashboardHeader() {
           </Button>
 
           {/* Dropdown menu */}
+          <AnimatePresence>
           {showMenu && (
-            <div
+            <motion.div
               ref={menuRef}
               role="menu"
               aria-label="User options"
               onKeyDown={handleMenuKeyDown}
-              className="absolute top-full mt-2 inset-s-0 bg-background dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-1 z-50 min-w-44 dropdown-enter"
+              className="absolute top-full mt-2 inset-s-0 bg-background dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-1 z-50 min-w-44"
+              initial={{ opacity: 0, y: -6, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6, scale: 0.97 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              style={{ transformOrigin: "top left" }}
             >
               <Button
                 type="button"
@@ -312,8 +324,9 @@ export function DashboardHeader() {
                 <LogOut size={14} aria-hidden="true" />
                 Log out
               </Button>
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
 
         {/* ── Right: action buttons ── */}
@@ -360,10 +373,18 @@ export function DashboardHeader() {
               }
             </NavButton>
 
+            <AnimatePresence>
             {showMobileMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowMobileMenu(false)} />
-                <div className="absolute top-full right-0 mt-2 bg-background dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-1 z-50 w-52 dropdown-enter-right">
+                <motion.div
+                  className="absolute top-full right-0 mt-2 bg-background dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-1 z-50 w-52"
+                  initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                  transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                  style={{ transformOrigin: "top right" }}
+                >
                   <Button
                     type="button"
                     variant="ghost"
@@ -386,12 +407,13 @@ export function DashboardHeader() {
                       No notifications yet.
                     </p>
                   </div>
-                </div>
+                </motion.div>
               </>
             )}
+            </AnimatePresence>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Logout confirmation dialog */}
       {showLogoutConfirm && (

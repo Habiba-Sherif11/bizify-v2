@@ -1,71 +1,76 @@
 "use client";
 
-// External libraries
-import { Card } from "@/components/ui/card";
-import { BarChart3, Compass, FlaskConical, Users } from "lucide-react";
+import { motion } from "framer-motion";
 
-// Problem data
 const PROBLEMS = [
   {
-    icon: BarChart3,
+    number: "01",
     title: "Manual Market Research",
-    description: "Hours spent digging through reports, surveys, and data that quickly becomes outdated.",
+    description:
+      "Hours spent digging through reports and data that quickly becomes outdated — before you've even started.",
   },
   {
-    icon: Compass,
-    title: "Scattered Tools & Info",
-    description: "Juggling spreadsheets, docs, and dozens of tabs just to piece together a plan.",
+    number: "02",
+    title: "Scattered Tools, No Clear Direction",
+    description:
+      "Juggling spreadsheets, docs, and a dozen open tabs just to piece together a plan. It shouldn't take this long.",
   },
   {
-    icon: FlaskConical,
-    title: "Hard to Validate Ideas",
-    description: "No structured way to test whether your idea has real market potential before investing.",
+    number: "03",
+    title: "No Way to Know If Your Idea Works",
+    description:
+      "No structured way to test whether your idea has real potential before investing time, money, and confidence.",
   },
   {
-    icon: Users,
-    title: "No Expert Guidance",
-    description: "Most first-time founders don’t have access to mentors or strategic advisors.",
+    number: "04",
+    title: "No One to Ask",
+    description:
+      "Most first-time founders have no access to mentors. The internet gives ten conflicting answers. You need one good one.",
   },
 ];
 
 export function ProblemsSection() {
   return (
-    <section
-      id="problems"
-      className="relative min-h-[88svh] px-4 py-14 sm:px-6 sm:py-16 lg:px-8 flex items-center"
-    >
+    <section id="problems" className="relative py-20 px-4 sm:px-6 lg:px-8">
       <div className="relative z-10 w-full max-w-5xl mx-auto">
-        {/* Section Header */}
-        <div className="text-center mb-10 sm:mb-12">
-          <div className="inline-block px-4 py-1.5 mb-6 bg-white border border-amber-500 rounded-full">
-            <span className="text-xs font-semibold text-amber-500 uppercase tracking-wide">
-              The Problem
-            </span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-neutral-950 mb-4">
-            Starting a Business Is Harder Than It Should Be
+        <motion.div
+          className="mb-16"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <h2 className="text-3xl sm:text-4xl font-bold text-neutral-950 max-w-lg leading-tight">
+            Starting a business is harder than it should be.
           </h2>
-          <p className="text-sm sm:text-base text-neutral-600 max-w-2xl mx-auto">
-            Entrepreneurs waste time, money, and energy on fragmented processes that slow them down.
+          <p className="mt-4 text-base text-neutral-500 max-w-sm">
+            You have the idea. What you&apos;re missing is the map.
           </p>
-        </div>
+        </motion.div>
 
-        {/* Problems Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-5">
+        <div>
           {PROBLEMS.map((problem, idx) => (
-            <Card
-              key={idx}
-              className="p-4 sm:p-5 border border-neutral-200/80 bg-background shadow-sm transition-shadow duration-200 hover:shadow-md"
+            <motion.div
+              key={problem.number}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.5, delay: idx * 0.08, ease: "easeOut" }}
             >
-              <div className="mb-3 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-cyan-600/10 text-cyan-700 flex items-center justify-center">
-                  <problem.icon className="w-5 h-5" aria-hidden="true" />
-                </div>
+              <div className="grid grid-cols-[48px_1fr] sm:grid-cols-[64px_1fr_1.4fr] gap-x-6 gap-y-1.5 sm:gap-y-0 py-7 border-t border-neutral-200/70 items-start">
+                <span className="text-xl sm:text-2xl font-bold text-amber-500 leading-tight tabular-nums select-none pt-0.5">
+                  {problem.number}
+                </span>
+                <h3 className="text-base sm:text-[1.05rem] font-semibold text-neutral-950 leading-snug sm:pt-0.5">
+                  {problem.title}
+                </h3>
+                <p className="col-start-2 sm:col-start-3 text-sm sm:text-[0.9rem] text-neutral-500 leading-relaxed">
+                  {problem.description}
+                </p>
               </div>
-              <h3 className="text-base font-semibold text-neutral-950 mb-1.5">{problem.title}</h3>
-              <p className="text-neutral-600 text-sm leading-relaxed">{problem.description}</p>
-            </Card>
+            </motion.div>
           ))}
+          <div className="border-t border-neutral-200/70" />
         </div>
       </div>
     </section>
