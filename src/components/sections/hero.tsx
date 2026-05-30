@@ -105,19 +105,19 @@ export function Hero() {
             className="mt-10 flex flex-col sm:flex-row gap-3 justify-center"
           >
             {!loading && user ? (
-              <Button asChild variant="primary-gradient" size="lg" className="min-w-44 text-sm font-semibold px-6">
+              <Button asChild variant="primary-gradient" size="lg" className="min-w-44 text-sm font-semibold px-6 rounded-4xl">
                 <Link href="/dashboard">Go to Dashboard</Link>
               </Button>
             ) : !loading ? (
               <>
-                <Button asChild variant="primary-gradient" size="lg" className="min-w-44 text-sm font-semibold px-6">
+                <Button asChild variant="primary-gradient" size="lg" className="min-w-44 text-sm font-semibold px-6 rounded-4xl">
                   <Link href="/signup">Start Building Now </Link>
                 </Button>
                 <Button
                   asChild
                   variant="ghost"
                   size="lg"
-                  className="min-w-44 text-neutral-600 hover:text-neutral-900 text-sm font-medium"
+                  className="min-w-44 text-neutral-600 hover:text-neutral-900 text-sm font-medium rounded-4xl"
                 >
                   <Link href="#hiw">See how it works</Link>
                 </Button>

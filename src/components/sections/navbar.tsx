@@ -78,7 +78,7 @@ export function Navbar() {
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       >
         <nav
-          className={`max-w-5xl mx-auto flex items-center justify-between rounded-xl py-2.5 px-5 transition-all duration-300 ${
+          className={`max-w-5xl mx-auto flex items-center justify-between rounded-4xl py-2.5 px-5 transition-all duration-300 ${
             isScrolled
               ? "bg-[#FAFAFA]/96 backdrop-blur-md border border-[#E9E9E9] shadow-[0_4px_24px_-4px_rgba(28,28,30,0.09),0_0_0_1px_rgba(28,28,30,0.04)]"
               : "bg-[#FAFAFA] border border-[#E9E9E9] shadow-[0_2px_12px_-2px_rgba(28,28,30,0.07),0_0_0_1px_rgba(28,28,30,0.03)]"
@@ -132,7 +132,7 @@ export function Navbar() {
           <div className="hidden lg:flex items-center gap-1.5 shrink-0">
             {!loading && user ? (
               <Link href="/dashboard">
-                <Button variant="primary-gradient" size="sm" className="px-4 h-8">
+                <Button variant="primary-gradient" size="sm" className="px-4 h-8 rounded-4xl">
                   Dashboard
                 </Button>
               </Link>
@@ -142,13 +142,13 @@ export function Navbar() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="px-4 h-8 text-[#8C8C8C] hover:text-[#1C1C1E]"
+                    className="px-4 h-8 text-[#8C8C8C] hover:text-[#1C1C1E] rounded-4xl"
                   >
                     Log in
                   </Button>
                 </Link>
                 <Link href="/signup">
-                  <Button variant="primary-gradient" size="sm" className="px-4 h-8">
+                  <Button variant="primary-gradient" size="sm" className="px-4 h-8 rounded-4xl">
                     Get started
                   </Button>
                 </Link>
@@ -234,7 +234,7 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={handleLinkClick}
-                  className={`flex items-center gap-3 px-4 py-3 min-h-[44px] rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-3 min-h-[44px] rounded-4xl text-sm font-medium transition-colors ${
                     isActive
                       ? "bg-amber-50 text-[#1C1C1E]"
                       : "text-[#8C8C8C] hover:text-[#1C1C1E] hover:bg-[#F5F5F5]"
@@ -257,19 +257,19 @@ export function Navbar() {
         <div className="px-5 py-6 border-t border-[#E9E9E9] space-y-2.5">
           {!loading && user ? (
             <Link href="/dashboard" onClick={handleLinkClick} className="block">
-              <Button variant="primary-gradient" size="lg" className="w-full h-11">
+              <Button variant="primary-gradient" size="lg" className="w-full h-11 rounded-4xl">
                 Dashboard
               </Button>
             </Link>
           ) : !loading ? (
             <>
               <Link href="/signup" onClick={handleLinkClick} className="block">
-                <Button variant="primary-gradient" size="lg" className="w-full h-11">
+                <Button variant="primary-gradient" size="lg" className="w-full h-11 rounded-4xl">
                   Get started
                 </Button>
               </Link>
               <Link href="/login" onClick={handleLinkClick} className="block">
-                <Button variant="outline" size="lg" className="w-full h-11 text-[#8C8C8C]">
+                <Button variant="outline" size="lg" className="w-full h-11 text-[#8C8C8C] rounded-4xl">
                   Log in
                 </Button>
               </Link>
