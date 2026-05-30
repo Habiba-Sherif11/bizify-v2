@@ -20,7 +20,7 @@ export function HeroMockup({
         style={{
           width: "100%",
           maxWidth: "800px",
-          aspectRatio: "800/544.81",
+          aspectRatio: "800/594.81",
           position: "relative",
         }}
       >
