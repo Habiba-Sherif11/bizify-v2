@@ -342,11 +342,19 @@ function AiChatContent() {
         window.dispatchEvent(new CustomEvent("bizify:idea_created"));
       }
 
-    } catch {
+    } catch (error: unknown) {
+      const httpStatus = (error as { response?: { status?: number } })?.response?.status;
+      const detail =
+        (error as { response?: { data?: { detail?: string; error?: string } } })?.response?.data;
+      const errorText =
+        httpStatus === 429
+          ? (detail?.detail || detail?.error || "AI token limit reached. Please upgrade your plan for more tokens.")
+          : "Sorry, I'm having trouble connecting right now. Please try again.";
+
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        text: "Sorry, I'm having trouble connecting right now. Please try again.",
+        text: errorText,
         time: ts(),
       };
       updateSession(activeId, { messages: [...baseMessages, errorMsg] });
