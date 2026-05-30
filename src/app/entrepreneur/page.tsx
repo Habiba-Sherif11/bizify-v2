@@ -11,7 +11,6 @@ import { GuidanceTour } from "@/features/guidance/components/GuidanceTour";
 import { FeatureCard } from "@/features/entrepreneur/components/FeatureCard";
 import { RecentActivity, type ActivityItem } from "@/features/entrepreneur/components/RecentActivity";
 import { AiSearchBar } from "@/features/entrepreneur/components/AiSearchBar";
-import { TokenUsageWidget } from "@/features/entrepreneur/components/TokenUsageWidget";
 import type { Idea } from "@/features/entrepreneur/types/idea";
 
 function formatToday() {
@@ -179,10 +178,7 @@ export default function EntrepreneurDashboard() {
           </div>
         </section>
 
-        {/* AI token usage */}
-        <section className="max-w-xs">
-          <TokenUsageWidget />
-        </section>
+        
 
       </main>
     </div>
