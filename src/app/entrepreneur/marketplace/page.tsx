@@ -9,6 +9,7 @@ import {
   type PartnerCardProps,
   type PartnerType,
 } from "@/features/marketplace/components/PartnerCard";
+import { MentorDetailModal, type MentorDetail } from "@/features/marketplace/components/MentorDetailModal";
 import { api } from "@/features/auth/lib/api";
 
 // ─── API types ────────────────────────────────────────────────────────────────
@@ -31,6 +32,11 @@ interface MarketplacePartner {
   category_id: string | null;
   category_name: string | null;
   linkedin_url: string | null;
+  headline: string | null;
+  about_summary: string | null;
+  skills_json: unknown;
+  country: string | null;
+  documents_json: unknown;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -64,6 +70,22 @@ function parseTags(raw: unknown): string[] {
   }
 }
 
+function parseExperience(raw: unknown): MentorDetail["experience"] {
+  if (!raw) return [];
+  const arr = Array.isArray(raw) ? raw : (typeof raw === "object" ? Object.values(raw as Record<string, unknown>) : []);
+  return arr.filter(Boolean).map((item) => {
+    if (typeof item === "object" && item !== null) return item as MentorDetail["experience"][number];
+    return { role: String(item) };
+  });
+}
+
+function parseCertificates(raw: unknown): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
+  if (typeof raw === "object") return Object.values(raw as Record<string, unknown>).map(String).filter(Boolean);
+  return [];
+}
+
 function toCardProps(p: MarketplacePartner): PartnerCardProps {
   const type = TYPE_MAP[p.partner_type] ?? "Supplier";
   return {
@@ -71,11 +93,30 @@ function toCardProps(p: MarketplacePartner): PartnerCardProps {
     name: p.display_name || p.company_name,
     type,
     description: p.description,
-    tags: parseTags(p.services_json),
+    tags: parseTags(p.services_json || p.skills_json),
     avatarColor: AVATAR_COLORS[type],
     phone: p.phone_number ?? undefined,
     category: p.category_name ?? undefined,
     linkedinUrl: p.linkedin_url ?? undefined,
+    headline: p.headline ?? undefined,
+    country: p.country ?? undefined,
+  };
+}
+
+function toMentorDetail(p: MarketplacePartner): MentorDetail {
+  return {
+    id: p.id,
+    name: p.display_name || p.company_name,
+    headline: p.headline ?? undefined,
+    about_summary: p.about_summary ?? undefined,
+    description: p.description,
+    category: p.category_name ?? undefined,
+    country: p.country ?? undefined,
+    phone: p.phone_number ?? undefined,
+    linkedinUrl: p.linkedin_url ?? undefined,
+    skills: parseTags(p.skills_json || p.services_json),
+    experience: parseExperience(p.experience_json),
+    certificates: parseCertificates(p.documents_json),
   };
 }
 
@@ -98,10 +139,10 @@ export default function MarketplacePage() {
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [categories, setCategories] = useState<PartnerCategory[]>([]);
   const [search, setSearch] = useState("");
-  const [partners, setPartners] = useState<PartnerCardProps[]>([]);
+  const [partners, setPartners] = useState<MarketplacePartner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMentor, setSelectedMentor] = useState<MentorDetail | null>(null);
 
-  // Fetch categories whenever the type tab changes
   useEffect(() => {
     const params: Record<string, string> = {};
     if (activeFilter !== "All") params.type = BACKEND_TYPE[activeFilter as PartnerType];
@@ -110,7 +151,6 @@ export default function MarketplacePage() {
       .then(({ data }) => setCategories(data))
       .catch(() => setCategories([]));
 
-    // Reset selected category when type changes
     setActiveCategoryId(null);
   }, [activeFilter]);
 
@@ -123,7 +163,7 @@ export default function MarketplacePage() {
       if (search.trim()) params.q = search.trim();
 
       const { data } = await api.get<MarketplacePartner[]>("/marketplace/partners", { params });
-      setPartners(data.map(toCardProps));
+      setPartners(data);
     } catch (err: unknown) {
       const e = err as { response?: { status?: number; data?: unknown }; message?: string; code?: string };
       console.error("[Marketplace] fetch error", { status: e?.response?.status, data: e?.response?.data, message: e?.message, code: e?.code });
@@ -141,7 +181,6 @@ export default function MarketplacePage() {
   const visibleCategories = activeFilter === "All"
     ? categories
     : categories.filter((c) => c.partner_type === BACKEND_TYPE[activeFilter as PartnerType]);
-
 
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 transition-colors">
@@ -228,9 +267,16 @@ export default function MarketplacePage() {
           </div>
         ) : partners.length > 0 ? (
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {partners.map((p) => (
-              <PartnerCard key={p.id} {...p} />
-            ))}
+            {partners.map((p) => {
+              const isMentor = p.partner_type === "MENTOR";
+              return (
+                <PartnerCard
+                  key={p.id}
+                  {...toCardProps(p)}
+                  onClick={isMentor ? () => setSelectedMentor(toMentorDetail(p)) : undefined}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="mt-24 flex flex-col items-center gap-3 text-center">
@@ -242,6 +288,12 @@ export default function MarketplacePage() {
           </div>
         )}
       </main>
+
+      {/* Mentor detail modal */}
+      <MentorDetailModal
+        mentor={selectedMentor}
+        onClose={() => setSelectedMentor(null)}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Phone, ExternalLink } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type PartnerType = "Supplier" | "Manufacturer" | "Mentor";
@@ -16,6 +16,9 @@ export interface PartnerCardProps {
   phone?: string;
   category?: string;
   linkedinUrl?: string;
+  headline?: string;
+  country?: string;
+  onClick?: () => void;
 }
 
 const TYPE_COLORS: Record<PartnerType, string> = {
@@ -33,18 +36,27 @@ const CATEGORY_COLORS: Record<PartnerType, string> = {
 export function PartnerCard({
   name,
   type,
-  specialty,
   description,
   tags,
   avatarColor,
-  phone,
   category,
-  linkedinUrl,
+  headline,
+  country,
+  onClick,
 }: PartnerCardProps) {
   const initials = name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
   return (
-    <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm p-5 flex flex-col gap-4">
+    <div
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") onClick(); } : undefined}
+      className={cn(
+        "bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm p-5 flex flex-col gap-3",
+        onClick && "cursor-pointer hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-md transition-all"
+      )}
+    >
       {/* Header */}
       <div className="flex items-start gap-3">
         <div className={cn(
@@ -55,17 +67,14 @@ export function PartnerCard({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{name}</h3>
-              {specialty && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{specialty}</p>
-              )}
-            </div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">{name}</h3>
             <span className={cn("shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold", TYPE_COLORS[type])}>
               {type}
             </span>
           </div>
-          {/* Category badge */}
+          {headline && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{headline}</p>
+          )}
           {category && (
             <span className={cn(
               "inline-block mt-1.5 px-2 py-0.5 rounded-full border text-[10px] font-medium",
@@ -77,15 +86,15 @@ export function PartnerCard({
         </div>
       </div>
 
-      {/* Description */}
-      <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-3">
+      {/* Short description */}
+      <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-2">
         {description}
       </p>
 
-      {/* Tags */}
+      {/* Top 3 skills/tags */}
       {tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {tags.map((tag) => (
+          {tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
               className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-700 text-xs text-gray-500 dark:text-gray-400"
@@ -93,38 +102,26 @@ export function PartnerCard({
               {tag}
             </span>
           ))}
+          {tags.length > 3 && (
+            <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-700 text-xs text-gray-400 dark:text-gray-500">
+              +{tags.length - 3}
+            </span>
+          )}
         </div>
       )}
 
-      {/* Actions row */}
-      <div className="flex flex-col gap-2">
-        {/* Phone */}
-        {phone ? (
-          <a
-            href={`tel:${phone}`}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 text-sm text-gray-600 dark:text-gray-300 hover:border-cyan-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
-          >
-            <Phone size={13} className="shrink-0 text-cyan-500" />
-            <span className="truncate">{phone}</span>
-          </a>
-        ) : (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 text-sm text-gray-400 dark:text-gray-500">
-            <Phone size={13} className="shrink-0" />
-            <span>No phone provided</span>
-          </div>
-        )}
-
-        {/* LinkedIn — only shown for mentors when a URL is provided */}
-        {type === "Mentor" && linkedinUrl && (
-          <a
-            href={linkedinUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-200 dark:border-blue-800 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
-          >
-            <ExternalLink size={13} className="shrink-0" />
-            <span>View on LinkedIn</span>
-          </a>
+      {/* Country + view prompt */}
+      <div className="flex items-center justify-between mt-auto pt-1">
+        {country ? (
+          <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+            <MapPin size={11} />
+            {country}
+          </span>
+        ) : <span />}
+        {onClick && (
+          <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+            View profile →
+          </span>
         )}
       </div>
     </div>
