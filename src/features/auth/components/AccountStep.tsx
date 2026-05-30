@@ -36,7 +36,7 @@ const ROLE_CARDS = [
     role: "entrepreneur" as Role,
     icon: Rocket,
     title: "Entrepreneur",
-    subtitle: "I'm building a business — from idea to launch.",
+    subtitle: "I'm building a business from idea to launch.",
   },
   {
     role: "mentor" as Role,
@@ -149,31 +149,32 @@ export function AccountStep({ onNext }: Props) {
     return (
       <div className="space-y-4">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">I am a…</h2>
-          <p className="text-sm text-gray-500 mt-1">Choose your role to get started</p>
+          <h2 className="text-base font-semibold text-[#1C1C1E]">I am a…</h2>
+          <p className="text-sm text-[#8C8C8C] mt-0.5">Choose your role to get started</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {ROLE_CARDS.map(({ role, icon: Icon, title, subtitle }) => (
-            <Button
+            <button
               key={role}
               type="button"
-              variant="outline"
               onClick={() => setSelectedRole(role)}
-              className="flex items-start gap-3 p-4 h-auto rounded-xl border-gray-200 bg-white text-left hover:border-cyan-400 hover:bg-cyan-50/40 justify-start whitespace-normal"
+              className="group flex flex-col items-center text-center gap-2 p-3 rounded-xl border border-[#E9E9E9] bg-white transition-all duration-150 hover:border-amber-300 hover:bg-amber-50/40 hover:shadow-[0_2px_8px_-2px_rgba(245,158,11,0.15)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
             >
-              <Icon className="w-5 h-5 mt-0.5 shrink-0 text-gray-400" />
-              <div>
-                <p className="text-sm font-semibold text-gray-800">{title}</p>
-                <p className="text-xs text-gray-500 mt-0.5 leading-snug">{subtitle}</p>
+              <div className="w-8 h-8 rounded-lg bg-[#F5F5F5] group-hover:bg-amber-100 flex items-center justify-center transition-colors duration-150">
+                <Icon className="w-4 h-4 text-[#8C8C8C] group-hover:text-amber-600 transition-colors duration-150" />
               </div>
-            </Button>
+              <div>
+                <p className="text-[12px] font-semibold text-[#1C1C1E] leading-tight">{title}</p>
+                <p className="text-[9px] text-[#8C8C8C] mt-0.5 leading-snug">{subtitle}</p>
+              </div>
+            </button>
           ))}
         </div>
 
         <div className="relative flex items-center gap-3">
-          <Separator className="flex-1 bg-gray-200" />
-          <span className="text-xs text-gray-400">or</span>
-          <Separator className="flex-1 bg-gray-200" />
+          <Separator className="flex-1 bg-[#E9E9E9]" />
+          <span className="text-xs text-[#8C8C8C]">or</span>
+          <Separator className="flex-1 bg-[#E9E9E9]" />
         </div>
 
         <GoogleButton label="Continue with Google" />
@@ -185,27 +186,25 @@ export function AccountStep({ onNext }: Props) {
 
   // — Registration form —
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-3">
       {/* Role badge + change */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <selectedCard.icon className="w-4 h-4 text-cyan-600" />
-          <span className="text-sm font-medium text-cyan-700">{selectedCard.title}</span>
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200/70">
+          <selectedCard.icon className="w-3.5 h-3.5 text-amber-600" />
+          <span className="text-xs font-medium text-amber-700">{selectedCard.title}</span>
         </div>
-        <Button
+        <button
           type="button"
-          variant="link"
-          size="sm"
           onClick={() => setSelectedRole(null)}
-          className="text-xs text-gray-400 hover:text-gray-600 h-auto p-0"
+          className="text-xs text-[#8C8C8C] hover:text-[#1C1C1E] transition-colors"
         >
           Change role
-        </Button>
+        </button>
       </div>
 
       {/* Name row */}
       <div className="space-y-1">
-        <Label className="text-xs text-gray-500">Name</Label>
+        <Label className="text-xs text-[#8C8C8C]">Name</Label>
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Input
@@ -238,7 +237,7 @@ export function AccountStep({ onNext }: Props) {
 
       {/* Email */}
       <div className="space-y-1">
-        <Label htmlFor="email" className="text-xs text-gray-500">Email</Label>
+        <Label htmlFor="email" className="text-xs text-[#8C8C8C]">Email</Label>
         <Input
           id="email"
           type="email"
@@ -260,7 +259,7 @@ export function AccountStep({ onNext }: Props) {
 
       {/* Password */}
       <div className="space-y-1">
-        <Label htmlFor="password" className="text-xs text-gray-500">Password</Label>
+        <Label htmlFor="password" className="text-xs text-[#8C8C8C]">Password</Label>
         <div className="relative">
           <Input
             id="password"
@@ -293,7 +292,7 @@ export function AccountStep({ onNext }: Props) {
 
       {/* Confirm password */}
       <div className="space-y-1">
-        <Label htmlFor="confirm" className="text-xs text-gray-500">Confirm Password</Label>
+        <Label htmlFor="confirm" className="text-xs text-[#8C8C8C]">Confirm Password</Label>
         <Input
           id="confirm"
           type="password"
@@ -317,7 +316,7 @@ export function AccountStep({ onNext }: Props) {
       {isPartner && (
         <>
           <div className="space-y-1">
-            <Label htmlFor="company" className="text-xs text-gray-500">Company Name</Label>
+            <Label htmlFor="company" className="text-xs text-[#8C8C8C]">Company Name</Label>
             <Input
               id="company"
               placeholder="Your company name"
@@ -335,7 +334,7 @@ export function AccountStep({ onNext }: Props) {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="description" className="text-xs text-gray-500">
+            <Label htmlFor="description" className="text-xs text-[#8C8C8C]">
               Description <span className="text-gray-400">(optional)</span>
             </Label>
             <Textarea
@@ -349,7 +348,7 @@ export function AccountStep({ onNext }: Props) {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="services" className="text-xs text-gray-500">
+            <Label htmlFor="services" className="text-xs text-[#8C8C8C]">
               Services Offered <span className="text-gray-400">(optional)</span>
             </Label>
             <Textarea
@@ -364,7 +363,7 @@ export function AccountStep({ onNext }: Props) {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="experience" className="text-xs text-gray-500">
+            <Label htmlFor="experience" className="text-xs text-[#8C8C8C]">
               Industry Experience <span className="text-gray-400">(optional)</span>
             </Label>
             <Textarea
@@ -379,7 +378,7 @@ export function AccountStep({ onNext }: Props) {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="files" className="text-xs text-gray-500">
+            <Label htmlFor="files" className="text-xs text-[#8C8C8C]">
               Supporting Documents <span className="text-red-400">*</span>
             </Label>
             <input

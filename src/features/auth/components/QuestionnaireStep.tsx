@@ -30,13 +30,15 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
   const pct = Math.round((current / total) * 100);
   return (
     <div className="space-y-1.5">
-      <div className="flex justify-between text-xs text-gray-400">
-        <span>{current < total ? `Question ${current + 1} of ${total}` : "All done!"}</span>
-        <span>{pct}%</span>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-medium text-[#8C8C8C]">
+          {current < total ? `Question ${current + 1} of ${total}` : "You're all set"}
+        </span>
+        <span className="text-[11px] font-semibold text-amber-500">{pct}%</span>
       </div>
-      <div className="h-1 w-full bg-gray-100 dark:bg-neutral-700 rounded-full overflow-hidden">
+      <div className="h-0.75 w-full bg-[#F5F5F5] rounded-full overflow-hidden">
         <div
-          className="h-full rounded-full bg-linear-to-r from-amber-400 to-yellow-500 transition-all duration-500"
+          className="h-full rounded-full bg-amber-400 transition-all duration-500 ease-out"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -44,7 +46,8 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
   );
 }
 
-const WELCOME = "Welcome! I'm your AI co-founder. Let's personalize your experience — it'll only take a minute.";
+const WELCOME =
+  "Hi! I'm your AI co-founder. A few questions to personalize your experience. It'll only take a minute.";
 
 export function QuestionnaireStep({ onNext }: Props) {
   const questions = questionnaireData as Question[];
@@ -89,7 +92,10 @@ export function QuestionnaireStep({ onNext }: Props) {
       setHistory((h) => [
         ...h,
         { role: "user", text: displayText },
-        { role: "ai", text: "Perfect! I've got everything I need. Let's move on to your skills." },
+        {
+          role: "ai",
+          text: "Perfect! I've got everything I need. Let's move on to your skills.",
+        },
       ]);
       setCurrentQ(questions.length);
     }
@@ -130,8 +136,8 @@ export function QuestionnaireStep({ onNext }: Props) {
     <div className="flex flex-col gap-4" style={{ minHeight: 400 }}>
       {/* Header */}
       <div>
-        <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">Tell us about yourself</h2>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">This helps us tailor the experience for you</p>
+        <h2 className="text-base font-semibold text-[#1C1C1E]">A few quick questions</h2>
+        <p className="text-sm text-[#8C8C8C] mt-0.5">Help your AI co-founder understand you</p>
       </div>
 
       {/* Progress */}
@@ -141,19 +147,21 @@ export function QuestionnaireStep({ onNext }: Props) {
       <div
         ref={scrollRef}
         className="flex flex-col gap-3.5 overflow-y-auto flex-1 pr-0.5 scroll-smooth"
-        style={{ maxHeight: 300, minHeight: 200 }}
+        style={{ maxHeight: 300, minHeight: 180 }}
       >
         {history.map((msg, i) => (
           <ChatBubble key={i} role={msg.role} text={msg.text} />
         ))}
       </div>
 
-      {/* Choice buttons for current question */}
+      {/* Choice buttons */}
       {!isDone && (
         <div className="flex flex-col gap-2 pt-1">
           {isMulti && (
-            <p className="text-xs font-medium text-amber-600 flex items-center gap-1">
-              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-100 text-amber-600 text-[10px] font-bold leading-none">+</span>
+            <p className="text-[11px] font-medium text-amber-600 flex items-center gap-1">
+              <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-100 text-amber-600 text-[9px] font-bold leading-none">
+                +
+              </span>
               Select all that apply
             </p>
           )}
@@ -170,7 +178,7 @@ export function QuestionnaireStep({ onNext }: Props) {
         </div>
       )}
 
-      {/* Continue / Submit — shows for multi after selection, or when all done */}
+      {/* Continue / Submit */}
       {(isDone || (isMulti && selected.length > 0)) && (
         <Button
           type="button"

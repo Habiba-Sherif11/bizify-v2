@@ -25,7 +25,7 @@ type Step = { number: number; label: string };
 
 function ProgressStepper({ currentStep, steps }: { currentStep: number; steps: Step[] }) {
   return (
-    <div className="flex items-start w-full mb-6">
+    <div className="flex items-start w-full">
       {steps.map((step, i) => {
         const isActive = step.number === currentStep;
         const isPast = step.number < currentStep;
@@ -33,23 +33,23 @@ function ProgressStepper({ currentStep, steps }: { currentStep: number; steps: S
 
         return (
           <div key={step.number} className="flex items-start flex-1 last:flex-none">
-            <div className="flex flex-col items-center gap-1">
+            <div className="flex flex-col items-center gap-1.5">
               <div
                 className={cn(
-                  "w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold transition-colors shrink-0",
-                  isActive && "bg-amber-500 text-white",
-                  isPast && "bg-cyan-500 text-white",
-                  !isActive && !isPast && "bg-gray-200 text-gray-500"
+                  "w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold transition-all shrink-0 ring-2 ring-offset-1",
+                  isActive && "bg-amber-500 text-white ring-amber-200",
+                  isPast && "bg-[#0891B2] text-white ring-cyan-100",
+                  !isActive && !isPast && "bg-[#E9E9E9] text-[#8C8C8C] ring-transparent"
                 )}
               >
-                {isPast ? <Check size={12} strokeWidth={2.5} /> : step.number}
+                {isPast ? <Check size={13} strokeWidth={2.5} /> : step.number}
               </div>
               <span
                 className={cn(
-                  "text-[10px] font-medium whitespace-nowrap",
+                  "text-[10px] font-medium whitespace-nowrap leading-none",
                   isActive && "text-amber-500",
-                  isPast && "text-cyan-500",
-                  !isActive && !isPast && "text-gray-400"
+                  isPast && "text-[#0891B2]",
+                  !isActive && !isPast && "text-[#8C8C8C]"
                 )}
               >
                 {step.label}
@@ -57,8 +57,13 @@ function ProgressStepper({ currentStep, steps }: { currentStep: number; steps: S
             </div>
 
             {!isLast && (
-              <div className="flex-1 flex items-center pt-3 px-2">
-                <div className={cn("w-full h-0.5 transition-colors", isPast ? "bg-cyan-500" : "bg-gray-200")} />
+              <div className="flex-1 flex items-center pt-3.5 px-1.5">
+                <div
+                  className={cn(
+                    "w-full h-px transition-colors",
+                    isPast ? "bg-[#0891B2]" : "bg-[#E9E9E9]"
+                  )}
+                />
               </div>
             )}
           </div>
@@ -76,10 +81,15 @@ export function SignupForm() {
     : PARTNER_STEPS;
 
   return (
-    <div className="space-y-0">
-      {step < 5 && <ProgressStepper currentStep={step} steps={steps} />}
+    <div className="space-y-4">
+      {step < 5 && (
+        <>
+          <ProgressStepper currentStep={step} steps={steps} />
+          <div className="h-px bg-black/[0.05] -mx-6" />
+        </>
+      )}
 
-      <div className="rounded-xl border border-gray-200/80 bg-[#FAFAFA] shadow-sm p-5 sm:p-6">
+      <div>
         {step === 1 && <AccountStep onNext={handleStep1} />}
         {step === 2 && <OTPVerification onVerify={handleOtp} email={email} />}
         {step === 3 && <QuestionnaireStep onNext={handleQuestionnaire} />}
