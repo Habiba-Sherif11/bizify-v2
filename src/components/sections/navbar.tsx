@@ -90,9 +90,9 @@ export function Navbar() {
             className="flex items-center gap-2 shrink-0"
             onClick={handleLinkClick}
           >
-            <SVGComponent className="h-7 w-auto" />
+            <SVGComponent className="h-6 w-auto" />
             <span
-              className="text-[1.75rem] font-semibold tracking-wide leading-none text-[#1C1C1E]"
+              className="text-[1.5rem] tracking-wide leading-none text-[#1C1C1E]"
               style={{ fontFamily: "var(--font-cormorant-sc)" }}
             >
               Bizify
