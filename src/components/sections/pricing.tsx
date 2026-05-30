@@ -7,30 +7,42 @@ import { Check, Minus, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
-// Feature and plan data
+// Subscription plan comparison table
 const FEATURES = [
-  { name: "AI idea brainstorming", free: true, starter: true, plus: true, premium: true },
-  { name: "Market research reports", free: true, starter: true, plus: true, premium: true },
-  { name: "Competitor analysis", free: false, starter: true, plus: true, premium: true },
-  { name: "Business plan builder", free: false, starter: true, plus: true, premium: true },
-  { name: "AI mentor chat", free: false, starter: true, plus: true, premium: true },
-  { name: "Financial projections", free: false, starter: false, plus: true, premium: true },
-  { name: "Pitch deck generator", free: false, starter: false, plus: true, premium: true },
-  { name: "Milestone tracking", free: false, starter: false, plus: true, premium: true },
-  { name: "Priority support", free: false, starter: false, plus: true, premium: true },
-  { name: "Custom branding on reports", free: false, starter: false, plus: false, premium: true },
-  { name: "Advanced AI models", free: false, starter: false, plus: false, premium: true },
-  { name: "Team collaboration", free: false, starter: false, plus: false, premium: true },
-  { name: "Dedicated AI advisor", free: false, starter: false, plus: false, premium: true },
-  { name: "API access", free: false, starter: false, plus: false, premium: true },
-  { name: "White-label reports", free: false, starter: false, plus: false, premium: true },
+  { name: "AI idea brainstorming", free: true, starter: true, pro: true, premium: true },
+  { name: "Market research reports", free: true, starter: true, pro: true, premium: true },
+  { name: "1 idea analysis / month", free: true, starter: false, pro: false, premium: false },
+  { name: "3 idea analyses / month", free: false, starter: true, pro: false, premium: false },
+  { name: "10 idea analyses / month", free: false, starter: false, pro: true, premium: false },
+  { name: "Unlimited idea analyses", free: false, starter: false, pro: false, premium: true },
+  { name: "Competitor analysis", free: false, starter: true, pro: true, premium: true },
+  { name: "Business plan builder", free: false, starter: true, pro: true, premium: true },
+  { name: "AI mentor chat", free: false, starter: true, pro: true, premium: true },
+  { name: "Financial projections", free: false, starter: false, pro: true, premium: true },
+  { name: "Pitch deck generator", free: false, starter: false, pro: true, premium: true },
+  { name: "Export reports (PDF)", free: false, starter: false, pro: true, premium: true },
+  { name: "Priority support", free: false, starter: false, pro: false, premium: true },
+  { name: "Custom branding on reports", free: false, starter: false, pro: false, premium: true },
+  { name: "Advanced AI models", free: false, starter: false, pro: false, premium: true },
+  { name: "Team collaboration", free: false, starter: false, pro: false, premium: true },
+  { name: "Dedicated AI advisor", free: false, starter: false, pro: false, premium: true },
+  { name: "White-label reports", free: false, starter: false, pro: false, premium: true },
 ];
 
 const PLANS = [
-  { key: "free" as const, name: "Free", monthly: 0, yearly: 0, cta: "Sign up", color: "#8ECAE6" },
-  { key: "starter" as const, name: "Starter", monthly: 19, yearly: 15, cta: "Try for free", color: "#219EBC" },
-  { key: "plus" as const, name: "Plus", monthly: 29, yearly: 23, cta: "Try for free", popular: true, color: "#FB8500" },
-  { key: "premium" as const, name: "Premium", monthly: 69, yearly: 55, cta: "Try for free", color: "#126782" },
+  { key: "free" as const, name: "Free", monthly: 0, yearly: 0, cta: "Sign up", color: "#8ECAE6", currency: "" },
+  { key: "starter" as const, name: "Starter", monthly: 150, yearly: 120, cta: "Get started", color: "#219EBC", currency: "EGP" },
+  { key: "pro" as const, name: "Pro", monthly: 350, yearly: 280, cta: "Get started", popular: true, color: "#FB8500", currency: "EGP" },
+  { key: "premium" as const, name: "Premium", monthly: 600, yearly: 480, cta: "Get started", color: "#126782", currency: "EGP" },
+];
+
+// Pay-Per-Feature section bullets
+const PPF_FEATURES = [
+  "Any single AI section (customers, competition, market, MVP…)",
+  "Full report for that section — download & keep",
+  "No subscription required",
+  "Buy 3+ sections and save 15% automatically",
+  "Credits never expire",
 ];
 
 export function PricingSection() {
@@ -147,15 +159,26 @@ export function PricingSection() {
                       </div>
 
                       <div className="flex items-baseline gap-0.5 mt-1 mb-3">
-                        <span
-                          className="text-neutral-900"
-                          style={{ fontSize: "1.75rem", fontWeight: 700, lineHeight: 1 }}
-                        >
-                          ${billing === "monthly" ? plan.monthly : plan.yearly}
-                        </span>
-                        <span className="text-neutral-400 ml-0.5" style={{ fontSize: "0.75rem" }}>
-                          /mo
-                        </span>
+                        {plan.monthly === 0 ? (
+                          <span
+                            className="text-neutral-900"
+                            style={{ fontSize: "1.75rem", fontWeight: 700, lineHeight: 1 }}
+                          >
+                            Free
+                          </span>
+                        ) : (
+                          <>
+                            <span
+                              className="text-neutral-900"
+                              style={{ fontSize: "1.75rem", fontWeight: 700, lineHeight: 1 }}
+                            >
+                              {billing === "monthly" ? plan.monthly : plan.yearly}
+                            </span>
+                            <span className="text-neutral-400 ml-0.5" style={{ fontSize: "0.75rem" }}>
+                              {plan.currency}/mo
+                            </span>
+                          </>
+                        )}
                       </div>
 
                       <Button
@@ -239,10 +262,20 @@ export function PricingSection() {
               </div>
 
               <div className="flex items-baseline gap-0.5 mb-4">
-                <span className="text-neutral-900" style={{ fontSize: "2rem", fontWeight: 700 }}>
-                  ${billing === "monthly" ? plan.monthly : plan.yearly}
-                </span>
-                <span className="text-neutral-400" style={{ fontSize: "0.8rem" }}>/mo</span>
+                {plan.monthly === 0 ? (
+                  <span className="text-neutral-900" style={{ fontSize: "2rem", fontWeight: 700 }}>
+                    Free
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-neutral-900" style={{ fontSize: "2rem", fontWeight: 700 }}>
+                      {billing === "monthly" ? plan.monthly : plan.yearly}
+                    </span>
+                    <span className="text-neutral-400" style={{ fontSize: "0.8rem" }}>
+                      {plan.currency}/mo
+                    </span>
+                  </>
+                )}
               </div>
 
               <Button
@@ -283,6 +316,58 @@ export function PricingSection() {
               </div>
             </div>
           ))}
+        </motion.div>
+
+        {/* Pay-Per-Feature banner */}
+        <motion.div
+          className="mt-8"
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
+        >
+          <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50/60 backdrop-blur-sm p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+              {/* Left — label + price */}
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-600 text-[11px] font-semibold uppercase tracking-wide">
+                    Pay-Per-Feature
+                  </span>
+                  <span className="text-[11px] text-neutral-400">No subscription needed</span>
+                </div>
+                <div className="flex items-baseline gap-1 mb-3">
+                  <span className="text-3xl font-bold text-neutral-900">135</span>
+                  <span className="text-sm text-neutral-500">EGP / section</span>
+                </div>
+                <p className="text-sm text-neutral-600 max-w-md">
+                  Pay only for the AI sections you need — no commitment, no monthly fee.
+                  Buy 3 or more at once and get a <span className="font-semibold text-amber-600">15% bundle discount</span> automatically.
+                </p>
+              </div>
+
+              {/* Right — feature bullets + CTA */}
+              <div className="sm:min-w-[260px]">
+                <ul className="space-y-1.5 mb-4">
+                  {PPF_FEATURES.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm text-neutral-700">
+                      <Check size={14} strokeWidth={2.5} className="mt-0.5 shrink-0 text-amber-500" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Button asChild variant="outline" size="default"
+                  className="w-full border-amber-400 text-amber-600 hover:bg-amber-50 hover:border-amber-500">
+                  <Link href="/signup">Buy sections</Link>
+                </Button>
+              </div>
+            </div>
+
+            {/* Price anchor note */}
+            <p className="mt-4 text-[11px] text-neutral-400 border-t border-amber-200 pt-3">
+              Buying 3 sections (405 EGP) costs more than a Starter plan (150 EGP/mo) — subscribe to save more if you use Bizify regularly.
+            </p>
+          </div>
         </motion.div>
 
         {/* Bottom CTA */}
